@@ -1,0 +1,75 @@
+{
+  "repo": "TianxingChen/Embodied-AI-Guide",
+  "name": "Embodied-AI-Guide",
+  "one_liner": "中文具身智能入门指南与百科全书式知识索引",
+  "problem": "帮助新人快速建立具身智能领域认知：用 RoboTwin 实践项目动手入门，并以百科形式梳理算法、基础设施、控制、硬件等技术脉络。",
+  "difficulty": "入门",
+  "core_abstractions": [
+    {"name": "从这里开始与认知资料", "role": "领域定义、术语速查表、新人常见问题、社区与会议生态，用于快速建立整体版图", "file": "README.md"},
+    {"name": "动手实践 RoboTwin 教程", "role": "以 RoboTwin 2.0 走通操作策略全生命周期：装环境、拿数据、训练 ACT、评测对照榜单", "file": "README.md"},
+    {"name": "算法篇", "role": "从工程工具、视觉基础模型、机器人学习到 VLA 与 LLM+Planner 的能力栈索引", "file": "topics/algorithm.md"},
+    {"name": "软件基础设施篇", "role": "仿真器、基准集、数据集与策略部署工具链的选型与生态", "file": "topics/infrastructure.md"},
+    {"name": "控制篇", "role": "控制论与机器人学基础、现代控制、SLAM 与全身控制，提供稳定性与工程底座", "file": "topics/control.md"},
+    {"name": "硬件篇", "role": "嵌入式、机械设计、系统集成、传感器与触觉感知等硬件技术栈", "file": "topics/hardware.md"},
+    {"name": "机器人学简介讲义", "role": "配套的机器人学入门讲义 PDF，补充几何、运动学与动力学的基础概念", "file": "files/机器人学简介.pdf"}
+  ],
+  "layers": [
+    {"name": "入门认知层", "responsibility": "建立领域定义、术语与版图认知，判断自己该从哪入手", "modules": ["领域定义", "术语速查", "常见问题", "社区生态", "会议期刊"], "files": ["README.md"]},
+    {"name": "动手实践层", "responsibility": "用 RoboTwin 2.0 跑通一次操作策略的完整生命周期，形成工程直觉", "modules": ["环境安装", "数据下载", "ACT 训练", "策略评测"], "files": ["README.md"]},
+    {"name": "算法能力栈层", "responsibility": "从底层工具到上层学习决策的算法全景索引", "modules": ["工程工具", "视觉基础模型", "机器人学习", "VLA", "多模态", "导航"], "files": ["topics/algorithm.md"]},
+    {"name": "软件基础设施层", "responsibility": "仿真器、基准集、数据集与部署工具链，决定复现性与能力上限", "modules": ["仿真器", "基准集", "数据集", "工具链"], "files": ["topics/infrastructure.md"]},
+    {"name": "控制底座层", "responsibility": "为系统提供稳定性、可解释性与工程底座的控制与机器人学知识", "modules": ["控制理论", "机器人学", "SLAM", "全身控制"], "files": ["topics/control.md"]},
+    {"name": "硬件层", "responsibility": "把算法变成真实世界稳定可复现系统的硬件技术栈", "modules": ["嵌入式", "机械设计", "系统集成", "传感器", "触觉"], "files": ["topics/hardware.md"]}
+  ],
+  "data_flow": [
+    "第1步：读 README 第 1 章「从这里开始」，理解具身智能是什么、与前序 AI 的差别",
+    "第2步：对照「学习路线建议」表，按自己背景（新手 / CV / 机器人 / 硬件）选定起点",
+    "第3步：展开「术语速查表」与「新人常见问题」，先建立字面认知",
+    "第4步：动手跑通第 2 章 RoboTwin 2.0 教程，走完装环境→拿数据→训练 ACT→评测全流程",
+    "第5步：读第 3 章 Useful Info，了解社区、会议、论文列表与年度趋势",
+    "第6步：进入第 4 章算法篇，先看 Robot Learning 建立学习路线，再看 VLA 了解当前主流",
+    "第7步：按兴趣检索算法篇其余章节（视觉基础模型、多模态、导航、具身+X）",
+    "第8步：读第 5 章基础设施篇，选定一个仿真器加一个基准加一个数据集的最小闭环",
+    "第9步：按需补第 6 章控制篇与第 7 章硬件篇，解决真机与稳定性问题"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "总入口，含学习路线、术语表、动手教程与各篇章导航"},
+    {"path": "topics/algorithm.md", "what": "算法篇完整内容，具身算法能力栈索引"},
+    {"path": "topics/infrastructure.md", "what": "软件基础设施篇完整内容"},
+    {"path": "topics/control.md", "what": "控制篇完整内容"},
+    {"path": "topics/hardware.md", "what": "硬件篇完整内容"},
+    {"path": "files/机器人学简介.pdf", "what": "配套的机器人学入门讲义"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "唯一总入口，一章读懂定位、路线图、术语与动手教程"},
+    {"path": "topics/algorithm.md", "why": "篇幅最大的一篇，具身算法能力栈的完整索引"},
+    {"path": "topics/infrastructure.md", "why": "仿真器、基准、数据集选型，决定复现性且最易被忽视"},
+    {"path": "topics/control.md", "why": "控制与机器人学底座，真机与稳定性问题回查此处"},
+    {"path": "topics/hardware.md", "why": "硬件技术栈与传感器生态，偏硬件读者的起点"},
+    {"path": "files/机器人学简介.pdf", "why": "几何、运动学与动力学基础讲义，补齐机器人学入门"}
+  ],
+  "extension_points": [
+    "是「索引 + 百科」而非系统教材，不含完整课程式推导与习题",
+    "算法篇明确声明自己是索引而非教材，深入需回到原始论文与课程",
+    "不提供端到端代码库，动手部分依赖外部 RoboTwin 与 XPolicyLab 仓库",
+    "真机内容偏少，主线教程为纯仿真，真机标定与部署仅点到为止",
+    "采用非商业许可，禁止公司或企业内部使用及任何营利场景"
+  ],
+  "learning_path": [
+    "第1步：读 README 第 1 章，按背景选定起点并建立术语认知",
+    "第2步：跟第 2 章 RoboTwin 教程动手跑通一次操作策略全流程",
+    "第3步：读算法篇的 Robot Learning 与 VLA 两节，形成算法主线",
+    "第4步：读基础设施篇，搭起仿真器加基准加数据集的最小闭环",
+    "第5步：换一个策略（如 π0、RDT-1B、GR00T）重跑教程，感受架构差异",
+    "第6步：按兴趣深挖控制篇或硬件篇，并按论文列表持续跟进前沿"
+  ],
+  "diagram_mermaid": "graph TD\n  A[读 README 第 1 章 建立认知] --> B[按背景选定起点]\n  B --> C[第 2 章 RoboTwin 动手教程]\n  C --> D[装环境与下载数据]\n  D --> E[训练 ACT 策略]\n  E --> F[评测并对照榜单]\n  F --> G[第 3 章 认知资料与论文列表]\n  G --> H[第 4 章 算法篇]\n  H --> I[第 5 章 基础设施篇]\n  I --> J[第 6 章 控制篇]\n  J --> K[第 7 章 硬件篇]\n  F --> L[换策略再跑一遍]",
+  "surprises": [
+    "定位是「一条主线 + 一张全景图」：一周跑通 RoboTwin 动手，其余章节当百科检索",
+    "算法篇自认是「索引而非教材」，且含大量 2025-2026 前沿动态（如 SAM3、VGGT、Newton）",
+    "教程明确警告读取 HDF5 图像必须用 XPolicyLab 的解码函数，否则 RGB 通道会静默颠倒",
+    "策略侧代码已拆到 XPolicyLab 子模块，克隆时必须带 --recurse-submodules 否则缺文件",
+    "采用非商业许可协议，企业内使用或集成到收费产品均被禁止"
+  ],
+  "confidence": "高"
+}

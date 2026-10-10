@@ -209,6 +209,27 @@
   "warnings": []
  },
  {
+  "file": "GT-RIPL__Awesome-LLM-Robotics.json",
+  "repo": "GT-RIPL/Awesome-LLM-Robotics",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 7,
+  "flow": 9,
+  "key_files": 3,
+  "paths_checked": 19,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
+  },
+  "errors": [],
+  "warnings": [
+   "key_files 数量偏少（3 < 4）"
+  ]
+ },
+ {
   "file": "Genesis-Embodied-AI__Genesis.json",
   "repo": "Genesis-Embodied-AI/Genesis",
   "confidence": "高",
@@ -494,6 +515,25 @@
   "warnings": []
  },
  {
+  "file": "Significant-Gravitas__AutoGPT.json",
+  "repo": "Significant-Gravitas/AutoGPT",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 10,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 55,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "StanfordVL__BEHAVIOR-1K.json",
   "repo": "StanfordVL/BEHAVIOR-1K",
   "confidence": "高",
@@ -502,6 +542,25 @@
   "flow": 10,
   "key_files": 8,
   "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "TianxingChen__Embodied-AI-Guide.json",
+  "repo": "TianxingChen/Embodied-AI-Guide",
+  "confidence": "高",
+  "abstractions": 7,
+  "layers": 6,
+  "flow": 9,
+  "key_files": 6,
+  "paths_checked": 25,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -546,6 +605,25 @@
   "skipped": {
    "symbol": 0,
    "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "anthropics__claude-code.json",
+  "repo": "anthropics/claude-code",
+  "confidence": "中",
+  "abstractions": 8,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 45,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
   },
   "errors": [],
   "warnings": []
@@ -893,6 +971,25 @@
   "warnings": []
  },
  {
+  "file": "google-deepmind__open_x_embodiment.json",
+  "repo": "google-deepmind/open_x_embodiment",
+  "confidence": "中",
+  "abstractions": 11,
+  "layers": 6,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 39,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "google-gemini__gemini-cli.json",
   "repo": "google-gemini/gemini-cli",
   "confidence": "高",
@@ -1083,6 +1180,25 @@
   "warnings": []
  },
  {
+  "file": "isaac-sim__IsaacSim.json",
+  "repo": "isaac-sim/IsaacSim",
+  "confidence": "中",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 3
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "kortix-ai__suna.json",
   "repo": "kortix-ai/suna",
   "confidence": "高",
@@ -1173,6 +1289,25 @@
   "skipped": {
    "symbol": 0,
    "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "letta-ai__letta.json",
+  "repo": "letta-ai/letta",
+  "confidence": "中",
+  "abstractions": 8,
+  "layers": 6,
+  "flow": 8,
+  "key_files": 8,
+  "paths_checked": 30,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 5
   },
   "errors": [],
   "warnings": []
@@ -1395,6 +1530,25 @@
   "flow": 12,
   "key_files": 10,
   "paths_checked": 57,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "modelcontextprotocol__servers.json",
+  "repo": "modelcontextprotocol/servers",
+  "confidence": "中",
+  "abstractions": 8,
+  "layers": 6,
+  "flow": 9,
+  "key_files": 10,
+  "paths_checked": 42,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -1629,6 +1783,25 @@
   "skipped": {
    "symbol": 0,
    "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "robotics-survey__Awesome-Robotics-Foundation-Models.json",
+  "repo": "robotics-survey/Awesome-Robotics-Foundation-Models",
+  "confidence": "高",
+  "abstractions": 7,
+  "layers": 7,
+  "flow": 9,
+  "key_files": 4,
+  "paths_checked": 15,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 7
   },
   "errors": [],
   "warnings": []
@@ -1870,6 +2043,25 @@
   "flow": 10,
   "key_files": 10,
   "paths_checked": 61,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "zc-xzc__embodied-ai-learning-handbook.json",
+  "repo": "zc-xzc/embodied-ai-learning-handbook",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 7,
+  "flow": 9,
+  "key_files": 8,
+  "paths_checked": 39,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],

@@ -1,0 +1,83 @@
+{
+  "repo": "modelcontextprotocol/servers",
+  "name": "MCP Servers",
+  "one_liner": "MCP 官方参考 Server 合集，含 7 个互相独立的实现",
+  "problem": "展示如何用 MCP SDK 给 LLM 提供受控的工具、资源与提示访问；提供文件系统、Git、知识图谱记忆等 7 个可即插即用的参考 server，作为自建 server 的教学范本。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "everything 参考服务器", "role": "演示 MCP 全特性：prompts、resources、tools、sampling、roots、logging 与多种传输", "file": "src/everything/index.ts"},
+    {"name": "filesystem 参考服务器", "role": "带 Roots 访问控制的安全文件操作，演示路径校验与权限边界", "file": "src/filesystem/index.ts"},
+    {"name": "memory 参考服务器", "role": "基于本地知识图谱的持久记忆：实体、关系、观察三元组，让模型跨会话记住信息", "file": "src/memory/index.ts"},
+    {"name": "sequentialthinking 参考服务器", "role": "通过可修订的思考序列实现动态、反思式问题求解", "file": "src/sequentialthinking/index.ts"},
+    {"name": "fetch 参考服务器", "role": "Python 实现：抓取网页并转换为便于 LLM 消费的内容", "file": "src/fetch/src/mcp_server_fetch/server.py"},
+    {"name": "git 参考服务器", "role": "Python 实现：读取、搜索与操作 Git 仓库", "file": "src/git/src/mcp_server_git/server.py"},
+    {"name": "time 参考服务器", "role": "Python 实现：时区查询与时间转换", "file": "src/time/src/mcp_server_time/server.py"},
+    {"name": "npm workspaces 根清单", "role": "把 src/* 组织为 monorepo，统一 build/publish-all/link-all 与依赖覆盖", "file": "package.json"}
+  ],
+  "layers": [
+    {"name": "合集索引与治理层", "role": "README 列出参考 server 清单，CONTRIBUTING/CODE_OF_CONDUCT/SECURITY/RELEASING 定义维护规则", "modules": ["."], "files": ["README.md", "CONTRIBUTING.md", "ADDITIONAL.md"]},
+    {"name": "工作区与构建层", "role": "以 npm workspaces 声明 src/* 为子包，tsconfig 统一 TS 编译目标", "modules": ["."], "files": ["package.json", "tsconfig.json"]},
+    {"name": "TypeScript 参考服务器层", "role": "4 个 TS 实现的独立 server，各自 package.json、Dockerfile、__tests__ 与 vitest 配置", "modules": ["src/everything", "src/filesystem", "src/memory", "src/sequentialthinking"], "files": ["src/everything/index.ts", "src/filesystem/index.ts", "src/memory/index.ts", "src/sequentialthinking/index.ts"]},
+    {"name": "Python 参考服务器层", "role": "3 个 Python 实现的独立 server，各自 pyproject.toml、uv.lock、Dockerfile 与 tests", "modules": ["src/fetch", "src/git", "src/time"], "files": ["src/fetch/src/mcp_server_fetch/server.py", "src/git/src/mcp_server_git/server.py", "src/time/src/mcp_server_time/server.py"]},
+    {"name": "协议文档接入层", "role": "仓库自身挂载一个 MCP docs server，便于开发时查阅协议规范", "modules": ["."], "files": [".mcp.json"]},
+    {"name": "CI/CD 与发布层", "role": "动态发现 src 下的包，按语言分别测试/构建/发布，并用脚本完成版本发布", "modules": [".github/workflows", "scripts"], "files": ["scripts/release.py", ".github/workflows/typescript.yml", ".github/workflows/python.yml", ".github/workflows/release.yml"]}
+  ],
+  "data_flow": [
+    "第1步：读 README.md，确认这是参考实现合集，并看到 7 个 Reference Servers 清单",
+    "第2步：选定一个 server，例如 Memory，进入 src/memory 目录",
+    "第3步：读该目录的 README.md，了解它的能力与暴露的工具",
+    "第4步：TypeScript server 直接用 npx 运行，例如 npx -y @modelcontextprotocol/server-memory",
+    "第5步：Python server 用 uvx 或 pip 运行，例如 uvx mcp-server-git",
+    "第6步：在 MCP 客户端（如 Claude Desktop）的 mcpServers 配置中登记该 server",
+    "第7步：客户端启动后通过 stdio 或 Streamable HTTP 建立连接，server 执行 registerTools/registerResources/registerPrompts",
+    "第8步：客户端调用工具，server 执行并把结果返回给模型",
+    "第9步：想找更多社区 server，转 ADDITIONAL.md 或官方 MCP Registry"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "合集总入口与 7 个 server 的索引"},
+    {"path": "package.json", "what": "工作区脚本入口：build、watch、publish-all、link-all"},
+    {"path": "scripts/release.py", "what": "版本发布脚本入口"},
+    {"path": "src/everything/index.ts", "what": "一个 TypeScript server 的完整骨架入口"},
+    {"path": "src/git/src/mcp_server_git/server.py", "what": "一个 Python server 的实现入口"},
+    {"path": "src/git/pyproject.toml", "what": "Python 包定义与 console script 入口"},
+    {"path": ".mcp.json", "what": "仓库自身的 MCP docs server 接入配置"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立「这是参考实现合集、非生产产品」的定位与 server 清单"},
+    {"path": "CLAUDE.md", "why": "最好的 monorepo 总览：结构、构建命令、代码风格、CI 与关键模式一页说清"},
+    {"path": "package.json", "why": "理解 workspaces 如何把 src/* 组织成 monorepo 及依赖覆盖"},
+    {"path": "src/everything/index.ts", "why": "一个 TS server 的最小完整骨架，理解 registerTools 等注册模式"},
+    {"path": "src/everything/docs/architecture.md", "why": "everything server 的架构说明，适合作为 MCP 全特性范例"},
+    {"path": "src/memory/index.ts", "why": "看一个具体业务 server 如何实现知识图谱记忆"},
+    {"path": "src/git/src/mcp_server_git/server.py", "why": "对比 Python 版本的 server 写法与 pyproject 配置"},
+    {"path": "CONTRIBUTING.md", "why": "理解「只收 issue 不收外部 PR」的独特协作政策"},
+    {"path": "RELEASING.md", "why": "了解 OIDC 可信发布流程与失败重试方式"},
+    {"path": "scripts/release.py", "why": "发布自动化的具体实现"}
+  ],
+  "extension_points": [
+    "想新增一个 server：本仓库不接受（CONTRIBUTING 与 CLAUDE.md 指向 MCP Server Registry）；技术上可在 src/ 下新增 workspace 包",
+    "想给某个 server 加工具：改该 server 的 index.ts 或 server.py 中的 registerTools",
+    "想演示更多协议特性如 Resources/Prompts/Roots：参考 src/everything 的注册方式",
+    "想改构建或发布：调整 package.json 的 workspaces 脚本、.github/workflows 与 scripts/release.py",
+    "想加 Python 依赖或改入口命令：改对应 src/*/pyproject.toml 的 dependencies 与 project.scripts",
+    "想加新语言实现的 server：需按 CONTRIBUTING 的维护者工作流提交 issue，而非直接 PR"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，建立「参考实现合集」的整体认知与 server 清单",
+    "第2步：读 CLAUDE.md，拿到 monorepo 全貌、构建命令与代码约定",
+    "第3步：读 src/everything/index.ts 与 docs/architecture.md，学 MCP server 的骨架与全特性",
+    "第4步：读 src/memory/index.ts，看一个具体业务 server 如何组织工具与状态",
+    "第5步：读 src/git/src/mcp_server_git/server.py 与 pyproject.toml，对比 Python 写法",
+    "第6步：读 CONTRIBUTING.md 与 RELEASING.md，理解维护者 AI 提示驱动的协作与发布方式"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户读 README] --> B[选择某个 server]\n  B --> C[进入 src 对应目录]\n  C --> D[读该 server README]\n  D --> E[用 npx 或 uvx 运行]\n  E --> F[写入 MCP 客户端配置]\n  F --> G[客户端建立连接]\n  G --> H[server 注册工具与资源]\n  H --> I[客户端调用工具]\n  I --> J[返回结果给模型]",
+  "surprises": [
+    "这是合集型仓库而非单一项目：7 个互相独立的 server，4 个 TypeScript 加 3 个 Python，没有统一运行时，只靠 npm workspaces 与 CI 约定维系",
+    "CONTRIBUTING 明确「只接受 issue，不接受外部 PR」：设计实现由维护者以 AI 提示驱动的工作流完成，外部贡献者被要求提交 prompt 而非代码",
+    "默认分支 main 与开发分支 v2/main 分离，改动要等里程碑发布才并入 main，issue 表单的改动不会立即生效",
+    "仓库自我定位为参考实现而非生产可用，安全需使用者按自身威胁模型自行加固；GitHub、Slack、Postgres 等旧 server 已迁到 servers-archived 仓库",
+    "根目录 CONTRIBUTING.md 引用了 ./AGENTS.md，但本工作树根目录并未见到该文件，仅 src/everything/AGENTS.md 存在",
+    "因此本份分析置信度标为中：合集没有统一架构，只能按「组织方式与类别」来描述"
+  ],
+  "confidence": "中"
+}

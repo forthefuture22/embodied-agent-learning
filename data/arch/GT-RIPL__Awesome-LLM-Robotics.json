@@ -1,0 +1,70 @@
+{
+  "repo": "GT-RIPL/Awesome-LLM-Robotics",
+  "name": "Awesome-LLM-Robotics",
+  "one_liner": "LLM 与多模态模型用于机器人和 RL 的论文清单",
+  "problem": "系统整理用大语言与多模态模型做机器人推理、规划、操作与导航的论文，供研究者快速检索、选题与追踪前沿。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Surveys 综述", "role": "具身智能安全、语言接地、机器人基础模型等方向的综述论文索引", "file": "README.md"},
+    {"name": "Reasoning 推理", "role": "空间推理、失败检测、关系关键点约束等视觉语言模型推理工作", "file": "README.md"},
+    {"name": "Planning 规划", "role": "用 LLM 或 VLM 做任务规划、TAMP、行为树生成与重规划的工作", "file": "README.md"},
+    {"name": "Manipulation 操作", "role": "LLM 引导的操作、奖励生成、技能学习与 VLA 相关工作", "file": "README.md"},
+    {"name": "Instructions and Navigation 指令与导航", "role": "视觉语言导航、语义地图与开放词表导航", "file": "README.md"},
+    {"name": "Simulation Frameworks 仿真框架", "role": "ManiSkill3、Genesis、Habitat、BEHAVIOR 等仿真与基准平台", "file": "README.md"},
+    {"name": "Safety 安全与红队", "role": "越狱、后门攻击、安全护栏与对抗测试", "file": "README.md"},
+    {"name": "Libraries and Tools 库与工具", "role": "配套训练与工具库（如 VeRL-Omni）索引", "file": "README.md"}
+  ],
+  "layers": [
+    {"name": "综述与总览层", "responsibility": "提供领域综述，帮助建立研究版图", "modules": ["Surveys"], "files": ["README.md"]},
+    {"name": "认知与推理层", "responsibility": "让模型理解空间关系、失败与物体属性", "modules": ["Reasoning"], "files": ["README.md"]},
+    {"name": "规划与决策层", "responsibility": "把语言转成可执行的任务或动作序列", "modules": ["Planning"], "files": ["README.md"]},
+    {"name": "操作执行层", "responsibility": "操作策略、奖励函数生成与技能学习", "modules": ["Manipulation"], "files": ["README.md"]},
+    {"name": "导航与指令层", "responsibility": "语言指令驱动的导航与语义地图表示", "modules": ["Instructions and Navigation"], "files": ["README.md"]},
+    {"name": "仿真与工具层", "responsibility": "承载实验的仿真框架与配套工具库", "modules": ["Simulation Frameworks", "Libraries and Tools"], "files": ["README.md"]},
+    {"name": "安全与风险层", "responsibility": "部署安全、攻击与红队测试视角", "modules": ["Safety, Risks, Red Teaming"], "files": ["README.md"]}
+  ],
+  "data_flow": [
+    "第1步：读 README 开头的 Overview 目录，了解八大主题分类",
+    "第2步：先读 Surveys 综述，建立 LLM 加机器人研究的整体脉络",
+    "第3步：按兴趣进入 Reasoning 或 Planning，看推理与规划两类范式",
+    "第4步：读 Manipulation，了解 LLM 如何落到具体操作与奖励生成",
+    "第5步：读 Instructions and Navigation，补充导航与语言指令方向",
+    "第6步：读 Simulation Frameworks，了解承载实验的仿真平台",
+    "第7步：关注 Safety 一节，理解部署风险与对抗测试",
+    "第8步：参考 Libraries and Tools，找到可直接上手的训练或工具库",
+    "第9步：条目按时间倒序排列，可从头浏览最新工作并顺引用链深挖"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "唯一入口，含 Overview 目录与全部论文条目"},
+    {"path": "how-to-PR.md", "what": "贡献指南，说明论文提交格式与倒序排列要求"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "整个仓库的全部内容都在这一份清单里，先通读 Overview 建立分类感"},
+    {"path": "how-to-PR.md", "why": "了解条目格式与贡献规范，理解这份清单如何维护"},
+    {"path": "LICENSE", "why": "仓库许可协议，使用与引用前需确认"}
+  ],
+  "extension_points": [
+    "只做论文索引，不含代码、教程或评测结果",
+    "不提供阅读顺序或难度分级，需读者自行判断取舍",
+    "条目按倒序时间排列但无摘要，需逐条点开原文",
+    "部分条目信息不全，例如只有 Paper 链接而没有 Code",
+    "以 LLM 与多模态加机器人为主，不覆盖纯控制、纯 RL 或纯视觉基础模型"
+  ],
+  "learning_path": [
+    "第1步：读 README 的 Overview，记住八大主题分类",
+    "第2步：先过一遍 Surveys，建立研究版图",
+    "第3步：按你的方向（规划 / 操作 / 导航）挑一个主题精读代表论文",
+    "第4步：按时间倒序追踪最新工作，形成时间线",
+    "第5步：对照 Simulation Frameworks 找到可复现的实验平台",
+    "第6步：关注 Safety 一节，补上部署风险视角"
+  ],
+  "diagram_mermaid": "graph TD\n  A[读 Overview 目录] --> B[Surveys 综述]\n  B --> C[Reasoning 推理]\n  B --> D[Planning 规划]\n  C --> E[Manipulation 操作]\n  D --> E\n  E --> F[Instructions and Navigation 导航]\n  F --> G[Simulation Frameworks 仿真]\n  G --> H[Safety 安全与红队]\n  H --> I[Libraries and Tools 工具]\n  I --> J[顺时间倒序追踪前沿]",
+  "surprises": [
+    "整个仓库只有一个 README.md，是纯清单型资源，无代码无目录",
+    "条目严格按时间倒序排列，最新的工作在每节最前",
+    "收录范围横跨推理、规划、操作、导航、仿真与安全，甚至包含社会偏见议题",
+    "由 GT-RIPL 维护，2022 年创建并持续更新到 2026 年",
+    "条目多指向 arXiv 编号，随时间可能出现失效或版本变更"
+  ],
+  "confidence": "高"
+}

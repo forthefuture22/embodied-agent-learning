@@ -1,0 +1,71 @@
+{
+  "repo": "robotics-survey/Awesome-Robotics-Foundation-Models",
+  "name": "Awesome-Robotics-Foundation-Models",
+  "one_liner": "机器人基础模型综述配套的论文索引清单",
+  "problem": "作为综述论文《Foundation Models in Robotics》的配套仓库，按论文 Figure 1 的组织方式索引机器人基础模型及相关感知工作。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Survey 综述", "role": "仓库对应的综述论文《Foundation Models in Robotics》引用入口与出处", "file": "README.md"},
+    {"name": "Robotics 机器人应用", "role": "神经缩放律、策略学习、价值学习、任务规划、机器人 Transformer、in-context 学习、开放词表导航操作", "file": "README.md"},
+    {"name": "Relevant to Robotics 感知相关", "role": "开放词表检测、分割、3D 场景表示、物体表示、affordance 与预测模型", "file": "README.md"},
+    {"name": "Embodied AI 具身智能", "role": "具身推理、开放世界多任务 agent 与通用智能体", "file": "README.md"},
+    {"name": "Generalist AI 通用智能体", "role": "通用 agent 与生成式仿真", "file": "README.md"},
+    {"name": "Simulators 仿真器", "role": "Gibson、Habitat、iGibson、BEHAVIOR、LIBERO 等仿真与基准平台", "file": "README.md"},
+    {"name": "Survey Tree 分类图", "role": "以图片形式呈现论文的组织树，对应论文 Figure 1", "file": "survey_tree.png"}
+  ],
+  "layers": [
+    {"name": "综述与分类层", "responsibility": "提供综述引用与整体分类树，作为全仓导航", "modules": ["Survey", "Survey Tree"], "files": ["README.md", "survey_tree.png"]},
+    {"name": "机器人策略与规划层", "responsibility": "决策控制、价值学习、LLM 任务规划、代码生成与 Transformer 范式", "modules": ["Policy Learning", "Task Planning", "Robot Transformers", "LLM-Based Code Generation"], "files": ["README.md"]},
+    {"name": "开放词表与操作层", "responsibility": "开放词表导航与操作、in-context 决策学习", "modules": ["Open-Vocabulary Navigation and Manipulation", "In-context Learning"], "files": ["README.md"]},
+    {"name": "感知基础层", "responsibility": "检测、分割、3D 场景与物体表示等感知基础模型", "modules": ["Object Detection", "Semantic Segmentation", "3D Scene Representations", "Object Representations"], "files": ["README.md"]},
+    {"name": "Affordance 与预测层", "responsibility": "可操作性信息与视频、世界模型等预测模型", "modules": ["Affordance Information", "Predictive Models"], "files": ["README.md"]},
+    {"name": "具身与通用智能层", "responsibility": "具身推理、开放世界 agent 与通用智能体", "modules": ["Embodied AI", "Generalist AI"], "files": ["README.md"]},
+    {"name": "仿真器层", "responsibility": "承载实验的仿真环境与基准平台", "modules": ["Simulators"], "files": ["README.md"]}
+  ],
+  "data_flow": [
+    "第1步：读 README 顶部说明，理解它按论文 Figure 1 组织内容",
+    "第2步：看 survey_tree.png，先建立整体论文分类树",
+    "第3步：读 Survey 一节，定位到对应的综述论文",
+    "第4步：按 Table of Contents 顺序读 Robotics 部分的策略学习与规划",
+    "第5步：读 Robot Transformers 与 In-context Learning，理解建模范式",
+    "第6步：读开放词表导航与操作，衔接感知与决策",
+    "第7步：读 Relevant to Robotics 的感知基础（检测、分割、3D、物体）",
+    "第8步：读 Affordance 与 Predictive Models，补充可操作性与预测",
+    "第9步：读 Embodied AI、Generalist AI 与 Simulators，收尾于具身与仿真平台"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "唯一入口，含 Table of Contents 与全部论文条目"},
+    {"path": "survey_tree.png", "what": "论文分类树图，对应综述论文 Figure 1"},
+    {"path": "LICENSE", "what": "仓库许可协议"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "全部论文条目所在，含 Table of Contents 与引用信息"},
+    {"path": "survey_tree.png", "why": "一张图看清论文如何分类，对应论文 Figure 1"},
+    {"path": "LICENSE", "why": "许可协议，使用与引用前需确认"},
+    {"path": ".gitignore", "why": "仓库忽略规则，佐证它仅维护 README 的轻量结构"}
+  ],
+  "extension_points": [
+    "只做论文索引，不含代码实现、实验复现或教程",
+    "内容相对陈旧，最后更新停留在 2024 年 10 月，之后的新工作未收录",
+    "组织方式强绑定综述论文 Figure 1，脱离论文独立使用时不直观",
+    "条目多为 2024 年之前的经典工作，2025 至 2026 前沿需另找资源",
+    "无难度分级与阅读顺序建议，需读者自行筛选"
+  ],
+  "learning_path": [
+    "第1步：读 README 顶部说明，理解按 Figure 1 组织的逻辑",
+    "第2步：看 survey_tree.png 建立论文分类树",
+    "第3步：读对应综述论文，建立整体框架",
+    "第4步：按 Robotics 部分精读策略学习与规划代表工作",
+    "第5步：读感知与 affordance 部分，补齐基础模型视角",
+    "第6步：以 Simulators 收尾，找到可实验的平台"
+  ],
+  "diagram_mermaid": "graph TD\n  A[读 README 说明] --> B[看 survey_tree 分类图]\n  B --> C[读综述论文 Figure 1]\n  C --> D[Robotics 策略学习与规划]\n  D --> E[Robot Transformers 与 ICL]\n  E --> F[开放词表导航与操作]\n  F --> G[感知基础 检测 分割 3D]\n  G --> H[Affordance 与 Predictive Models]\n  H --> I[Embodied AI 与 Generalist AI]\n  I --> J[Simulators 仿真平台]",
+  "surprises": [
+    "是综述论文《Foundation Models in Robotics》的配套仓库，结构严格照搬论文 Figure 1",
+    "整仓几乎只有一份 README.md 和一张分类图 survey_tree.png，无代码无目录",
+    "最后更新停留在 2024 年 10 月，之后的前沿工作（如新 VLA、世界模型）未收录",
+    "分类把机器人应用与「对机器人相关的感知基础模型」明确分开，体现基础模型视角",
+    "定位是面向已读综述的机器人研究者的快速参考，而非入门教程"
+  ],
+  "confidence": "高"
+}

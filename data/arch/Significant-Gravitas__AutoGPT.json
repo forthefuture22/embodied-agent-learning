@@ -1,0 +1,96 @@
+{
+  "repo": "Significant-Gravitas/AutoGPT",
+  "name": "AutoGPT",
+  "one_liner": "用可视化积木搭工作流并运行自主 AI 智能体的开源平台",
+  "problem": "要让 AI 完成多步真实工作，需要把模型、工具、触发与人工审批编排成可靠流程。AutoGPT 用可复用积木加有向图表达工作流，配分布式执行器与 AI 辅助建图，把一次性脚本变成可调度、可观测、可扩展的 agent。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Block", "role": "可复用的能力积木，声明输入输出 schema 与异步生成器 run，是平台最小执行单元", "file": "autogpt_platform/backend/backend/blocks/_base.py"},
+    {"name": "BlockSchema", "role": "基于 Pydantic 的输入输出契约，负责校验、生成 JSON Schema 与推导凭据字段", "file": "autogpt_platform/backend/backend/blocks/_base.py"},
+    {"name": "Node", "role": "图中一个具体的 Block 实例，持有块引用与已配置的输入值", "file": "autogpt_platform/backend/backend/data/graph.py"},
+    {"name": "Link", "role": "节点之间的有向数据连线，声明源节点某输出接到目标节点某输入", "file": "autogpt_platform/backend/backend/data/graph.py"},
+    {"name": "Graph 与 GraphModel", "role": "节点与连线组成的工作流，负责输入输出 schema 推导、结构校验与数据库读写", "file": "autogpt_platform/backend/backend/data/graph.py"},
+    {"name": "ExecutionManager", "role": "消费 RabbitMQ 执行消息，创建执行上下文并按拓扑顺序调度节点执行", "file": "autogpt_platform/backend/backend/executor/manager.py"},
+    {"name": "Scheduler", "role": "按 cron 定时触发图执行，是三种触发方式之一", "file": "autogpt_platform/backend/backend/executor/scheduler.py"},
+    {"name": "CoPilot", "role": "对话式助手，读图结构并用自然语言帮用户生成、修改与解释工作流", "file": "autogpt_platform/backend/backend/copilot/engine.py"},
+    {"name": "SDK 自动注册表", "role": "自动发现并注册 block、provider 与其凭据、OAuth、webhook 配置", "file": "autogpt_platform/backend/backend/sdk/registry.py"},
+    {"name": "Credentials 与 Provider", "role": "凭据抽象与服务商枚举，统一管理 OAuth 与 API key 的存取与绑定", "file": "autogpt_platform/backend/backend/integrations/providers.py"},
+    {"name": "ForgeAgent", "role": "classic 侧基于组件与协议的 agent 框架，用命令与协议拼装自主代理", "file": "classic/forge/forge/agent/forge_agent.py"}
+  ],
+  "layers": [
+    {"name": "说明与顶层配置层", "responsibility": "讲清平台与经典两部分的定位、许可、自托管与托管两种用法", "modules": ["."], "files": ["README.md", "AGENTS.md", "CONTRIBUTING.md"]},
+    {"name": "图与执行层", "responsibility": "定义工作流数据模型并驱动执行：图校验、调度、队列消费与状态推送", "modules": ["autogpt_platform/backend/backend/data", "autogpt_platform/backend/backend/executor"], "files": ["autogpt_platform/backend/backend/data/graph.py", "autogpt_platform/backend/backend/executor/manager.py", "autogpt_platform/backend/backend/executor/scheduler.py"]},
+    {"name": "能力积木层", "responsibility": "上百个可复用 Block，覆盖基础、AI、集成与代码执行等能力", "modules": ["autogpt_platform/backend/backend/blocks"], "files": ["autogpt_platform/backend/backend/blocks/_base.py", "autogpt_platform/backend/backend/blocks/__init__.py", "autogpt_platform/backend/backend/blocks/basic.py", "autogpt_platform/backend/backend/blocks/agent.py"]},
+    {"name": "集成与凭据层", "responsibility": "管理第三方服务商、OAuth、webhook 与 MCP 目录，让积木能连到外部系统", "modules": ["autogpt_platform/backend/backend/integrations"], "files": ["autogpt_platform/backend/backend/integrations/providers.py"]},
+    {"name": "智能助手层", "responsibility": "CoPilot 对话式建图与优化，含聊天桥、执行器、工具与能力发现", "modules": ["autogpt_platform/backend/backend/copilot"], "files": ["autogpt_platform/backend/backend/copilot/engine.py", "autogpt_platform/backend/backend/copilot/bot/app.py"]},
+    {"name": "API 服务层", "responsibility": "对外提供 REST 与 WebSocket 接口，处理认证、中间件与实时状态", "modules": ["autogpt_platform/backend/backend/api"], "files": ["autogpt_platform/backend/backend/api/rest_api.py", "autogpt_platform/backend/backend/api/ws_api.py"]},
+    {"name": "SDK 扩展层", "responsibility": "提供写新积木与接入新服务商的 SDK 与自动注册机制", "modules": ["autogpt_platform/backend/backend/sdk"], "files": ["autogpt_platform/backend/backend/sdk/registry.py", "autogpt_platform/backend/backend/sdk/builder.py"]},
+    {"name": "前端可视化构建层", "responsibility": "Next.js 前端，提供 Build 画布、Agents 面板、Marketplace 与 AutoPilot 聊天", "modules": ["autogpt_platform/frontend/src"], "files": ["autogpt_platform/frontend/src/app", "autogpt_platform/frontend/README.md"]},
+    {"name": "部署与安装层", "responsibility": "一键起全部服务的 compose 与单容器安装脚本，支撑自托管", "modules": ["autogpt_platform/single-container", "autogpt_platform/installer"], "files": ["autogpt_platform/docker-compose.yml", "autogpt_platform/single-container/README.md", "autogpt_platform/installer/install.sh"]},
+    {"name": "Classic 经典代理层", "responsibility": "保留原始自主 agent 与 Forge 组件式框架，MIT 许可", "modules": ["classic"], "files": ["classic/README.md", "classic/forge/forge/app.py", "classic/forge/forge/agent/forge_agent.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户在 Build 画布拖拽 Block 并用 Link 连成 Graph，或在 AutoPilot 里用自然语言描述目标",
+    "第2步：后端把 Graph、Node、Link 按 Prisma 数据模型持久化到 Postgres",
+    "第3步：触发有三种：用户在界面手动运行、Scheduler 按 cron 定时、外部 Webhook 事件",
+    "第4步：执行请求进入 RabbitMQ，ExecutionManager 消费消息并创建执行上下文",
+    "第5步：ExecutionManager 按拓扑顺序调度节点，把上游输出经 Link 注入下游节点输入",
+    "第6步：每个节点调用其 Block.run，产出若干输出名到数据的流",
+    "第7步：执行状态、耗时与成本经 WebSocket 实时推送给前端",
+    "第8步：遇到标注为不可逆或敏感的 Block，执行在动作前暂停等待人工审批",
+    "第9步：节点失败时按错误处理策略重试、跳过或终止整图",
+    "第10步：执行完成后结果落库并通知用户",
+    "第11步：CoPilot 可读当前 Graph 结构，用对话帮用户新建或修改节点与连线"
+  ],
+  "entry_points": [
+    {"path": "autogpt_platform/backend/backend/app.py", "what": "后端多进程主入口，拉起数据库、调度器、执行器、API 与 CoPilot"},
+    {"path": "autogpt_platform/docker-compose.yml", "what": "一键启动全部平台服务，自托管的首选入口"},
+    {"path": "autogpt_platform/backend/backend/blocks/__init__.py", "what": "动态发现并加载全部 Block 的入口"},
+    {"path": "autogpt_platform/backend/backend/api/rest_api.py", "what": "REST API 服务，暴露图、执行与积木相关接口"},
+    {"path": "autogpt_platform/backend/backend/api/ws_api.py", "what": "WebSocket 服务，推送执行进度与状态"},
+    {"path": "autogpt_platform/backend/backend/executor/manager.py", "what": "执行管理器，消费队列并调度节点执行"},
+    {"path": "autogpt_platform/backend/backend/copilot/bot/app.py", "what": "CoPilot 聊天桥入口，连接对话与建图能力"},
+    {"path": "autogpt_platform/frontend/src/app", "what": "前端应用路由根，Build 画布与 Agents 面板都在此"},
+    {"path": "classic/forge/forge/app.py", "what": "classic Forge 应用入口，组装组件式 agent 与协议服务"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先认清仓库分 autogpt_platform 平台与 classic 经典两部分，以及两套许可"},
+    {"path": "autogpt_platform/README.md", "why": "平台自托管快速上手，配合 docker compose 把系统跑起来"},
+    {"path": "autogpt_platform/backend/backend/blocks/_base.py", "why": "Block 与 BlockSchema 的定义，是理解整套能力体系的核心"},
+    {"path": "autogpt_platform/backend/backend/blocks/__init__.py", "why": "Block 如何被自动发现与加载，理解扩展点必读"},
+    {"path": "autogpt_platform/backend/backend/data/graph.py", "why": "Node、Link、Graph 与图校验，理解工作流数据模型"},
+    {"path": "autogpt_platform/backend/backend/executor/manager.py", "why": "ExecutionManager 与 ExecutionProcessor，理解执行如何调度"},
+    {"path": "autogpt_platform/backend/backend/app.py", "why": "后端进程拓扑一览，快速看清平台有哪些常驻服务"},
+    {"path": "autogpt_platform/backend/backend/executor/scheduler.py", "why": "定时触发实现，理解非手动运行如何发生"},
+    {"path": "autogpt_platform/backend/backend/copilot/engine.py", "why": "CoPilot 执行引擎选择与对话建图的入口"},
+    {"path": "autogpt_platform/backend/backend/sdk/registry.py", "why": "SDK 自动注册机制，写新积木与接新服务商的关键"}
+  ],
+  "extension_points": [
+    "想加一个新能力积木：在 autogpt_platform/backend/backend/blocks 下新建 Block 子类，定义 Input/Output 的 BlockSchema 与异步 run",
+    "想接入新服务商与凭据：在 autogpt_platform/backend/backend/integrations/providers.py 与 sdk/registry.py 注册 provider",
+    "想加新的触发方式：用 BlockType.WEBHOOK 与 BlockWebhookConfig，或扩展 executor/scheduler.py",
+    "想改执行调度策略：改 autogpt_platform/backend/backend/executor/manager.py 的 ExecutionManager 与 ExecutionProcessor",
+    "想改图的合法性规则：改 autogpt_platform/backend/backend/data/graph.py 的 validate_graph 系列方法",
+    "想扩展 CoPilot 能力：改 autogpt_platform/backend/backend/copilot 下的 tools 与 capabilities",
+    "想用 classic 组件式 agent：改 classic/forge/forge/components 下的组件或新增 protocol"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，认清仓库由 autogpt_platform 平台与 classic 经典两部分构成且许可不同",
+    "第2步：读 autogpt_platform/README.md 与 docker-compose.yml，先把平台跑起来再读代码",
+    "第3步：读 autogpt_platform/backend/backend/blocks/_base.py 的 Block 与 BlockSchema，理解能力积木如何定义",
+    "第4步：读 autogpt_platform/backend/backend/blocks/__init__.py，理解积木如何被动态发现与加载",
+    "第5步：读 autogpt_platform/backend/backend/data/graph.py 的 Node、Link、Graph，理解工作流数据模型",
+    "第6步：读 autogpt_platform/backend/backend/executor/manager.py，理解执行如何被队列驱动并按拓扑调度",
+    "第7步：读 autogpt_platform/backend/backend/executor/scheduler.py 与 copilot/engine.py，理解触发与 AI 辅助建图",
+    "第8步：读 classic/README.md 与 classic/forge/forge/agent/forge_agent.py，理解经典组件式 agent"
+  ],
+  "diagram_mermaid": "graph TD\n  USER[用户在画布或 AutoPilot 描述目标] --> GRAPH[Graph 节点与连线工作流]\n  GRAPH --> DB[Postgres 持久化]\n  TRIG[手动 定时 Webhook 三种触发] --> QUEUE[RabbitMQ 执行队列]\n  QUEUE --> EXEC[ExecutionManager 消费并调度]\n  EXEC --> NODE[按拓扑顺序执行 Node]\n  NODE --> BLOCK[调用 Block.run 产出输出流]\n  BLOCK --> LINK[经 Link 注入下游节点输入]\n  EXEC --> WS[WebSocket 推送状态与成本]\n  WS --> USER\n  COPILOT[CoPilot 对话生成与改图] --> GRAPH\n  EXEC --> OUT[结果落库并通知]",
+  "surprises": [
+    "一个仓库里其实是两个产品：autogpt_platform 是现代可视化 agent 平台用 Polyform Shield 许可，classic 是原始自主 agent 用 MIT 许可，两者代码几乎不共享",
+    "与仓库以文档配置为主的印象相反，这里有完整可运行的平台源码：FastAPI 后端、Next.js 前端、RabbitMQ 执行器与 Prisma 数据模型",
+    "Block 的 run 是异步生成器而非普通函数，一个 block 能按不同输出名多次 yield，这是图能分支的根本原因",
+    "执行是消息队列驱动、可水平扩展的，docker compose 支持把 executor 扩到多实例，与早期单进程 AutoGPT 完全不同",
+    "不可逆与敏感动作在 Block 层被显式标注，执行前需要人工审批，这是给自主 agent 加的安全护栏"
+  ],
+  "confidence": "高"
+}

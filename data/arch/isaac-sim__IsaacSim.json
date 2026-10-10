@@ -1,0 +1,92 @@
+{
+  "repo": "isaac-sim/IsaacSim",
+  "name": "IsaacSim 技能库发布仓库",
+  "one_liner": "面向 Isaac Sim 仿真的 Claude Code 智能体技能库，含 37 个技能与编排器",
+  "problem": "Isaac Sim 功能庞杂、API 与最佳实践分散，智能体难以稳定完成建场景、加物理、接传感器、渲染与产数据等长链路任务。本仓库把领域知识固化成可被智能体发现、路由与复用的技能文件，让多步仿真任务可重复执行。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "SKILL.md", "role": "单个技能的定义文件，YAML frontmatter 声明名称与触发描述，正文写流程、脚本与故障排查，是整套库的基本单元", "file": ".claude/skills/isaac-sim-orchestrator/SKILL.md"},
+    {"name": "isaac-sim-orchestrator", "role": "顶层编排技能，把自然语言请求映射到专门技能，并按四阶段顺序执行与校验", "file": ".claude/skills/isaac-sim-orchestrator/SKILL.md"},
+    {"name": "技能路由表", "role": "请求信号到目标技能的映射与交接契约，是编排器不亲自干活、只做分派的关键", "file": ".claude/skills/isaac-sim-workflow/SKILL.md"},
+    {"name": "环境变量契约", "role": "ISAAC_SIM_DIR、ISAAC_LAB_DIR、WORKSPACE_DIR 等共享变量，所有技能靠它保持可移植，避免写死绝对路径", "file": ".claude/skills/isaac-sim-orchestrator/SKILL.md"},
+    {"name": "四阶段执行流程", "role": "验证基础、增量集成、打磨交付、蒸馏，复杂任务按此推进，每个失败只有一个新变量", "file": ".claude/skills/isaac-sim-orchestrator/SKILL.md"},
+    {"name": "Meta-Skilling Framework", "role": "从零构建技能的发现、练习、记录、验证、迭代五阶段方法论，配套 SKILL.md 模板", "file": ".claude/skills/meta-skills/SKILL.md"},
+    {"name": "skill-distillation", "role": "把一次会话里的新经验、纠错与变通固化成技能文件更新的记忆循环，强制以提案形式进行", "file": ".claude/skills/skill-distillation/SKILL.md"},
+    {"name": "质量门", "role": "isaac-sim-validator 作为交付前的校验关卡，检查废弃导入、硬编码路径、灯光缺失与黑帧", "file": ".claude/skills/isaac-sim-validator/SKILL.md"},
+    {"name": "SDG 数据生成", "role": "data-collection-sim 与 mobility-gen 用 Replicator 产出带标注的合成数据，是仿真到训练数据的桥梁", "file": ".claude/skills/data-collection-sim/SKILL.md"},
+    {"name": "三文件模式", "role": "关注点分离：流程留在 SKILL.md，可执行代码抽到 scripts/，深度参考抽到 references/", "file": ".claude/skills/meta-skills/SKILL.md"},
+    {"name": "evals 评测样例", "role": "每个技能目录下的评测数据，用于验证技能是否被正确触发与执行", "file": ".claude/skills/meta-skills/evals/evals.json"}
+  ],
+  "layers": [
+    {"name": "仓库根层", "responsibility": "只有一份 C++ 风格配置与 .claude 目录，表明这是发布型仓库而非 Isaac Sim 源码仓库", "modules": ["."], "files": [".clang-format"]},
+    {"name": "技能库根层", "responsibility": "承载全部技能目录，每个目录含 SKILL.md 与可选的 scripts、references、evals", "modules": [".claude/skills"], "files": [".claude/skills/meta-skills/SKILL.md"]},
+    {"name": "编排与元技能层", "responsibility": "负责路由、交付物界定、技能编写与经验固化，是这套库的大脑", "modules": [".claude/skills/isaac-sim-orchestrator", ".claude/skills/isaac-sim-workflow", ".claude/skills/meta-skills", ".claude/skills/skill-distillation"], "files": [".claude/skills/isaac-sim-orchestrator/SKILL.md", ".claude/skills/isaac-sim-workflow/SKILL.md", ".claude/skills/meta-skills/SKILL.md", ".claude/skills/skill-distillation/SKILL.md"]},
+    {"name": "安装与部署技能层", "responsibility": "把 Isaac Sim 装起来并跑起来：二进制、Docker、Python 包安装，无头部署与远程执行", "modules": [".claude/skills/isaac-sim-installation", ".claude/skills/isaac-sim-headless-deployment", ".claude/skills/isaac-sim-remote", ".claude/skills/isaac-sim-migration"], "files": [".claude/skills/isaac-sim-installation/SKILL.md", ".claude/skills/isaac-sim-headless-deployment/SKILL.md", ".claude/skills/isaac-sim-remote/SKILL.md"]},
+    {"name": "仿真技术技能层", "responsibility": "物理、运动生成、机械臂逆解、导航等仿真核心能力", "modules": [".claude/skills/physics-simulation", ".claude/skills/motion-generation", ".claude/skills/manipulation-ik", ".claude/skills/navigation-primitives", ".claude/skills/isaac-sim-robot-navigation", ".claude/skills/mobility-gen"], "files": [".claude/skills/physics-simulation/SKILL.md", ".claude/skills/motion-generation/SKILL.md", ".claude/skills/navigation-primitives/SKILL.md"]},
+    {"name": "感知与渲染技能层", "responsibility": "传感器、相机、渲染与相机布点，决定仿真看到什么", "modules": [".claude/skills/isaac-sim-sensor", ".claude/skills/isaac-camera", ".claude/skills/isaac-sim-rendering", ".claude/skills/place-camera-aim-at", ".claude/skills/place-camera-max-coverage"], "files": [".claude/skills/isaac-sim-sensor/SKILL.md", ".claude/skills/isaac-camera/SKILL.md", ".claude/skills/isaac-sim-rendering/SKILL.md"]},
+    {"name": "数据生成技能层", "responsibility": "用 Replicator 批量产带标注合成数据，覆盖静态场景、光照变化与移动机器人轨迹", "modules": [".claude/skills/data-collection-sim", ".claude/skills/actor-sdg-sweep-config", ".claude/skills/occupancy-map"], "files": [".claude/skills/data-collection-sim/SKILL.md", ".claude/skills/data-collection-sim/scripts/minimal_sdg_pipeline.py", ".claude/skills/occupancy-map/SKILL.md"]},
+    {"name": "技能脚手架层", "responsibility": "每个技能内部统一的结构：流程文档、可执行脚本、深度参考与评测样例", "modules": [".claude/skills/isaac-sim-installation/scripts", ".claude/skills/meta-skills/references", ".claude/skills/data-collection-sim/scripts"], "files": [".claude/skills/isaac-sim-installation/scripts/preflight.py", ".claude/skills/meta-skills/references/quality-criteria.md", ".claude/skills/data-collection-sim/scripts/warehouse_sdg.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户提出自然语言请求，例如在仓库里摆 6 台 Nova 机器人并导出视频",
+    "第2步：若交付物或验收标准不明确，先由 isaac-sim-workflow 界定交付物类型、验收标准与所需证据",
+    "第3步：isaac-sim-orchestrator 读取环境契约，把请求拆成能力清单并映射到已有技能",
+    "第4步：若环境未就绪，先走 isaac-sim-installation 的 preflight 与安装流程把 Isaac Sim 装好",
+    "第5步：编排器按路由表把请求分派给专门技能：USD 资产、物理、传感器、渲染或数据生成",
+    "第6步：每个技能按自身 SKILL.md 的流程执行，必要时调用其 scripts/ 下的可执行脚本",
+    "第7步：复杂任务按四阶段推进，先逐个在隔离环境里验证基础能力，再增量集成",
+    "第8步：渲染与数据生成技能产出图像、视频或带标注的合成数据到磁盘",
+    "第9步：isaac-sim-validator 作为交付前质量门校验输出，不通过则回到对应技能修正",
+    "第10步：任务结束后 skill-distillation 把新经验、纠错与变通固化成技能文件更新提案",
+    "第11步：用户确认后写回技能文件，成为下一次会话可用的持久记忆"
+  ],
+  "entry_points": [
+    {"path": ".claude/skills/isaac-sim-orchestrator/SKILL.md", "what": "总路由入口，任何多技能仿真任务都从这里分派"},
+    {"path": ".claude/skills/isaac-sim-workflow/SKILL.md", "what": "交付物界定入口，在动手前定义验收标准与证据要求"},
+    {"path": ".claude/skills/isaac-sim-installation/SKILL.md", "what": "安装入口，指导把 Isaac Sim 以二进制、Docker 或 Python 包方式装好"},
+    {"path": ".claude/skills/meta-skills/SKILL.md", "what": "技能编写入口，讲清技能库的设计哲学与从零建技能的框架"},
+    {"path": ".claude/skills/skill-distillation/SKILL.md", "what": "经验固化入口，定义会话经验如何写回技能文件"},
+    {"path": ".claude/skills/isaac-sim-installation/scripts/preflight.py", "what": "安装前置检查脚本，探测系统、GPU、磁盘与依赖"},
+    {"path": ".claude/skills/data-collection-sim/scripts/minimal_sdg_pipeline.py", "what": "最小 SDG 管线脚本，用 Replicator 产一帧带标注数据"},
+    {"path": ".clang-format", "what": "唯一的代码风格配置，指向 Isaac Sim 的 C++ 代码规范"}
+  ],
+  "key_files": [
+    {"path": ".claude/skills/meta-skills/SKILL.md", "why": "先读它理解整套技能库的设计哲学、三文件模式与 SKILL.md 模板"},
+    {"path": ".claude/skills/isaac-sim-orchestrator/SKILL.md", "why": "顶层路由与环境契约，理解请求如何被拆解与分派"},
+    {"path": ".claude/skills/isaac-sim-workflow/SKILL.md", "why": "交付物界定与验收标准，理解这套库对真实性的要求"},
+    {"path": ".claude/skills/skill-distillation/SKILL.md", "why": "记忆循环的核心，理解技能文件为何被当作持久记忆"},
+    {"path": ".claude/skills/isaac-sim-installation/SKILL.md", "why": "把 Isaac Sim 真正装起来的唯一入口，含三种安装方式"},
+    {"path": ".claude/skills/data-collection-sim/SKILL.md", "why": "合成数据生成的代表技能，理解仿真到数据的桥梁"},
+    {"path": ".claude/skills/isaac-sim-validator/SKILL.md", "why": "交付前质量门的定义，理解输出如何被校验"},
+    {"path": ".claude/skills/meta-skills/references/quality-criteria.md", "why": "技能质量的常设评分标准，编写新技能时的依据"},
+    {"path": ".claude/skills/isaac-sim-installation/scripts/preflight.py", "why": "少见的可执行脚本样例，理解技能如何落到代码"},
+    {"path": ".clang-format", "why": "唯一与代码相关的文件，提示仓库服务的是 Isaac Sim 的 C++ 生态"}
+  ],
+  "extension_points": [
+    "想加一个新能力如新传感器：在 .claude/skills 下新建目录写 SKILL.md，按 meta-skills 的模板与三文件模式组织",
+    "想让新技能被自动路由：在 isaac-sim-orchestrator 与 isaac-sim-workflow 的路由表中登记信号到目标技能",
+    "想改技能库的拆分合并规则：改 meta-skills 的拆分与合并决策树一节",
+    "想改经验固化规则：改 skill-distillation 的蒸馏流程与分类表",
+    "想改环境变量契约：改 isaac-sim-orchestrator 的 Environment contract 一节",
+    "想加安装方式：在 isaac-sim-installation/scripts 下加安装脚本并更新其工作流与平台支持表",
+    "想加 SDG 输出格式：改 data-collection-sim 的 scripts 与 writers 说明"
+  ],
+  "learning_path": [
+    "第1步：先看目录结构与 .clang-format，认清这是发布型仓库，只有风格配置和 .claude/skills，不含 Isaac Sim 源码",
+    "第2步：读 .claude/skills/meta-skills/SKILL.md，理解技能库的设计哲学、三文件模式与 SKILL.md 模板",
+    "第3步：读 .claude/skills/isaac-sim-orchestrator/SKILL.md，理解顶层路由、环境契约与四阶段执行",
+    "第4步：读 .claude/skills/isaac-sim-workflow/SKILL.md，理解交付物界定与验收标准",
+    "第5步：读 .claude/skills/isaac-sim-installation/SKILL.md，理解如何真正把 Isaac Sim 装起来",
+    "第6步：读 .claude/skills/data-collection-sim/SKILL.md 及其脚本，理解合成数据怎么产",
+    "第7步：读 .claude/skills/skill-distillation/SKILL.md，理解经验如何固化回技能文件"
+  ],
+  "diagram_mermaid": "graph TD\n  REQ[用户自然语言请求] --> WF[isaac-sim-workflow 界定交付物]\n  WF --> ORCH[isaac-sim-orchestrator 路由]\n  ORCH --> ENV[环境契约 ISAAC_SIM_DIR 等]\n  ORCH --> INST[isaac-sim-installation 安装校验]\n  ORCH --> TECH[仿真技术技能 物理 运动 导航]\n  ORCH --> SENSE[感知与渲染技能 传感器 相机]\n  ORCH --> SDG[数据生成技能 Replicator]\n  TECH --> VAL[isaac-sim-validator 质量门]\n  SENSE --> VAL\n  SDG --> VAL\n  VAL --> OUT[视频 图像 合成数据]\n  OUT --> DIST[skill-distillation 固化经验]\n  DIST --> SKILLS[技能文件 成为持久记忆]",
+  "surprises": [
+    "仓库性质：这是发布型元仓库，不含 Isaac Sim 仿真源码，只有一份 C++ 风格配置和 .claude/skills 下的 37 个智能体技能，仿真本体要另行安装",
+    "技能文件被当作持久记忆：meta-skills 明确写「没写进文件的东西下次会话就不存在」，蒸馏步骤是强制提案而非可选",
+    "技能里多处引用的 AGENTS.md 在仓库中并不存在，是上游 isaac-claw 技能库的残留引用",
+    "这套库遵循 Claude Code 技能规范，硬约束 SKILL.md 正文不超过 500 行、description 不超过 1024 字符，超了就要拆三文件",
+    "技能靠环境变量而非绝对路径保持可移植，写死 IP 或用户路径被视为 bug"
+  ],
+  "confidence": "中"
+}

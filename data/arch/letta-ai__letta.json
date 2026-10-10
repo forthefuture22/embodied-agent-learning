@@ -1,0 +1,79 @@
+{
+  "repo": "letta-ai/letta",
+  "name": "Letta",
+  "one_liner": "MemGPT 原仓库，现已改为指向 letta-code 的落地导航页",
+  "problem": "承载 Letta（原 MemGPT）分层记忆架构的迁移与归档信息：当前实现已迁往 letta-ai/letta-code，本仓库仅作导航、历史说明与安全边界声明。",
+  "difficulty": "入门",
+  "core_abstractions": [
+    {"name": "落地导航页", "role": "README 声明 main 是 landing page，给出 npm 安装、终端 UI、App Server 与文档的入口，并指向当前源码仓库", "file": "README.md"},
+    {"name": "维护边界声明", "role": "AGENTS.md 明确禁止把本仓库当作可运行实现、禁止用于 benchmark/对比/科研，并要求转向 letta-code", "file": "AGENTS.md"},
+    {"name": "安全支持边界", "role": "SECURITY.md 界定只接受在维护项目的漏洞报告，archive 分支与旧 Python 包不在支持范围", "file": "SECURITY.md"},
+    {"name": "贡献政策", "role": "CONTRIBUTING.md 说明仓库已归档、不接受任何改动，指引到 letta-code", "file": "CONTRIBUTING.md"},
+    {"name": "AI 使用政策", "role": "AI_POLICY.md 要求披露 AI 使用、坚持 human-in-the-loop，并强调仓库代码已归档", "file": "AI_POLICY.md"},
+    {"name": "学术引用元数据", "role": "CITATION.cff 给出 MemGPT 论文（arXiv 2310.08560）与作者，是理解项目出处的锚点", "file": "CITATION.cff"},
+    {"name": "Issue 守卫工作流", "role": ".github/workflows/issue-guard.yml 自动拦截针对归档仓库的 issue/PR，强制迁移到 letta-code", "file": ".github/workflows/issue-guard.yml"},
+    {"name": "信任贡献者名单", "role": ".github/TRUSTED_CONTRIBUTORS 记录被信任的贡献者，用于自动化流程的身份判定", "file": ".github/TRUSTED_CONTRIBUTORS"}
+  ],
+  "layers": [
+    {"name": "定位与导航层", "responsibility": "告诉访客这是什么、当前实现在哪、如何安装运行", "modules": ["."], "files": ["README.md"]},
+    {"name": "维护边界与代理指令层", "responsibility": "约束人类与 AI 代理不得把本仓库当作实现或评测基准", "modules": ["."], "files": ["AGENTS.md", "AI_POLICY.md"]},
+    {"name": "安全与支持范围层", "responsibility": "声明受支持项目范围并自动拦截误用", "modules": [".github"], "files": ["SECURITY.md", ".github/workflows/issue-guard.yml"]},
+    {"name": "贡献与社区层", "responsibility": "声明归档状态、不接受改动，并维护信任贡献者名单", "modules": [".github"], "files": ["CONTRIBUTING.md", ".github/TRUSTED_CONTRIBUTORS", ".github/ISSUE_TEMPLATE/config.yml"]},
+    {"name": "学术引用层", "responsibility": "提供 MemGPT 论文的标准引用信息", "modules": ["."], "files": ["CITATION.cff"]},
+    {"name": "法务合规层", "responsibility": "隐私政策、服务条款与许可证", "modules": ["."], "files": ["PRIVACY.md", "TERMS.md", "LICENSE"]}
+  ],
+  "data_flow": [
+    "第1步：研究者搜索到 letta-ai/letta 仓库并打开 README",
+    "第2步：README 说明 main 只是一个 landing page，当前源码在 letta-ai/letta-code",
+    "第3步：按 README 用 npm 安装 @letta-ai/letta-code，运行 letta 启动终端 UI，或 letta server 起服务",
+    "第4步：若想读历史 V1 源码，README 与 AGENTS.md 指向 archive 分支，并声明其为已退役、不受支持",
+    "第5步：若想提 issue 或 PR，CONTRIBUTING.md 与 AGENTS.md 明确不接受，需转到 letta-code",
+    "第6步：若发现漏洞，SECURITY.md 说明只接受在维护项目中的报告，走邮件 support@letta.com",
+    "第7步：若由 AI 代理访问，AI_POLICY.md 与 AGENTS.md 强制披露 AI 使用并保持只读历史视角",
+    "第8步：若需要引用，CITATION.cff 给出 MemGPT 论文与作者信息"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "导航入口：定位说明、安装方式与当前源码去向"},
+    {"path": "AGENTS.md", "what": "代理与贡献者入口，列出禁止用途与正确工作路径"},
+    {"path": "CONTRIBUTING.md", "what": "贡献入口，声明归档并把贡献者导向 letta-code"},
+    {"path": "SECURITY.md", "what": "漏洞报告入口与支持范围说明"},
+    {"path": "AI_POLICY.md", "what": "AI 使用规范入口"},
+    {"path": "CITATION.cff", "what": "学术引用入口"},
+    {"path": ".github/workflows/issue-guard.yml", "what": "自动化守卫入口，拦截针对归档仓库的 issue"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "第一步必须读：确立这是 landing page 而非源码仓库"},
+    {"path": "AGENTS.md", "why": "最完整的边界声明，明确本仓库禁止被当作实现或基准"},
+    {"path": "CONTRIBUTING.md", "why": "最短的一份，直接说明仓库已归档、不接受改动"},
+    {"path": "SECURITY.md", "why": "厘清 archive 分支与旧 Python 包不在安全支持范围"},
+    {"path": "AI_POLICY.md", "why": "理解项目对 AI 生成内容的披露与 human-in-the-loop 要求"},
+    {"path": "CITATION.cff", "why": "拿到 MemGPT 论文引用，追溯分层记忆架构的学术出处"},
+    {"path": ".github/workflows/issue-guard.yml", "why": "看仓库如何用自动化把误用挡在门外"},
+    {"path": "TERMS.md", "why": "了解服务条款与内容许可边界"}
+  ],
+  "extension_points": [
+    "想修改或扩展当前 Letta 功能：不在本仓库，应到 letta-ai/letta-code",
+    "想提交 issue 或 PR：走 letta-code 的 issue 追踪，本仓库不接受",
+    "想报告安全漏洞：按 SECURITY.md 邮件 support@letta.com，不要在公开 issue 中披露",
+    "想更新落地页文案或迁移指引：改 README.md",
+    "想调整误用拦截规则：改 .github/workflows/issue-guard.yml",
+    "想更新信任贡献者：改 .github/TRUSTED_CONTRIBUTORS",
+    "想阅读历史分层记忆实现：切到 archive 分支，注意其为退役代码、仅供历史参考"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，先接受「这是 landing page」这一事实，避免后续误判",
+    "第2步：读 AGENTS.md，掌握禁止用途与正确的迁移路径",
+    "第3步：读 SECURITY.md 与 CONTRIBUTING.md，明确支持边界与贡献政策",
+    "第4步：读 CITATION.cff，定位 MemGPT 论文这一分层记忆架构的源头",
+    "第5步：想学真实架构去 letta-ai/letta-code；想读 V1 Python 实现切 archive 分支"
+  ],
+  "diagram_mermaid": "graph TD\n  A[访客或AI代理进入仓库] --> B[README 落地导航页]\n  B --> C[AGENTS 维护边界]\n  B --> D[letta-code 当前源码]\n  B --> E[archive 历史V1源码]\n  C --> F[CONTRIBUTING 贡献政策]\n  C --> G[SECURITY 漏洞报告]\n  F --> D\n  G --> H[邮件 support@letta.com]\n  B --> I[CITATION 论文引用]\n  C --> J[AI_POLICY 使用规范]",
+  "surprises": [
+    "本仓库性质是元仓库而非源码仓库：main 分支只有文档，工作树里找不到任何 .py 文件；原 MemGPT 的分层记忆实现并不在此",
+    "真正的 V1 Python 服务端源码被放到 archive 分支并声明为退役、不受支持，本仓库的包名、star 数与 Docker 镜像都不能代表当前实现",
+    "仓库用 AGENTS.md 与 AI_POLICY.md 主动「劝退」：明令禁止用本仓库做 benchmark、评测、对比或科研，这在开源仓库中相当罕见",
+    "CONTRIBUTING.md 只有寥寥数语，直接说仓库已归档、不接受任何改动，与常规项目的贡献指南形成强烈反差",
+    "因此本份分析置信度标为中：我能确认仓库性质与组织方式，但无法从本工作树分析其记忆架构细节"
+  ],
+  "confidence": "中"
+}

@@ -1,0 +1,87 @@
+{
+  "repo": "anthropics/claude-code",
+  "name": "Claude Code",
+  "one_liner": "Claude Code 的文档、官方插件与 issue 自动化元仓库",
+  "problem": "承载 Claude Code 的安装文档、官方插件市场、内置 mod 源码、企业部署示例与 GitHub issue 自动化；产品本体闭源并以二进制/npm 分发，源码不在本仓库。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "产品文档与安装入口", "role": "README 说明 Claude Code 是什么、如何用 curl/brew/winget 安装，并指向官方文档", "file": "README.md"},
+    {"name": "插件市场清单", "role": ".claude-plugin/marketplace.json 定义官方插件市场与每个插件的来源、分类、作者", "file": ".claude-plugin/marketplace.json"},
+    {"name": "官方插件集", "role": "plugins/ 下 13 个插件，覆盖代码审查、提交工作流、feature 开发、插件开发、PR 审查等", "file": "plugins/README.md"},
+    {"name": "内置 mod 源码", "role": "mods/ 是随二进制发布的内置插件源码：sec-default、diff、telemetry、agents-md，以 hooks 模块形式挂钩引擎事件", "file": "mods/README.md"},
+    {"name": "Issue 生命周期规则", "role": "scripts/issue-lifecycle.ts 是标签、超时天数与催办文案的单一事实源", "file": "scripts/issue-lifecycle.ts"},
+    {"name": "Claude 驱动的 issue 分诊", "role": ".claude/commands/triage-issue.md 定义用 Claude 分析 issue 并打标签的命令", "file": ".claude/commands/triage-issue.md"},
+    {"name": "CI 安全加固约定", "role": "CLAUDE.md 规定调用 Claude 的 workflow 必须在 egress-firewall runner 上运行并使用 auto 权限模式", "file": "CLAUDE.md"},
+    {"name": "部署与配置示例", "role": "examples/ 提供 gateway、hooks、mdm 与 settings 四类企业级配置样例", "file": "examples/settings/README.md"}
+  ],
+  "layers": [
+    {"name": "产品与安装文档层", "role": "介绍产品、安装方式与反馈渠道，并维护变更日志与订阅源", "modules": ["."], "files": ["README.md", "CHANGELOG.md"]},
+    {"name": "插件市场层", "role": "官方插件的目录、市场清单与安装说明", "modules": ["plugins", ".claude-plugin"], "files": [".claude-plugin/marketplace.json", "plugins/README.md"]},
+    {"name": "内置 mod 层", "role": "随引擎发布的内置插件源码，用 hooks 模块与类型契约定义行为", "modules": ["mods"], "files": ["mods/README.md"]},
+    {"name": "Issue 自动化层", "role": "用脚本与 workflow 完成 issue 分诊、去重、生命周期催办与关闭", "modules": ["scripts", ".github/workflows", ".claude/commands"], "files": ["scripts/issue-lifecycle.ts", ".claude/commands/triage-issue.md", ".github/workflows/claude-issue-triage.yml"]},
+    {"name": "CI 安全加固层", "role": "约束调用 Claude 的 workflow 的出口网络与权限模式，并自动校验", "modules": [".github"], "files": ["CLAUDE.md", ".github/egress-firewall.yaml", ".github/scripts/check_workflow_hardening.py"]},
+    {"name": "部署与配置示例层", "role": "给出企业网关、MDM 策略与 settings 配置样例", "modules": ["examples"], "files": ["examples/settings/README.md", "examples/mdm/README.md", "examples/hooks/bash_command_validator_example.py"]},
+    {"name": "开发环境层", "role": "提供带防火墙的 devcontainer 沙箱与启动脚本", "modules": [".devcontainer", "Script"], "files": [".devcontainer/devcontainer.json", "Script/run_devcontainer_claude_code.ps1"]},
+    {"name": "治理与反馈层", "role": "许可证、安全策略与 issue 表单模板", "modules": [".github/ISSUE_TEMPLATE"], "files": ["LICENSE.md", "SECURITY.md", ".github/ISSUE_TEMPLATE/bug_report.yml"]}
+  ],
+  "data_flow": [
+    "第1步：用户访问 anthropics/claude-code，想找产品源码或提反馈",
+    "第2步：README 说明这是文档/安装/反馈仓库，产品本体不在此，安装走官方脚本或包管理器",
+    "第3步：想装官方插件，读 plugins/README.md 或 .claude-plugin/marketplace.json 里的插件清单",
+    "第4步：想报 bug，README 指向 /bug 命令或 GitHub issue，进入 .github/ISSUE_TEMPLATE 表单",
+    "第5步：issue 创建后触发 .github/workflows/issue-opened-dispatch.yml",
+    "第6步：claude-issue-triage.yml 调用 Claude，按 .claude/commands/triage-issue.md 自动打标签",
+    "第7步：claude-dedupe-issues.yml 检测并处理重复 issue",
+    "第8步：issue-lifecycle-comment.yml 依据 scripts/issue-lifecycle.ts 的超时规则催办或关闭",
+    "第9步：想改产品行为，不在此仓库；想贡献插件或 mod，读 plugins/README.md 与 mods/README.md",
+    "第10步：想在企业内落地，参考 examples/settings 与 examples/mdm 的配置样例"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "安装与文档入口，并声明这是文档/反馈仓库"},
+    {"path": "plugins/README.md", "what": "官方插件目录入口"},
+    {"path": ".claude-plugin/marketplace.json", "what": "插件市场清单入口"},
+    {"path": "mods/README.md", "what": "内置 mod 源码与测试方式的入口"},
+    {"path": ".claude/commands/triage-issue.md", "what": "Claude 驱动的 issue 分诊命令入口"},
+    {"path": "scripts/issue-lifecycle.ts", "what": "issue 生命周期规则的单一事实源入口"},
+    {"path": ".github/workflows/claude.yml", "what": "响应 @claude 提及的 workflow 入口"},
+    {"path": ".devcontainer/devcontainer.json", "what": "沙箱开发环境入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "第一步确认仓库性质：文档/插件/反馈，而非产品源码"},
+    {"path": "CLAUDE.md", "why": "贡献者与代理指南，含调用 Claude 的 CI 安全加固三条规则"},
+    {"path": "plugins/README.md", "why": "官方插件总览与插件标准结构说明"},
+    {"path": ".claude-plugin/marketplace.json", "why": "插件市场的权威定义，看清每个插件的来源与分类"},
+    {"path": "mods/README.md", "why": "理解内置 mod 如何以 hooks 模块与类型契约接入引擎"},
+    {"path": "scripts/issue-lifecycle.ts", "why": "issue 自动化的核心规则，标签与超时一目了然"},
+    {"path": ".claude/commands/triage-issue.md", "why": "看 Claude 如何被用来自动给 issue 打标签"},
+    {"path": "examples/settings/README.md", "why": "企业级 settings 配置样例与安全取舍对照表"},
+    {"path": ".github/workflows/claude.yml", "why": "理解 @claude 提及如何触发自动化"},
+    {"path": "CHANGELOG.md", "why": "体量巨大的变更日志，是追踪版本行为的唯一线索"}
+  ],
+  "extension_points": [
+    "想新增官方插件：在 plugins/ 下新增目录并在 .claude-plugin/marketplace.json 登记",
+    "想修改内置 mod：改 mods/ 下对应目录，sec-default、diff、telemetry、agents-md，用 claude plugin test 测试",
+    "想调整 issue 自动关闭或催办规则：改 scripts/issue-lifecycle.ts",
+    "想改 issue 分诊行为：改 .claude/commands/triage-issue.md",
+    "想新增 CI 工作流：在 .github/workflows 下新增，并满足 CLAUDE.md 的防火墙与权限加固要求",
+    "想补充部署样例：在 examples/ 下按 gateway、mdm、settings 分类新增"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，先确认这是文档/插件/反馈元仓库而非产品源码",
+    "第2步：读 CLAUDE.md，掌握贡献约定与 CI 安全加固要求",
+    "第3步：读 plugins/README.md 与 .claude-plugin/marketplace.json，理解插件体系",
+    "第4步：读 mods/README.md，学习内置 mod 的 hooks 模块与类型契约",
+    "第5步：读 scripts/issue-lifecycle.ts 与 .claude/commands/triage-issue.md，理解 issue 自动化",
+    "第6步：读 examples/settings 与 examples/mdm，学习企业级配置落地"
+  ],
+  "diagram_mermaid": "graph TD\n  A[访客进入仓库] --> B[README 安装与文档]\n  B --> C[plugins 官方插件]\n  B --> D[mods 内置插件源码]\n  B --> E[examples 部署配置]\n  B --> F[GitHub Issue 反馈]\n  F --> G[issue-opened-dispatch 触发]\n  G --> H[claude-issue-triage 自动分诊]\n  G --> I[claude-dedupe 去重]\n  F --> J[issue-lifecycle 催办与关闭]",
+  "surprises": [
+    "这是元仓库：Claude Code 产品本体闭源，不在此仓库；本仓库由文档、官方插件、内置 mod 源码与 issue 自动化四类内容拼成，没有产品运行时源码",
+    "仓库用 Claude 自己管理 issue：workflow 里跑 claude-code-action 做分诊、去重与生命周期催办，形成自举的维护闭环",
+    "mods/ 是「内置插件」的源码，会随二进制一起发布，但仓库 marketplace.json 并不列出它们，真正生效的是已装进二进制的那份",
+    "CLAUDE.md 要求所有调用 Claude 的 workflow 必须跑在带出口防火墙的 runner 上并使用 auto 权限模式，还有专门的 workflow 校验这一约束",
+    "README 明确 npm 安装已废弃，改用 curl/brew/winget 安装，与常见 Node 工具的认知相反",
+    "因此本份分析置信度标为中：能确认仓库性质与组织方式，但无法分析产品内部架构"
+  ],
+  "confidence": "中"
+}

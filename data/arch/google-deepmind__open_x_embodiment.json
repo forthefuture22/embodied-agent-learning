@@ -1,0 +1,88 @@
+{
+  "repo": "google-deepmind/open_x_embodiment",
+  "name": "Open X-Embodiment",
+  "one_liner": "把 22 种机器人的百万级轨迹统一成 RLDS 格式并附 RT-1-X 参考模型的仓库",
+  "problem": "机器人学习数据分散在几十个实验室、格式与动作空间各不相同，无法联合训练。本仓库定义统一的 RLDS episode 格式与数据集清单，并提供 RT-1-X 参考实现，让跨本体数据可以合并训练一个通用策略。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "RLDS episode 格式", "role": "统一数据契约：每个数据集表示为一串 episode，每个 episode 是 RLDS 的 step 序列，是跨本体合并的前提", "file": "README.md"},
+    {"name": "数据集清单与元数据", "role": "记录纳入开放的各个数据集名称、本体、引用方式，是使用者选数据的入口", "file": "README.md"},
+    {"name": "观测空间", "role": "模型只吃工作区 RGB 图与描述任务的字符串，图给出世界当前状态，字符串给出该做什么", "file": "README.md"},
+    {"name": "动作空间", "role": "7 个夹爪维度 xyz rpy 与开合，加上基座位移等，统一由 tokenize_action 定义取值范围", "file": "models/rt1.py"},
+    {"name": "RT1", "role": "完整的 RT-1 / RT-1-X 架构，把图像 token 与动作 token 拼成序列交给 Transformer", "file": "models/rt1.py"},
+    {"name": "ImageTokenizer", "role": "用 EfficientNet 加 FiLM 把图像与语言上下文融合成定长 image token", "file": "models/rt1.py"},
+    {"name": "Transformer", "role": "自注意力主干，带稠密位置嵌入，输出每个位置的词表 logits", "file": "models/rt1.py"},
+    {"name": "EfficientNetWithFilm", "role": "图像主干网络，用 FiLM 把语言上下文注入到卷积特征上", "file": "models/efficientnet.py"},
+    {"name": "FilmConditioning", "role": "FiLM 条件化层，用上下文生成缩放与偏移系数调制特征图", "file": "models/film_conditioning.py"},
+    {"name": "tokenize_action 与 detokenize_action", "role": "把连续动作离散化成词表 token，并把预测的 token 还原成动作字典", "file": "models/rt1.py"},
+    {"name": "RT1Policy", "role": "推理封装，负责加载 checkpoint、缩放图像、jit 前向与还原动作", "file": "models/rt1_inference_example.py"}
+  ],
+  "layers": [
+    {"name": "说明文档层", "responsibility": "讲清仓库定位、数据访问方式、观测与动作空间、常见问题", "modules": ["."], "files": ["README.md", "CONTRIBUTING.md"]},
+    {"name": "模型实现层", "responsibility": "用 JAX 与 flax 实现 RT-1-X 的各个组件：图像分词、FiLM 条件化、Transformer、动作分词", "modules": ["models"], "files": ["models/rt1.py", "models/efficientnet.py", "models/film_conditioning.py", "models/token_learner.py"]},
+    {"name": "推理示例层", "responsibility": "给出可直接运行的最小推理脚本，演示加载 checkpoint 并输出动作", "modules": ["models"], "files": ["models/rt1_inference_example.py"]},
+    {"name": "交互式教程层", "responsibility": "用 colab 演示数据可视化、构造训练批次、最小训练与 TF 推理", "modules": ["colabs"], "files": ["colabs/Open_X_Embodiment_Datasets.ipynb", "colabs/Minimal_Training_Example.ipynb", "colabs/Minimal_example_for_running_inference_using_RT_1_X_TF_using_tensorflow_datasets.ipynb"]},
+    {"name": "数据集获取层", "responsibility": "数据本体不在此仓库，需按 README 从 Google Cloud Storage 或 tfds 拉取到本地", "modules": ["."], "files": ["README.md"]},
+    {"name": "资源层", "responsibility": "存放 README 使用的示意图等静态资源", "modules": ["imgs"], "files": ["imgs/teaser.png"]}
+  ],
+  "data_flow": [
+    "第1步：从 README 指向的数据集清单电子表格中选定目标数据集，并记下它的引用要求",
+    "第2步：用 tfds.load 或 gsutil 从 gs://gdm-robotics-open-x-embodiment 把数据集下载到本地 tensorflow_datasets 目录",
+    "第3步：数据以 RLDS episode 序列形式落盘，每个 episode 是一段完整的机器人轨迹",
+    "第4步：用 colabs/Open_X_Embodiment_Datasets.ipynb 可视化若干 episode 并把它们组成训练批次",
+    "第5步：训练时参考 colabs/Minimal_Training_Example.ipynb，用 rlds 与 reverb 读数据、用 RT1 建模",
+    "第6步：推理时下载 RT-1-X 的 jax checkpoint，或用 TF checkpoint 走 TF 推理 colab",
+    "第7步：用 models/rt1_inference_example.py 的 RT1Policy 加载 checkpoint，并设定序列长度与词表大小",
+    "第8步：构造观测字典，包含 image 与 natural_language_embedding，调用 policy.action",
+    "第9步：图像经 ImageTokenizer 用 EfficientNet 加 FiLM 与语言上下文融合，得到 image token",
+    "第10步：Transformer 把 image token 与动作 token 拼成序列，预测动作 logits",
+    "第11步：detokenize_action 把离散 token 还原成动作字典，并与离线 episode 的真值动作叠加对比"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "总入口：数据访问方式、观测与动作空间说明、RT-1-X checkpoint 获取与 FAQ"},
+    {"path": "colabs/Open_X_Embodiment_Datasets.ipynb", "what": "数据集可视化入口，看若干 episode 并构造可训练批次"},
+    {"path": "colabs/Minimal_Training_Example.ipynb", "what": "最小训练示例，演示读 rlds 数据并训练"},
+    {"path": "colabs/Minimal_example_for_running_inference_using_RT_1_X_TF_using_tensorflow_datasets.ipynb", "what": "TF checkpoint 推理入口，加载模型并对离线 episode 叠加预测与真值动作"},
+    {"path": "models/rt1_inference_example.py", "what": "JAX 推理入口，构造 RT1Policy 并跑通一次动作预测"},
+    {"path": "models/rt1.py", "what": "模型定义入口，包含 RT1、Transformer、ImageTokenizer 与动作分词"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：这是数据集说明加参考模型的仓库，数据本体在外部"},
+    {"path": "models/rt1.py", "why": "核心文件，RT1、ImageTokenizer、Transformer 与动作分词都在这里"},
+    {"path": "models/efficientnet.py", "why": "图像主干实现，理解 FiLM 如何注入语言上下文"},
+    {"path": "models/film_conditioning.py", "why": "最短的核心抽象，二十几行讲清 FiLM 条件化"},
+    {"path": "models/token_learner.py", "why": "MlpBlock 与 TokenLearner 的依赖，理解 token 压缩的 MLP 结构"},
+    {"path": "models/rt1_inference_example.py", "why": "把模型、checkpoint、观测拼成可运行推理闭环的最佳样例"},
+    {"path": "colabs/Open_X_Embodiment_Datasets.ipynb", "why": "理解数据长什么样、如何组批的最快途径"},
+    {"path": "colabs/Minimal_Training_Example.ipynb", "why": "理解训练数据管线与损失如何组织的入口"},
+    {"path": "colabs/Minimal_example_for_running_inference_using_RT_1_X_TF_using_tensorflow_datasets.ipynb", "why": "TF 侧推理与可视化对照，方便核对 JAX 实现"},
+    {"path": "CONTRIBUTING.md", "why": "说明贡献流程与 CLA 要求，接入新数据集时先看"}
+  ],
+  "extension_points": [
+    "想接入新的机器人数据集：按 RLDS episode 格式转换后，把条目登记进 README 描述的数据集清单电子表格",
+    "想加入腕部相机、手内相机或深度输入：改 models/rt1.py 中 RT1 的观测组装与 ImageTokenizer 的输入拼接",
+    "想换图像主干或分辨率：改 models/efficientnet.py 的 MODEL_CONFIGS 以及 ImageTokenizer 中写死的 efficientnet-b3 与 300x300",
+    "想改动作维度或取值范围：改 models/rt1.py 的 tokenize_action 与 detokenize_action 中的动作列表与上下界",
+    "想改每张图的 token 数：改 models/rt1.py 的 TokenLearnerModuleV11.num_tokens 与 RT1.num_image_tokens",
+    "想换 FiLM 条件化方式：改 models/film_conditioning.py 的 FilmConditioning",
+    "想换前馈块或序列长度：改 models/rt1.py 的 FFNOptions 与 models/rt1_inference_example.py 里的 seqlen 与超参"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，弄清 RLDS 格式、数据集清单以及 RT-1-X 的观测与动作空间",
+    "第2步：跑 colabs/Open_X_Embodiment_Datasets.ipynb，直观看到 episode 结构并构造批次",
+    "第3步：读 models/rt1.py 的 RT1 与 ImageTokenizer，理解图像与语言如何融合成 token",
+    "第4步：读 models/efficientnet.py 与 film_conditioning.py，理解 FiLM 条件化的图像主干",
+    "第5步：读 models/token_learner.py 与 rt1.py 的 TokenLearnerModuleV11，理解 token 如何被压缩",
+    "第6步：读 models/rt1.py 的 tokenize_action 与 detokenize_action，理解连续动作如何离散化",
+    "第7步：读并运行 models/rt1_inference_example.py，跑通从观测到动作的完整推理闭环"
+  ],
+  "diagram_mermaid": "graph TD\n  DS[外部数据集 百万级轨迹] --> RLDS[统一为 RLDS episode 序列]\n  RLDS --> TFDS[tfds 或 gsutil 下载到本地]\n  TFDS --> COLAB[数据集 colab 可视化与组批]\n  COLAB --> TRAIN[最小训练示例 notebook]\n  IMG[工作区 RGB 图像] --> TOK[ImageTokenizer 用 EfficientNet 加 FiLM]\n  LANG[任务字符串嵌入] --> TOK\n  TOK --> TR[Transformer 自注意力主干]\n  ACT[动作 token] --> TR\n  TR --> LOGITS[动作 logits]\n  LOGITS --> DETOK[detokenize_action 还原动作字典]\n  CKPT[RT-1-X checkpoint] --> POLICY[RT1Policy 推理封装]\n  POLICY --> TR\n  DETOK --> OUT[叠加预测与真值动作]",
+  "surprises": [
+    "仓库性质：这是数据集说明加参考模型仓库，不含数据本体，真正价值在 README 指向的外部数据集清单电子表格，数据要自己从 Google Cloud Storage 拉",
+    "RT-1-X 相对 RT-1 的关键差异很小：动作 world_vector 范围从 -1 到 1 改成 -2 到 2，并用 token learner 把每张图压到 81 个 token",
+    "模型只吃单张工作区 RGB 图与任务字符串，明确不吃腕部相机、手内相机或深度，这个限制直接写在 README 里",
+    "动作不是回归而是被离散化成 token 后用交叉熵预测，这是把机器人控制塞进语言模型框架的关键设计，也是理解 rt1.py 的钥匙",
+    "推理脚本里动作历史默认被置零，include_prev_timesteps_actions 为假时输入的动作 token 实际不被网络使用"
+  ],
+  "confidence": "中"
+}
