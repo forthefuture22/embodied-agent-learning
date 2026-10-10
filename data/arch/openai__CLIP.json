@@ -1,0 +1,85 @@
+{
+  "repo": "openai/CLIP",
+  "name": "CLIP",
+  "one_liner": "用对比学习对齐图像与文本的双塔模型",
+  "problem": "在四亿图文对上做对比学习训练图像塔与文本塔，让二者嵌入进同一语义空间，无需任何微调即可零样本分类，解决视觉任务依赖大量标注数据的问题。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "CLIP", "role": "顶层双塔模型：持有 visual 图像塔与 transformer 文本塔，实现 encode_image / encode_text / forward，输出归一化余弦相似度 logits", "file": "clip/model.py"},
+    {"name": "VisionTransformer", "role": "ViT 图像塔：patch 卷积切块加 class token 加位置嵌入，过 Transformer 后取 class token 经 proj 投影到嵌入空间", "file": "clip/model.py"},
+    {"name": "ModifiedResNet", "role": "ResNet 图像塔：三层 stem、抗混叠下采样、以 AttentionPool2d 注意力池化替代全局平均池", "file": "clip/model.py"},
+    {"name": "Transformer", "role": "文本塔主干：由 ResidualAttentionBlock 堆叠，配合因果注意力掩码处理文本序列", "file": "clip/model.py"},
+    {"name": "ResidualAttentionBlock", "role": "pre-LN 残差块：先 LayerNorm 再多头注意力再加 MLP，含 QuickGELU 激活", "file": "clip/model.py"},
+    {"name": "build_model", "role": "从 state_dict 的形状反推架构超参（层数、宽度、patch 大小、分辨率），构造对应 CLIP 并加载权重", "file": "clip/model.py"},
+    {"name": "load", "role": "对外加载入口：按名字下载带 SHA256 校验的权重，区分 JIT 与 state_dict 两条加载路径，返回模型与预处理变换", "file": "clip/clip.py"},
+    {"name": "tokenize", "role": "文本分词入口：用小写 BPE 把字符串编成定长 77 的 token 序列，首尾加 sot / eot", "file": "clip/clip.py"},
+    {"name": "SimpleTokenizer", "role": "轻量 BPE 分词器：基于 bpe_simple_vocab_16e6 词表做字节到 unicode 映射与 BPE 合并", "file": "clip/simple_tokenizer.py"},
+    {"name": "convert_weights", "role": "把 Conv / Linear / MultiheadAttention / proj 等权重统一转成 fp16，并兼容旧版 checkpoint", "file": "clip/model.py"},
+    {"name": "_transform", "role": "图像预处理流水线：Resize 到短边、CenterCrop、转 RGB、ToTensor、按 CLIP 均值方差归一化", "file": "clip/clip.py"}
+  ],
+  "layers": [
+    {"name": "模型结构层", "responsibility": "定义双塔网络：图像塔、文本塔、注意力块与权重初始化", "modules": ["clip"], "files": ["clip/model.py"]},
+    {"name": "加载与注册层", "responsibility": "模型名到权重 URL 的映射、下载校验、JIT 与 state_dict 加载、设备与精度补丁", "modules": ["clip"], "files": ["clip/clip.py"]},
+    {"name": "文本分词层", "responsibility": "BPE 分词器实现与词表文件", "modules": ["clip"], "files": ["clip/simple_tokenizer.py", "clip/bpe_simple_vocab_16e6.txt.gz"]},
+    {"name": "包入口层", "responsibility": "把 clip.py 的公开 API 导出为 clip 包命名空间", "modules": ["clip"], "files": ["clip/__init__.py"]},
+    {"name": "Hub 入口层", "responsibility": "为每个模型名动态生成 torch.hub 可调用入口", "modules": ["."], "files": ["hubconf.py"]},
+    {"name": "测试层", "responsibility": "校验 JIT 与 Python 两种加载路径输出一致性", "modules": ["tests"], "files": ["tests/test_consistency.py"]},
+    {"name": "示例与数据层", "responsibility": "零样本分类与提示词工程 notebook、各类数据集提示词模板", "modules": ["notebooks", "data"], "files": ["notebooks/Interacting_with_CLIP.ipynb", "notebooks/Prompt_Engineering_for_ImageNet.ipynb", "data/prompts.md"]},
+    {"name": "文档与打包层", "responsibility": "使用说明、模型卡与 pip 安装配置", "modules": ["."], "files": ["README.md", "model-card.md", "setup.py"]}
+  ],
+  "data_flow": [
+    "第1步：clip.load 按模型名从 _MODELS 取 URL，下载权重并用 SHA256 校验",
+    "第2步：尝试 torch.jit.load 加载 JIT 模型，失败则回退为 torch.load 读 state_dict",
+    "第3步：build_model 从 state_dict 张量形状反推超参，构造 CLIP 并 convert_weights 转 fp16 后载入",
+    "第4步：图像经 _transform 做 Resize、CenterCrop、ToTensor 与归一化得到像素张量",
+    "第5步：文本经 tokenize 用 BPE 编成 77 长度、首尾 sot/eot 的 token 序列",
+    "第6步：encode_image 走图像塔，ViT 取 class token 或 ResNet 走 attnpool，再经 proj 投影",
+    "第7步：encode_text 走文本塔，取序列中 eot 位置的特征，经 text_projection 投影",
+    "第8步：forward 对两路特征做 L2 归一化，用 logit_scale 缩放后做余弦相似度矩阵",
+    "第9步：得到 logits_per_image 与 logits_per_text，softmax 即为匹配概率用于零样本分类",
+    "第10步：零样本推理时对每个类别拼模板如 a photo of a X，比较图像特征与各文本特征取最大值"
+  ],
+  "entry_points": [
+    {"path": "clip/clip.py", "what": "公开 API：load 加载模型、tokenize 分词、available_models 列出模型"},
+    {"path": "hubconf.py", "what": "torch.hub 入口，为每个模型名动态生成加载函数"},
+    {"path": "tests/test_consistency.py", "what": "测试入口，对比 JIT 与 Python 模型输出是否一致"},
+    {"path": "notebooks/Interacting_with_CLIP.ipynb", "what": "交互式示例，演示加载、编码与零样本预测"},
+    {"path": "notebooks/Prompt_Engineering_for_ImageNet.ipynb", "what": "演示提示词模板对零样本精度的影响"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读它：讲清对比学习思路、API 与零样本用法，建立整体认知"},
+    {"path": "clip/model.py", "why": "核心实现：双塔结构、encode_image/encode_text、forward 的相似度计算与 build_model 反推"},
+    {"path": "clip/clip.py", "why": "对外接口与加载逻辑：权重下载校验、JIT 与 state_dict 两条路径、tokenize 与图像预处理"},
+    {"path": "clip/simple_tokenizer.py", "why": "理解文本如何被 BPE 切分，字节到 unicode 映射等细节"},
+    {"path": "clip/__init__.py", "why": "很短，看清包只导出 clip.py 的公开符号"},
+    {"path": "hubconf.py", "why": "理解如何被 torch.hub 调用，以及模型名到函数的映射"},
+    {"path": "tests/test_consistency.py", "why": "展示 JIT 与 Python 模型等价的验证方式，也是最小可运行样例"},
+    {"path": "data/prompts.md", "why": "提示词模板集合，理解零样本分类精度为何依赖提示词"}
+  ],
+  "extension_points": [
+    "新增图像塔：在 clip/model.py 的 CLIP.__init__ 里按 vision_layers 类型分支增加新的视觉结构，并在 build_model 里补充对应形状反推",
+    "新增文本塔：替换 CLIP 里的 Transformer 与 token_embedding，同步改 encode_text 的 eot 取特征逻辑",
+    "注册新模型权重：在 clip/clip.py 的 _MODELS 字典加入名字到 URL 的映射，URL 需带 SHA256 目录名",
+    "改分词方式：替换 simple_tokenizer.py 的 SimpleTokenizer 或改 tokenize 的上下文长度与截断策略",
+    "改图像预处理：修改 clip.py 的 _transform，调整 Resize 插值、Crop 与归一化参数",
+    "调相似度温度：改 CLIP 的 logit_scale 初始化或在 forward 里替换相似度计算方式",
+    "接入下游任务：复用 encode_image / encode_text 输出特征做线性探针或检索，无需改模型结构"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解对比学习目标、双塔思想与零样本分类的用法",
+    "第2步：读 clip/clip.py 的 load 与 tokenize，弄清模型如何被加载与文本如何被编码",
+    "第3步：读 clip/model.py 的 CLIP 类，掌握 encode_image、encode_text 与 forward 的相似度计算",
+    "第4步：读同文件的 VisionTransformer 与 ModifiedResNet，理解两种图像塔的差异",
+    "第5步：读 build_model，看如何从权重形状反推架构，这是理解权重与结构绑定的关键",
+    "第6步：读 clip/simple_tokenizer.py 与 data/prompts.md，理解文本侧与提示词对零样本精度的影响"
+  ],
+  "diagram_mermaid": "graph TD\n  A[图像输入] --> B[_transform 预处理]\n  C[文本输入] --> D[tokenize BPE 分词]\n  B --> E[VisionTransformer 或 ModifiedResNet]\n  D --> F[Transformer 文本塔]\n  E --> G[proj 投影到嵌入空间]\n  F --> H[text_projection 投影]\n  G --> I[L2 归一化]\n  H --> I\n  I --> J[余弦相似度乘 logit_scale]\n  J --> K[softmax 得匹配概率]\n  K --> L[零样本分类输出]",
+  "surprises": [
+    "load 会先用 torch.jit.load 尝试加载，失败才回退成 state_dict，且 JIT 路径要靠遍历计算图节点去 patch cuda 设备名与 float 类型，非常 hack",
+    "build_model 不读配置文件，而是从 state_dict 里各张量的形状反推层数、宽度、patch 大小与分辨率，理解权重与结构绑定必须读它",
+    "VisionTransformer 取的是 class token 位置即 x[:, 0]，而文本塔取的是 argmax 位置即 eot token，两者取特征的位置规则不同",
+    "文本上下文长度硬编码为 77，tokenize 超过长度默认直接报错，需要显式传 truncate=True 才会截断",
+    "仓库只有推理与加载代码，没有任何训练循环与对比损失实现，训练细节在论文和 OpenCLIP 里而非本仓库"
+  ],
+  "confidence": "高"
+}

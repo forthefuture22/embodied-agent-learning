@@ -1,0 +1,164 @@
+{
+  "repo": "microsoft/AirSim",
+  "name": "AirSim",
+  "one_liner": "基于 Unreal 的无人机与自动驾驶高保真仿真器",
+  "problem": "为无人机与自动驾驶的 AI 研究提供物理与视觉都逼真的仿真环境，并用统一 RPC 接口跨语言控制载具、采集图像与传感器数据。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "ApiProvider",
+      "role": "API 注册中心，按载具名索引 VehicleApi 与 VehicleSimApi，并持有 WorldSimApi",
+      "file": "AirLib/include/api/ApiProvider.hpp"
+    },
+    {
+      "name": "VehicleApiBase",
+      "role": "所有载具控制 API 的抽象基类，定义 arm、apiControl、传感器读取等通用接口",
+      "file": "AirLib/include/api/VehicleApiBase.hpp"
+    },
+    {
+      "name": "RpcLibServerBase",
+      "role": "把 API 方法逐一 bind 到 msgpack-rpc 服务端，是仿真器与外部世界的解耦边界",
+      "file": "AirLib/include/api/RpcLibServerBase.hpp"
+    },
+    {
+      "name": "RpcLibClientBase",
+      "role": "跨语言客户端基类，通过 msgpack-rpc 调用服务端方法",
+      "file": "AirLib/include/api/RpcLibClientBase.hpp"
+    },
+    {
+      "name": "MultirotorApiBase",
+      "role": "多旋翼载具的高层飞行 API 抽象，如 takeoff、land、moveToPosition",
+      "file": "AirLib/include/vehicles/multirotor/api/MultirotorApiBase.hpp"
+    },
+    {
+      "name": "CarApiBase",
+      "role": "车辆载具的 API 抽象，如 setCarControls 与 getCarState",
+      "file": "AirLib/include/vehicles/car/api/CarApiBase.hpp"
+    },
+    {
+      "name": "SensorFactory",
+      "role": "按 settings 里的传感器类型实例化 IMU、GPS、气压计等模型",
+      "file": "AirLib/include/sensors/SensorFactory.hpp"
+    },
+    {
+      "name": "SensorBase",
+      "role": "传感器抽象基类，持有 ground truth 引用并输出测量值",
+      "file": "AirLib/include/sensors/SensorBase.hpp"
+    },
+    {
+      "name": "ASimModeBase",
+      "role": "Unreal 侧仿真模式基类，负责创建载具、摄像头与启动 RPC 服务",
+      "file": "Unreal/Plugins/AirSim/Source/SimMode/SimModeBase.h"
+    },
+    {
+      "name": "AirSimSettings",
+      "role": "解析 settings.json 的全局配置对象，定义载具、传感器、仿真参数",
+      "file": "AirLib/include/common/AirSimSettings.hpp"
+    },
+    {
+      "name": "UpdatableObject",
+      "role": "所有可被物理循环驱动的对象的生命周期基类，定义 reset 与 update",
+      "file": "AirLib/include/common/UpdatableObject.hpp"
+    }
+  ],
+  "layers": [
+    {
+      "name": "API 抽象层",
+      "responsibility": "定义载具、世界与仿真 API 的纯接口，与具体引擎无关",
+      "modules": ["AirLib/include/api"],
+      "files": ["AirLib/include/api/VehicleApiBase.hpp", "AirLib/include/api/ApiProvider.hpp", "AirLib/include/api/WorldSimApiBase.hpp"]
+    },
+    {
+      "name": "物理与传感器模型层",
+      "responsibility": "头文件形式的物理引擎与传感器噪声模型",
+      "modules": ["AirLib/include/physics", "AirLib/include/sensors"],
+      "files": ["AirLib/include/sensors/SensorFactory.hpp", "AirLib/include/sensors/SensorBase.hpp", "AirLib/include/common/UpdatableObject.hpp"]
+    },
+    {
+      "name": "载具模型层",
+      "responsibility": "多旋翼与车辆的参数、动力学与固件对接实现",
+      "modules": ["AirLib/include/vehicles", "AirLib/src/vehicles"],
+      "files": ["AirLib/include/vehicles/multirotor/api/MultirotorApiBase.hpp", "AirLib/include/vehicles/car/api/CarApiBase.hpp"]
+    },
+    {
+      "name": "RPC 通信层",
+      "responsibility": "用 msgpack-rpc 把 API 暴露成网络调用，实现引擎与客户端解耦",
+      "modules": ["AirLib/src/api"],
+      "files": ["AirLib/src/api/RpcLibServerBase.cpp", "AirLib/src/vehicles/multirotor/api/MultirotorRpcLibServer.cpp"]
+    },
+    {
+      "name": "Unreal 插件层",
+      "responsibility": "唯一依赖 Unreal 的部分，实现 SimMode、载具 Pawn、相机与渲染传感器",
+      "modules": ["Unreal/Plugins/AirSim/Source"],
+      "files": ["Unreal/Plugins/AirSim/Source/SimMode/SimModeBase.cpp", "Unreal/Plugins/AirSim/Source/Vehicles/Multirotor/SimModeWorldMultiRotor.cpp", "Unreal/Plugins/AirSim/Source/UnrealSensors/UnrealLidarSensor.cpp"]
+    },
+    {
+      "name": "客户端 SDK 层",
+      "responsibility": "多语言客户端，Python 版把 RPC 调用包装成易用方法",
+      "modules": ["PythonClient/airsim"],
+      "files": ["PythonClient/airsim/client.py", "PythonClient/airsim/types.py"]
+    },
+    {
+      "name": "文档层",
+      "responsibility": "设计说明、代码结构与扩展指南",
+      "modules": ["docs"],
+      "files": ["docs/code_structure.md", "docs/adding_new_apis.md", "docs/custom_drone.md"]
+    }
+  ],
+  "data_flow": [
+    "第1步：Unreal 加载环境，SimMode 读取 settings.json 决定载具类型与传感器配置",
+    "第2步：setupVehiclesAndCamera 创建载具 Pawn 与对应的 PawnSimApi",
+    "第3步：SimMode 调用 getVehicleApi 得到载具控制 API，注册进 ApiProvider",
+    "第4步：startApiServer 创建 RpcLibServer 并在端口 41451 监听",
+    "第5步：RpcLibServerBase 把每个 API 方法 bind 成 msgpack-rpc 方法名",
+    "第6步：Python 客户端连接端口，调用如 moveToPosition 的方法名",
+    "第7步：服务端 handler 把参数转成内部结构，调用对应载具 API",
+    "第8步：载具 API 更新动力学目标，物理引擎在 300Hz 循环里推进仿真",
+    "第9步：传感器与相机按 ground truth 生成 IMU、激光雷达、图像等数据",
+    "第10步：客户端通过 simGetImages 或状态 API 拉取结果，返回给上层 AI 算法"
+  ],
+  "entry_points": [
+    {"path": "Unreal/Plugins/AirSim/Source/SimMode/SimModeBase.cpp", "what": "Unreal 侧仿真模式主入口，创建载具并启动 RPC 服务"},
+    {"path": "Unreal/Plugins/AirSim/Source/Vehicles/Multirotor/SimModeWorldMultiRotor.cpp", "what": "多旋翼模式，选择 MultirotorRpcLibServer 并创建载具 API"},
+    {"path": "AirLib/src/api/RpcLibServerBase.cpp", "what": "所有通用 RPC 方法的绑定实现"},
+    {"path": "AirLib/src/vehicles/multirotor/api/MultirotorRpcLibServer.cpp", "what": "多旋翼专属 RPC 方法绑定"},
+    {"path": "PythonClient/airsim/client.py", "what": "Python 客户端入口，MultirotorClient 与 CarClient"},
+    {"path": "PythonClient/multirotor/hello_drone.py", "what": "最简 Python 起飞降落示例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先理解 AirSim 的定位与 RPC API 思路"},
+    {"path": "docs/code_structure.md", "why": "官方给出的分层与各目录职责说明"},
+    {"path": "AirLib/include/api/VehicleApiBase.hpp", "why": "所有载具 API 的抽象契约"},
+    {"path": "AirLib/include/api/ApiProvider.hpp", "why": "理解 API 如何按载具名注册与查找"},
+    {"path": "AirLib/src/api/RpcLibServerBase.cpp", "why": "看清 API 如何被绑定成 RPC 方法"},
+    {"path": "AirLib/include/vehicles/multirotor/api/MultirotorApiBase.hpp", "why": "多旋翼高层飞行 API 全貌"},
+    {"path": "AirLib/include/sensors/SensorFactory.hpp", "why": "传感器如何按配置实例化"},
+    {"path": "Unreal/Plugins/AirSim/Source/SimMode/SimModeBase.h", "why": "Unreal 与 AirLib 的衔接点"},
+    {"path": "PythonClient/airsim/client.py", "why": "客户端 API 设计范例"}
+  ],
+  "extension_points": [
+    "想加一个新载具类型：在 AirLib/include/vehicles/ 下建载具目录写 XXXApiBase，仿照 multirotor，再在 Unreal 侧加对应 SimMode 与 PawnSimApi",
+    "想加一个新 API：先实现方法，再在 AirLib/src/api/RpcLibServerBase.cpp 绑定服务端，在 RpcLibClientBase 与 PythonClient/airsim/client.py 加客户端方法",
+    "想加一个新传感器模型：在 AirLib/include/sensors/ 下继承 SensorBase，并在 SensorFactory 的 switch 里注册新类型",
+    "想改 Unreal 侧渲染传感器：修改 Unreal/Plugins/AirSim/Source/UnrealSensors 下的 UnrealLidarSensor 等",
+    "想加新配置项：修改 AirLib/include/common/AirSimSettings.hpp 并在 settings.json 增加字段",
+    "想换通信端口或协议参数：修改 SimMode 启动 ApiServer 时传入的端口与地址"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 docs/code_structure.md 建立全局分层认知",
+    "第2步：读 AirLib/include/api/VehicleApiBase.hpp 与 ApiProvider.hpp 理解 API 抽象",
+    "第3步：读 AirLib/src/api/RpcLibServerBase.cpp 理解 RPC 绑定与解耦机制",
+    "第4步：读 MultirotorApiBase.hpp 与 MultirotorRpcLibServer.cpp 看具体载具如何实现",
+    "第5步：读 SimModeBase.h 与 SimModeWorldMultiRotor.cpp 看 Unreal 如何组装一切",
+    "第6步：读 PythonClient/airsim/client.py 从使用方视角串起全链路",
+    "第7步：读 docs/adding_new_apis.md 与 docs/custom_drone.md 掌握扩展流程"
+  ],
+  "diagram_mermaid": "graph TD\n  SETTINGS[settings.json 配置] --> SIMMODE[SimMode 仿真模式]\n  SIMMODE --> VEHICLE[创建载具 Pawn 与 SimApi]\n  VEHICLE --> API[载具控制 API]\n  API --> PROVIDER[ApiProvider 注册表]\n  SIMMODE --> SERVER[RpcLibServer 启动]\n  SERVER --> BIND[把 API 绑定为 RPC 方法]\n  CLIENT[Python 或 C++ 客户端] -->|msgpack-rpc 端口 41451| SERVER\n  BIND --> PHYSICS[物理引擎循环]\n  PHYSICS --> SENSORS[传感器与相机模型]\n  SENSORS --> CLIENT",
+  "surprises": [
+    "AirLib 是头文件为主的自包含库，绝大部分物理与传感器逻辑不依赖 Unreal，可脱离引擎单独编译",
+    "仿真器与外部世界的唯一边界是 msgpack-rpc，新增能力往往要同时改服务端绑定与多语言客户端三处",
+    "所有 API 都带 vehicle_name 参数并在服务端按名字查表，同一场景可同时存在多台不同载具",
+    "载具差异被隔离在各自的 SimMode 子类，基类 createApiServer 与 getVehicleApi 是标准的扩展钩子"
+  ],
+  "confidence": "高"
+}

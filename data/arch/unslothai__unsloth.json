@@ -1,0 +1,94 @@
+{
+  "repo": "unslothai/unsloth",
+  "name": "Unsloth",
+  "one_liner": "单卡可用的 LLM 微调加速框架",
+  "problem": "用 Triton 手写内核替换 RMSNorm 与 RoPE 与交叉熵与 LoRA 的前反向，把显存占用降约七成、训练提速约两倍，让单卡也能微调大模型且不损失精度。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "FastLanguageModel", "role": "对外主入口：按模型名解析出具体 patcher，处理量化加载与设备放置，返回已打补丁的模型与分词器", "file": "unsloth/models/loader.py"},
+    {"name": "FastLlamaModel", "role": "模型补丁器基类：pre_patch 把 transformers 的注意力与解码层前向替换为 unsloth 版本，get_peft_model 注入并融合 LoRA", "file": "unsloth/models/llama.py"},
+    {"name": "LlamaAttention_fast_forward", "role": "替换后的注意力前向：用融合内核一次算出带 LoRA 的 QKV 与输出投影", "file": "unsloth/models/llama.py"},
+    {"name": "LlamaModel_fast_forward", "role": "替换后的解码器栈前向：串联各层并接 RoPE 与残差", "file": "unsloth/models/llama.py"},
+    {"name": "FastBaseModel", "role": "多模态与通用基类：提供通用 from_pretrained 与 get_peft_model 与 patch_peft_model", "file": "unsloth/models/vision.py"},
+    {"name": "LoRA_MLP", "role": "自定义 autograd Function：把 gate 与 up 与 down 三投影的 LoRA 与 SwiGLU 前反向一次算完", "file": "unsloth/kernels/fast_lora.py"},
+    {"name": "LoRA_QKV", "role": "自定义 autograd Function：Q 与 K 与 V 三投影融合 LoRA 的前反向", "file": "unsloth/kernels/fast_lora.py"},
+    {"name": "matmul_lora", "role": "融合矩阵乘：把基座权重（含 4bit 现场反量化）与 LoRA 的 A 与 B 在同一个算子内算出", "file": "unsloth/kernels/utils.py"},
+    {"name": "Fast_RMS_Layernorm", "role": "Triton 手写 RMSNorm：前反向内核替代 PyTorch 原生实现", "file": "unsloth/kernels/rms_layernorm.py"},
+    {"name": "fast_rope_embedding", "role": "Triton 手写旋转位置编码：就地作用于 Q 与 K，避免额外显存", "file": "unsloth/kernels/rope_embedding.py"},
+    {"name": "fast_cross_entropy_loss", "role": "内存高效交叉熵：分块计算 logits 的 softmax 与损失，避免物化整块 logits", "file": "unsloth/kernels/cross_entropy_loss.py"},
+    {"name": "unsloth_compile_transformers", "role": "编译器入口：对指定模型类型做算子融合与补丁替换", "file": "unsloth/models/_utils.py"}
+  ],
+  "layers": [
+    {"name": "对外入口层", "responsibility": "包导入时触发补丁与编译准备，导出 FastLanguageModel 等入口类", "modules": ["unsloth"], "files": ["unsloth/__init__.py", "unsloth/models/__init__.py"]},
+    {"name": "模型加载与分发层", "responsibility": "按模型名解析 patcher、处理量化与设备与分词器修复", "modules": ["unsloth/models"], "files": ["unsloth/models/loader.py", "unsloth/models/mapper.py", "unsloth/models/loader_utils.py"]},
+    {"name": "模型补丁层", "responsibility": "各模型族的 pre_patch 与 get_peft_model 与 patch_peft_model，替换注意力与解码层前向", "modules": ["unsloth/models"], "files": ["unsloth/models/llama.py", "unsloth/models/qwen2.py", "unsloth/models/qwen3.py", "unsloth/models/mistral.py", "unsloth/models/gemma.py", "unsloth/models/vision.py"]},
+    {"name": "Triton 内核层", "responsibility": "RMSNorm 与 RoPE 与 SwiGLU 与交叉熵与 LoRA 融合内核的手写实现", "modules": ["unsloth/kernels"], "files": ["unsloth/kernels/fast_lora.py", "unsloth/kernels/rms_layernorm.py", "unsloth/kernels/swiglu.py", "unsloth/kernels/rope_embedding.py", "unsloth/kernels/cross_entropy_loss.py", "unsloth/kernels/utils.py"]},
+    {"name": "量化与反量化层", "responsibility": "NF4 与 FP8 与 int4 打包权重的反量化与矩阵乘支持", "modules": ["unsloth/kernels"], "files": ["unsloth/kernels/nf4.py", "unsloth/kernels/fp8.py", "unsloth/kernels/int4_packed.py"]},
+    {"name": "保存与导出层", "responsibility": "把 LoRA 合并回基座并保存，支持 16bit 与 GGUF 与 FP8 等导出", "modules": ["unsloth"], "files": ["unsloth/save.py"]},
+    {"name": "训练与数据层", "responsibility": "定制 Trainer 与序列打包与数据集准备", "modules": ["unsloth", "unsloth/utils", "unsloth/dataprep"], "files": ["unsloth/trainer.py", "unsloth/utils/packing.py", "unsloth/dataprep/raw_text.py"]},
+    {"name": "强化学习层", "responsibility": "GRPO 与 DPO 与 KTO 等 RL 训练补丁", "modules": ["unsloth/models"], "files": ["unsloth/models/rl.py", "unsloth/models/dpo.py"]},
+    {"name": "注册表与优化器层", "responsibility": "模型注册表与量化别名映射，以及 Q-GaLore 等优化器", "modules": ["unsloth/registry", "unsloth/optimizers"], "files": ["unsloth/registry/registry.py", "unsloth/optimizers/q_galore_adamw.py"]},
+    {"name": "CLI 与测试层", "responsibility": "命令行入口与覆盖各内核正确性的测试", "modules": ["unsloth_cli", "tests"], "files": ["unsloth_cli/__main__.py", "unsloth-cli.py", "tests/run_all.sh"]}
+  ],
+  "data_flow": [
+    "第1步：用户 import unsloth，__init__.py 触发内核补丁与编译器准备，并把 transformers 相关类替换掉",
+    "第2步：调用 FastLanguageModel.from_pretrained，按模型名解析出对应的 model_patcher 并加载 4bit 权重",
+    "第3步：patcher 的 pre_patch 把 Attention 与 DecoderLayer 与 Model 的 forward 替换为 unsloth 版本",
+    "第4步：post_patch 调用 patch_model_and_tokenizer 换掉 RMSNorm 与嵌入层并重设权重 dtype",
+    "第5步：调用 get_peft_model，用 PEFT 把 LoRA 的 A 与 B 注入 q 与 k 与 v 与 o 与 gate 与 up 与 down 投影",
+    "第6步：patch_peft_model 把 MLP 与注意力的 forward 用 MethodType 替换成融合内核入口",
+    "第7步：前向时 X 进入 apply_lora_qkv，matmul_lora 一次算出基座权重与 LoRA 的贡献",
+    "第8步：RMSNorm 与 RoPE 与 SwiGLU 分别走 Triton 内核，Q 与 K 的旋转就地完成",
+    "第9步：反向由自定义 autograd Function 的 backward 按链式法则直接算各梯度，无需中间大张量",
+    "第10步：损失用分块交叉熵计算，避免物化整块 logits 的 softmax",
+    "第11步：保存时把 LoRA 合并回基座权重，按需导出 16bit 或 GGUF 或 FP8 等格式"
+  ],
+  "entry_points": [
+    {"path": "unsloth/models/loader.py", "what": "FastLanguageModel.from_pretrained 主入口，按模型名分发 patcher"},
+    {"path": "unsloth/models/llama.py", "what": "FastLlamaModel.get_peft_model 与 pre_patch 与 patch_peft_model"},
+    {"path": "unsloth-cli.py", "what": "命令行微调脚本入口"},
+    {"path": "unsloth_cli/__main__.py", "what": "unsloth 命令行的主模块入口"},
+    {"path": "unsloth/save.py", "what": "unsloth_save_model 保存与合并导出入口"},
+    {"path": "tests/run_all.sh", "what": "内核与功能的测试总入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立认知：注意它已重写为桌面与 Studio 产品介绍，讲清微调加速的卖点与安装方式"},
+    {"path": "unsloth/__init__.py", "why": "看补丁与编译在导入时如何被触发，是理解全局副作用的起点"},
+    {"path": "unsloth/models/loader.py", "why": "入口分发逻辑：模型名如何映射到 patcher 与量化加载路径"},
+    {"path": "unsloth/models/llama.py", "why": "核心补丁实现：pre_patch 替换前向，get_peft_model 与 patch_peft_model 注入并融合 LoRA"},
+    {"path": "unsloth/kernels/fast_lora.py", "why": "LoRA 融合内核：LoRA_MLP 与 LoRA_QKV 的自定义前反向，理解为何能省显存"},
+    {"path": "unsloth/kernels/utils.py", "why": "matmul_lora 与 fast_dequantize：基座权重与 LoRA 如何在一个算子内融合并现场反量化"},
+    {"path": "unsloth/kernels/rms_layernorm.py", "why": "最易读的 Triton 内核范例，从它入手理解内核与 autograd 封装"},
+    {"path": "unsloth/kernels/rope_embedding.py", "why": "旋转位置编码内核与就地实现的写法"},
+    {"path": "unsloth/models/_utils.py", "why": "补丁工具集：patch_fast_lora 与 patch_tokenizer 与编译入口都在这里"},
+    {"path": "unsloth/save.py", "why": "合并与导出逻辑，理解训练产物如何落盘与转 GGUF"}
+  ],
+  "extension_points": [
+    "支持新模型架构：在 unsloth/models 下仿照 llama.py 写一个 FastXxxModel，实现 pre_patch 与 get_peft_model 分支，并在 models/__init__.py 与 loader.py 的映射中注册",
+    "新增 Triton 内核：在 unsloth/kernels 下加文件，用 torch.autograd.Function 封装前反向，再在对应模型 forward 里替换调用",
+    "切换激活函数：改 llama.py 的 patch_peft_model 分支，SwiGLU 用 apply_lora_mlp_swiglu，GeGLU 用 apply_lora_mlp_geglu_approx",
+    "扩展量化支持：改 kernels/utils.py 的 matmul_lora 与 fast_dequantize 分支，或在 kernels/nf4.py 增加新的反量化内核",
+    "改 LoRA 注入目标：改 llama.py 的 patch_peft_model 中对 q 与 k 与 v 与 o 与 gate 与 up 与 down 的替换条件与目标模块",
+    "改保存与导出：改 save.py 的 unsloth_save_model 与各量化导出方法",
+    "注册模型别名与量化映射：改 models/mapper.py 的映射表与 registry/registry.py",
+    "改训练行为：改 trainer.py 的序列打包逻辑或 models/rl.py 的 RL 补丁"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，先意识到它已转为桌面与 Studio 产品叙事，再抓微调加速这一核心卖点",
+    "第2步：读 unsloth/__init__.py，理解导入时补丁与编译的副作用如何发生",
+    "第3步：读 kernels/rms_layernorm.py，用最小内核建立 Triton 加 autograd 封装的认知",
+    "第4步：读 kernels/fast_lora.py 与 kernels/utils.py，理解 LoRA 为何能在同一算子内与基座权重融合",
+    "第5步：读 models/llama.py 的 pre_patch 与 fast_forward，看前向如何被整体替换",
+    "第6步：读 models/llama.py 的 get_peft_model 与 patch_peft_model，理解 LoRA 注入与内核接管",
+    "第7步：读 models/loader.py，看入口如何按模型名分发，再读 save.py 了解导出"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户 import unsloth] --> B[导入时触发补丁与编译]\n  B --> C[FastLanguageModel.from_pretrained]\n  C --> D[按模型名选 patcher]\n  D --> E[pre_patch 替换注意力与解码层前向]\n  E --> F[post_patch 换 RMSNorm 与嵌入层]\n  F --> G[get_peft_model 注入 LoRA]\n  G --> H[patch_peft_model 换融合内核入口]\n  H --> I[前向 matmul_lora 融合基座与 LoRA]\n  I --> J[Triton 内核 RMSNorm 与 RoPE 与 SwiGLU 与交叉熵]\n  J --> K[自定义 autograd 反向]\n  K --> L[保存合并并导出 16bit 或 GGUF]",
+  "surprises": [
+    "大量补丁与编译逻辑并不在本仓库：patch_model_and_tokenizer 从外部 pip 包 unsloth_zoo.patching_utils 导入，全仓库有三百多处引用 unsloth_zoo，本仓库主要保留 Triton 内核与 patcher 骨架",
+    "LoRA 不是先合并再算：matmul_lora 在同一个 autograd Function 内一次算出基座权重与 LoRA 的 A 与 B，且 4bit 基座用 fast_dequantize 现场反量化，避免物化合并后的完整权重",
+    "patch_peft_model 用 types.MethodType 直接把 mlp_module.forward 与注意力的 q 与 k 与 v 与 o 前向替换成内核入口，且仅在 lora_dropout 为 0 且无 bias 且基座非 float32 时才启用，否则回退到 PEFT 原生实现",
+    "kernels/fast_lora.py 里被 patch_fast_lora 安装的 fast_lora_forward 函数体第一行就是 raise NotImplementedError，注释说 reshaping 不正确，说明该替代路径目前并未真正启用",
+    "README 已被重写为 Unsloth Desktop 与 Studio 的产品介绍，并提到 Qwen3.8 与 GLM-5.3 等尚未开源的名字，与仓库内代码实际支持的模型族存在明显落差，只看 README 会误判仓库范围"
+  ],
+  "confidence": "高"
+}

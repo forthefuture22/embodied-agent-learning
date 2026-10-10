@@ -1,0 +1,87 @@
+{
+  "repo": "run-llama/llama_index",
+  "name": "LlamaIndex",
+  "one_liner": "面向私有数据的 LLM 数据框架，主打 RAG 检索增强",
+  "problem": "把散落在文件、API、数据库里的私有数据，转成可被 LLM 检索与推理的结构化索引，解决大模型缺少自有知识、无法直接问答私有语料的问题。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Document / Node", "role": "统一的数据单元，Document 是原始文档，Node/TextNode 是被切分且可检索的片段，承载文本、元数据与向量", "file": "llama-index-core/llama_index/core/schema.py"},
+    {"name": "BaseReader", "role": "数据连接器抽象，把任意数据源加载成 Document 列表，是扩展新数据源的地方", "file": "llama-index-core/llama_index/core/readers/base.py"},
+    {"name": "NodeParser", "role": "TransformComponent 的一种，负责把 Document 切分成 Node，如按句、按 token 切分", "file": "llama-index-core/llama_index/core/node_parser/interface.py"},
+    {"name": "BaseIndex", "role": "索引基类，定义 from_documents、insert_nodes 与 as_query_engine/as_retriever 的桥接契约", "file": "llama-index-core/llama_index/core/indices/base.py"},
+    {"name": "VectorStoreIndex", "role": "最常用的索引实现，把节点文本经 embed_model 向量化后写入向量库", "file": "llama-index-core/llama_index/core/indices/vector_store/base.py"},
+    {"name": "BaseRetriever", "role": "检索抽象，输入 QueryBundle，输出带分数的 NodeWithScore 列表", "file": "llama-index-core/llama_index/core/base/base_retriever.py"},
+    {"name": "BaseQueryEngine", "role": "端到端问答抽象，query 方法把字符串变成 QueryBundle 并返回 Response", "file": "llama-index-core/llama_index/core/base/base_query_engine.py"},
+    {"name": "BaseSynthesizer", "role": "响应合成器，把检索到的节点填入提示模板交给 LLM 生成最终答案", "file": "llama-index-core/llama_index/core/response_synthesizers/base.py"},
+    {"name": "StorageContext", "role": "存储容器，统一持有 docstore、index_store、vector_store、graph_store", "file": "llama-index-core/llama_index/core/storage/storage_context.py"},
+    {"name": "Settings", "role": "全局默认配置单例，懒加载并集中管理 llm、embed_model、transformations 等", "file": "llama-index-core/llama_index/core/settings.py"},
+    {"name": "BasePydanticVectorStore", "role": "向量库接口，定义 add/query/delete 协议，是接入新向量数据库的契约", "file": "llama-index-core/llama_index/core/vector_stores/types.py"}
+  ],
+  "layers": [
+    {"name": "数据加载层", "responsibility": "把文件、API、数据库等异构数据源读取为 Document", "modules": ["llama-index-core/llama_index/core/readers", "llama-index-integrations/readers"], "files": ["llama-index-core/llama_index/core/readers/base.py", "llama-index-core/llama_index/core/readers/file/base.py"]},
+    {"name": "数据建模与切分层", "responsibility": "定义 Document/Node 数据契约并按策略切分", "modules": ["llama-index-core/llama_index/core/node_parser", "llama-index-core/llama_index/core/text_splitter"], "files": ["llama-index-core/llama_index/core/schema.py", "llama-index-core/llama_index/core/node_parser/interface.py"]},
+    {"name": "索引构建层", "responsibility": "把节点组织成可检索的索引结构，并桥接查询引擎", "modules": ["llama-index-core/llama_index/core/indices"], "files": ["llama-index-core/llama_index/core/indices/base.py", "llama-index-core/llama_index/core/indices/vector_store/base.py"]},
+    {"name": "存储层", "responsibility": "统一管理文档、索引结构、向量与图数据的持久化", "modules": ["llama-index-core/llama_index/core/storage", "llama-index-core/llama_index/core/vector_stores"], "files": ["llama-index-core/llama_index/core/storage/storage_context.py", "llama-index-core/llama_index/core/vector_stores/types.py", "llama-index-core/llama_index/core/vector_stores/simple.py"]},
+    {"name": "检索层", "responsibility": "根据查询从索引取回相关节点并打分", "modules": ["llama-index-core/llama_index/core/retrievers", "llama-index-core/llama_index/core/indices/vector_store/retrievers"], "files": ["llama-index-core/llama_index/core/base/base_retriever.py", "llama-index-core/llama_index/core/indices/vector_store/retrievers/retriever.py"]},
+    {"name": "合成与查询层", "responsibility": "编排检索与后处理，把节点合成为带引用的答案", "modules": ["llama-index-core/llama_index/core/query_engine", "llama-index-core/llama_index/core/response_synthesizers"], "files": ["llama-index-core/llama_index/core/query_engine/retriever_query_engine.py", "llama-index-core/llama_index/core/response_synthesizers/base.py"]},
+    {"name": "编排与 Agent 层", "responsibility": "用事件驱动的 Workflow 与 Agent 组织多步、多工具流程", "modules": ["llama-index-core/llama_index/core/workflow", "llama-index-core/llama_index/core/agent"], "files": ["llama-index-core/llama_index/core/agent/workflow/__init__.py"]},
+    {"name": "集成包层", "responsibility": "以独立 PyPI 包提供 LLM、向量库、加载器等具体实现", "modules": ["llama-index-integrations"], "files": ["llama-index-integrations/readers/llama-index-readers-file/llama_index/readers/file/__init__.py"]}
+  ],
+  "data_flow": [
+    "第1步：用 Reader 如 SimpleDirectoryReader 加载原始数据，得到 Document 列表",
+    "第2步：按 Settings.transformations 里的 NodeParser 把 Document 切分为 TextNode",
+    "第3步：Index.from_documents 调用 run_transformations 生成节点并写入 docstore",
+    "第4步：VectorStoreIndex 用 embed_model 把节点文本向量化，写入 vector_store 与 index_store",
+    "第5步：查询时 index.as_query_engine 先调 as_retriever 得到 VectorIndexRetriever",
+    "第6步：RetrieverQueryEngine._query 调用 retrieve 拿到 NodeWithScore 列表",
+    "第7步：node_postprocessors 对节点做重排、过滤、压缩",
+    "第8步：response_synthesizer.synthesize 把节点填入提示模板并调用 LLM",
+    "第9步：返回 Response 对象，包含答案文本与 source_nodes 引用"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "项目总览与五行代码的 RAG 最小示例"},
+    {"path": "llama-index-core/llama_index/core/indices/vector_store/base.py", "what": "VectorStoreIndex 定义，from_documents 与 as_retriever 的实现"},
+    {"path": "llama-index-core/llama_index/core/indices/base.py", "what": "BaseIndex.as_query_engine，索引到查询引擎的桥接入口"},
+    {"path": "llama-index-core/llama_index/core/query_engine/retriever_query_engine.py", "what": "RetrieverQueryEngine._query，查询管线的真正执行入口"},
+    {"path": "llama-index-core/llama_index/core/settings.py", "what": "全局默认配置入口，llm 与 embed_model 的解析来源"},
+    {"path": "llama-index-integrations/vector_stores/llama-index-vector-stores-chroma/llama_index/vector_stores/chroma/base.py", "what": "Chroma 向量库集成实现，扩展存储的参考样例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：数据框架定位与两种安装路径"},
+    {"path": "llama-index-core/llama_index/core/schema.py", "why": "Document、Node、NodeWithScore、QueryBundle 等数据契约都在此"},
+    {"path": "llama-index-core/llama_index/core/indices/base.py", "why": "索引基类，理解 from_documents 与 as_query_engine 的桥接"},
+    {"path": "llama-index-core/llama_index/core/indices/vector_store/base.py", "why": "向量索引如何调用 embed_model 与 vector_store"},
+    {"path": "llama-index-core/llama_index/core/base/base_retriever.py", "why": "检索抽象与 NodeWithScore 的产出契约"},
+    {"path": "llama-index-core/llama_index/core/query_engine/retriever_query_engine.py", "why": "把检索、后处理、合成串成一条查询管线"},
+    {"path": "llama-index-core/llama_index/core/response_synthesizers/base.py", "why": "答案合成抽象，理解 response_mode 参数体系"},
+    {"path": "llama-index-core/llama_index/core/settings.py", "why": "全局单例配置，很多默认行为由此决定"},
+    {"path": "llama-index-core/llama_index/core/vector_stores/types.py", "why": "向量库协议，扩展存储前必读"}
+  ],
+  "extension_points": [
+    "想加新的数据加载器：继承 llama-index-core/llama_index/core/readers/base.py 的 BaseReader 或 BasePydanticReader，实现 lazy_load_data，再在 llama-index-integrations/readers 下建独立包",
+    "想接入新向量库：继承 llama-index-core/llama_index/core/vector_stores/types.py 的 BasePydanticVectorStore，实现 add/query/delete，参考 chroma 集成",
+    "想换 LLM：实现 llama-index-core/llama_index/core/llms/llm.py 的 LLM 抽象，或直接设置 Settings.llm",
+    "想换切分策略：实现 llama-index-core/llama_index/core/node_parser/interface.py 的 NodeParser，加入 Settings.transformations",
+    "想加检索后处理：实现 llama-index-core/llama_index/core/postprocessor/types.py 的 BaseNodePostprocessor，传给 query engine 的 node_postprocessors",
+    "想改答案合成方式：实现 llama-index-core/llama_index/core/response_synthesizers/base.py 的 BaseSynthesizer，或换 ResponseMode",
+    "想加新索引类型：继承 llama-index-core/llama_index/core/indices/base.py 的 BaseIndex 并实现 build/insert/retrieve"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 llama-index-core/llama_index/core/settings.py，理解全局默认的心智模型",
+    "第2步：读 llama-index-core/llama_index/core/schema.py 的 Document、TextNode、NodeWithScore、QueryBundle 数据契约",
+    "第3步：读 llama-index-core/llama_index/core/indices/base.py，抓住 from_documents 与 as_query_engine 这条主轴",
+    "第4步：读 llama-index-core/llama_index/core/indices/vector_store/base.py，看向量化与存储如何发生",
+    "第5步：读 llama-index-core/llama_index/core/query_engine/retriever_query_engine.py 的 _query，串起检索与合成",
+    "第6步：读 llama-index-core/llama_index/core/readers/base.py 与某个集成 reader，学扩展加载器",
+    "第7步：读 llama-index-core/llama_index/core/vector_stores/types.py 与某个向量库集成，学扩展存储"
+  ],
+  "diagram_mermaid": "graph TD\n  A[原始数据源] --> B[Reader 加载器]\n  B --> C[Document 文档]\n  C --> D[NodeParser 切分]\n  D --> E[TextNode 节点]\n  E --> F[VectorStoreIndex 向量化]\n  F --> G[向量库 与 文档库]\n  H[用户提问] --> I[BaseRetriever 检索]\n  G --> I\n  I --> J[NodeWithScore 节点]\n  J --> K[NodePostprocessor 后处理]\n  K --> L[BaseSynthesizer 合成]\n  L --> M[LLM 生成答案]\n  M --> N[Response 响应]",
+  "surprises": [
+    "Settings 是全局单例：不显式传参时所有组件都从 Settings 懒加载默认 llm 与 embed_model，改一次会波及所有索引",
+    "VectorStoreIndex 默认 store_nodes_override=False，节点文本可能只留在向量库，docstore 未必有副本，持久化行为取决于 stores_text",
+    "TextNode 现在只是向后兼容别名，真正的主抽象是 Node，读代码时不要被类名误导",
+    "索引本身不实现 query：as_query_engine 先 as_retriever 再包一层 RetrieverQueryEngine，查询逻辑其实在 query_engine 层",
+    "monorepo 里 core 与 integrations 是分开的 PyPI 包，import 带 core 才是核心，不带 core 的都是集成包"
+  ],
+  "confidence": "高"
+}

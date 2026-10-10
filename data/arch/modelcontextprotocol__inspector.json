@@ -1,0 +1,87 @@
+{
+  "repo": "modelcontextprotocol/inspector",
+  "name": "MCP Inspector",
+  "one_liner": "MCP 官方调试工具，连接并检查任意 MCP Server",
+  "problem": "MCP Server 是黑盒，开发者看不到它暴露的工具、资源、提示词，也看不到 JSON-RPC 消息往返与 OAuth 报错；Inspector 提供连接任意 Server 的可视化调试台与可脚本化 CLI。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "InspectorClient", "role": "核心客户端：拥有与单个 MCP Server 的连接、请求/响应生命周期与全部状态 store", "file": "core/mcp/inspectorClient.ts"},
+    {"name": "createTransportNode", "role": "传输工厂：按 Server 配置创建 stdio / SSE / Streamable HTTP 三种传输之一", "file": "core/mcp/node/transport.ts"},
+    {"name": "MessageTrackingTransport", "role": "传输包装器：拦截所有进出的 JSON-RPC 请求/响应/通知，供 UI 展示与调试", "file": "core/mcp/messageTrackingTransport.ts"},
+    {"name": "RemoteClientTransport", "role": "浏览器端传输：用 HTTP + 流式响应与本地 Node 后端通信，桥接真实 MCP 连接", "file": "core/mcp/remote/remoteClientTransport.ts"},
+    {"name": "createRemoteApp", "role": "Node 后端远程会话：在服务端运行真实 MCP 连接并通过 HTTP API 暴露给浏览器", "file": "core/mcp/remote/node/server.ts"},
+    {"name": "useInspectorClient", "role": "React 绑定：通过 useSyncExternalStore 把 core 的 store 快照暴露给 web 与 TUI 组件树", "file": "core/react/useInspectorClient.ts"},
+    {"name": "状态 store", "role": "各类可订阅状态容器：消息日志、工具/资源/提示词列表、连接状态等", "file": "core/mcp/state/messageLogState.ts"},
+    {"name": "Screen 调试面板", "role": "每个标签页一个纯展示 Screen 组件，数据与回调全部由 props 注入", "file": "clients/web/src/components/screens/ToolsScreen/ToolsScreen.tsx"},
+    {"name": "Launcher", "role": "单一 mcp-inspector 二进制，解析模式标志并分发到 web / cli / tui", "file": "clients/launcher/src/index.ts"},
+    {"name": "Web Hono 后端", "role": "生产环境托管静态资源、远程 API 与沙箱，供浏览器 SPA 调用", "file": "clients/web/server/server.ts"}
+  ],
+  "layers": [
+    {"name": "启动分发层", "responsibility": "解析 --web/--cli/--tui 标志，动态 import 并运行对应客户端", "modules": ["clients/launcher"], "files": ["clients/launcher/src/index.ts", "clients/launcher/src/parse-launcher-argv.ts"]},
+    {"name": "共享核心层", "responsibility": "连接管理、请求/响应生命周期、状态 store、OAuth 与消息追踪，被所有客户端复用", "modules": ["core/mcp", "core/auth"], "files": ["core/mcp/inspectorClient.ts", "core/mcp/index.ts"]},
+    {"name": "传输层", "responsibility": "创建 stdio / SSE / Streamable HTTP 传输，并包装成远程传输协议", "modules": ["core/mcp/node", "core/mcp/remote"], "files": ["core/mcp/node/transport.ts", "core/mcp/remote/remoteClientTransport.ts"]},
+    {"name": "React 绑定层", "responsibility": "把 core 的 store 与客户端协议转成 React hooks，供 web 与 TUI 共用", "modules": ["core/react"], "files": ["core/react/useInspectorClient.ts", "core/react/useStoreSnapshot.ts"]},
+    {"name": "Web 前端层", "responsibility": "展示型组件与调试面板，按标签页组织界面，不含数据获取逻辑", "modules": ["clients/web/src/components", "clients/web/src/hooks"], "files": ["clients/web/src/components/views/InspectorView/InspectorView.tsx", "clients/web/src/utils/inspectorTabs.ts"]},
+    {"name": "Web 后端层", "responsibility": "Hono 服务器托管静态资源、提供远程 API、注入鉴权令牌与运行沙箱", "modules": ["clients/web/server"], "files": ["clients/web/server/server.ts", "clients/web/server/run-web.ts"]},
+    {"name": "CLI 与 TUI 层", "responsibility": "脚本化命令行客户端与基于 Ink 的终端界面，复用同一 core", "modules": ["clients/cli", "clients/tui"], "files": ["clients/cli/src/index.ts", "clients/tui/src/App.tsx"]},
+    {"name": "测试服务器层", "responsibility": "内置可组合的 MCP 测试服务器与夹具，供集成与冒烟测试使用", "modules": ["test-servers"], "files": ["test-servers/src"]}
+  ],
+  "data_flow": [
+    "第1步：用户执行 mcp-inspector 命令，launcher 解析 --web/--cli/--tui 并动态分发",
+    "第2步：web 模式下 launcher 启动 Node 后端 Hono 服务器，随后打开浏览器",
+    "第3步：浏览器 SPA 通过 /api/config 取得版本与后端地址，建立 RemoteClientTransport",
+    "第4步：用户在界面选择或新增 Server 配置，前端把配置发送给后端远程会话",
+    "第5步：后端调用 createTransportNode 按配置创建 stdio / SSE / Streamable HTTP 传输",
+    "第6步：InspectorClient 用该传输完成 initialize 握手，协商协议版本与双方能力",
+    "第7步：MessageTrackingTransport 拦截每条 JSON-RPC 请求、响应与通知，写入消息日志 store",
+    "第8步：前端通过 useInspectorClient 订阅 store 快照，Logging/Protocol/Network 面板实时渲染消息",
+    "第9步：用户在 Tools 面板调用工具，请求经远程传输到后端再发往 MCP Server，结果回流展示",
+    "第10步：断开连接时后端关闭底层传输，前端 store 状态更新为 disconnected"
+  ],
+  "entry_points": [
+    {"path": "clients/launcher/src/index.ts", "what": "mcp-inspector 二进制入口，解析模式标志并分发到 web/cli/tui"},
+    {"path": "clients/web/src/index.ts", "what": "web 客户端入口，调用 runWeb 启动后端并托管 SPA"},
+    {"path": "clients/web/server/run-web.ts", "what": "web 后端启动流程，组装配置并调用 Hono 服务器"},
+    {"path": "clients/web/src/main.tsx", "what": "浏览器 React 应用挂载入口，包裹 Mantine Provider"},
+    {"path": "clients/cli/src/index.ts", "what": "CLI 客户端入口，提供脚本化连接、列举与调用命令"},
+    {"path": "core/mcp/inspectorClient.ts", "what": "核心 InspectorClient 类定义，连接与状态的中心"},
+    {"path": "test-servers", "what": "内置可组合 MCP 测试服务器，用于本地调试与冒烟测试"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读它建立「四种客户端 + 共享 core」的整体认知"},
+    {"path": "docs/architecture.md", "why": "官方架构说明，解释 @inspector/core 与哑组件 + Storybook 策略"},
+    {"path": "core/mcp/inspectorClient.ts", "why": "核心类，理解连接、请求生命周期与状态所有权的起点"},
+    {"path": "core/mcp/node/transport.ts", "why": "三种 MCP 传输如何按配置创建，是解耦的关键"},
+    {"path": "core/mcp/messageTrackingTransport.ts", "why": "消息如何被拦截并进入调试面板"},
+    {"path": "core/mcp/remote/remoteClientTransport.ts", "why": "理解浏览器与后端如何跨进程通信"},
+    {"path": "core/react/useInspectorClient.ts", "why": "core 状态如何变成 React 组件可消费的 hooks"},
+    {"path": "clients/web/src/components/views/InspectorView/InspectorView.tsx", "why": "所有调试面板如何组装与切换的主视图"},
+    {"path": "clients/launcher/src/index.ts", "why": "理解单一二进制如何分发到三个客户端"},
+    {"path": "clients/web/server/server.ts", "why": "理解前后端分离：后端托管与远程 API 的组装点"}
+  ],
+  "extension_points": [
+    "想加一个新的调试面板：在 clients/web/src/utils/inspectorTabs.ts 注册 tab id，新增 clients/web/src/components/screens/<Name>Screen 组件，并在 InspectorView.tsx 导入渲染",
+    "想支持一种新的 MCP 传输：在 core/mcp/node/transport.ts 的 createTransportNode 增加分支，并在 core/mcp/types.ts 添加对应配置类型",
+    "想新增一种客户端形态：在 clients/ 下新增 client 目录，并在 clients/launcher/src/index.ts 的分发逻辑中注册",
+    "想改变消息记录方式：扩展 core/mcp/messageTrackingTransport.ts 的 MessageTrackingCallbacks 回调",
+    "想加新的协议方法调试入口：在 core/mcp/state/messageLogState.ts 与对应 Screen 面板协同扩展"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 docs/architecture.md，建立 core + 四客户端的整体认知",
+    "第2步：读 core/mcp/inspectorClient.ts，理解连接与状态的所有权归属",
+    "第3步：读 core/mcp/node/transport.ts，理解三种传输如何按配置创建",
+    "第4步：读 core/mcp/messageTrackingTransport.ts，理解消息如何被拦截用于展示",
+    "第5步：读 core/react/useInspectorClient.ts 与 core/mcp/state/，理解状态如何流到 React",
+    "第6步：读 clients/web/src/components/views/InspectorView/InspectorView.tsx，理解面板如何组织",
+    "第7步：读 clients/launcher/src/index.ts 与 clients/web/server/server.ts，理解前后端分离与启动"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户命令 mcp-inspector] --> B[Launcher 分发]\n  B --> C[Web 后端 Hono 服务器]\n  B --> D[CLI 客户端]\n  B --> E[TUI 客户端]\n  C --> F[浏览器 React 应用]\n  F --> G[RemoteClientTransport 远程传输]\n  G --> H[后端远程会话]\n  H --> I[createTransportNode 传输工厂]\n  I --> J[stdio 传输]\n  I --> K[SSE 传输]\n  I --> L[Streamable HTTP 传输]\n  J --> M[MCP Server]\n  H --> N[InspectorClient 核心]\n  N --> O[MessageTrackingTransport 消息追踪]\n  O --> P[状态 store]\n  P --> Q[React hooks 快照]\n  Q --> F",
+  "surprises": [
+    "core/ 故意没有 package.json，通过 @inspector/core 构建别名被各客户端内联，不是独立发布的包",
+    "浏览器无法直接启动 stdio 子进程，所以 web 模式实际是「前端 SPA + Node 后端」两段式，前后端走自定义远程传输协议而非直连 MCP Server",
+    "Inspector 会管理 OAuth 密钥与 stdio env 值，默认写入操作系统钥匙串，无钥匙串时落到 ~/.mcp-inspector/secrets.json 明文",
+    "客户端组件被刻意做成「哑组件」，只接收 props，状态全部来自 core hooks，这让 Storybook 成为一等公民",
+    "仓库同时存在 web / cli / tui / mcpdo 四种形态，共享同一份 core，行为保持一致"
+  ],
+  "confidence": "高"
+}

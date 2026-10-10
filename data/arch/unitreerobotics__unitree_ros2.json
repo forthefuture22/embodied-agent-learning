@@ -1,0 +1,134 @@
+{
+  "repo": "unitreerobotics/unitree_ros2",
+  "name": "unitree_ros2",
+  "one_liner": "宇树机器人基于 CycloneDDS 的 ROS 2 消息与示例接口",
+  "problem": "让 ROS 2 开发者无需调用宇树 SDK2，直接用 ROS 2 话题收发与宇树机器人相同的 DDS 消息，实现状态订阅与真机控制。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {
+      "name": "unitree_go 消息包",
+      "role": "四足 Go2/B2 的低层与运动状态消息定义，含 LowCmd、LowState、SportModeState 等",
+      "file": "cyclonedds_ws/src/unitree/unitree_go/msg/LowCmd.msg"
+    },
+    {
+      "name": "unitree_hg 消息包",
+      "role": "人形 G1/H1/H2 系列的低层消息定义，含 LowCmd、LowState、MotorState 等",
+      "file": "cyclonedds_ws/src/unitree/unitree_hg/msg/LowCmd.msg"
+    },
+    {
+      "name": "unitree_api 请求响应消息",
+      "role": "高层运动控制的 request/response 抽象，用 api_id 标识具体动作",
+      "file": "cyclonedds_ws/src/unitree/unitree_api/msg/Request.msg"
+    },
+    {
+      "name": "SportClient",
+      "role": "封装高层运动接口，把 Euler、Move 等调用转成带 api_id 的 Request 消息",
+      "file": "example/src/include/common/ros2_sport_client.h"
+    },
+    {
+      "name": "BaseClient",
+      "role": "请求响应的通用基类，发布 Request 并订阅同 id 的 Response，带超时",
+      "file": "example/src/include/common/base_client.hpp"
+    },
+    {
+      "name": "LowCmd 低层控制消息",
+      "role": "直接给关节电机下发 mode/q/dq/tau/kp/kd 的目标指令结构",
+      "file": "cyclonedds_ws/src/unitree/unitree_go/msg/LowCmd.msg"
+    },
+    {
+      "name": "motor_crc 校验",
+      "role": "对 LowCmd 做 CRC32 计算，机器人端会校验，不填 crc 指令会被丢弃",
+      "file": "example/src/src/common/motor_crc.cpp"
+    },
+    {
+      "name": "setup.sh 环境脚本",
+      "role": "设置 RMW 实现为 rmw_cyclonedds_cpp 并指定与机器人通信的网卡",
+      "file": "setup.sh"
+    }
+  ],
+  "layers": [
+    {
+      "name": "消息定义层",
+      "responsibility": "用 .msg 定义与机器人 DDS 完全一致的数据结构",
+      "modules": ["cyclonedds_ws/src/unitree"],
+      "files": ["cyclonedds_ws/src/unitree/unitree_go/msg/LowCmd.msg", "cyclonedds_ws/src/unitree/unitree_hg/msg/LowCmd.msg", "cyclonedds_ws/src/unitree/unitree_api/msg/Request.msg"]
+    },
+    {
+      "name": "ROS 2 中间件配置层",
+      "responsibility": "指定 CycloneDDS 作为 RMW、配置网卡与域，使 ROS 2 与机器人同网通信",
+      "modules": ["cyclonedds_ws"],
+      "files": ["setup.sh", "setup_local.sh", "setup_default.sh"]
+    },
+    {
+      "name": "客户端封装层",
+      "responsibility": "把消息收发封装成可复用的 C++ 客户端类",
+      "modules": ["example/src/include/common"],
+      "files": ["example/src/include/common/ros2_sport_client.h", "example/src/include/common/base_client.hpp", "example/src/include/common/ros2_robot_state_client.h"]
+    },
+    {
+      "name": "示例应用层",
+      "responsibility": "按机器人型号提供状态读取、低层控制、高层控制的可运行示例",
+      "modules": ["example/src/src"],
+      "files": ["example/src/src/read_motion_state.cpp", "example/src/src/low_level_ctrl.cpp", "example/src/src/h1-2/lowlevel/low_level_ctrl_hg.cpp"]
+    },
+    {
+      "name": "构建层",
+      "responsibility": "ament_cmake 声明可执行目标与消息生成，colcon 编译工作空间",
+      "modules": ["example/src"],
+      "files": ["example/src/CMakeLists.txt", "cyclonedds_ws/src/unitree/unitree_api/CMakeLists.txt"]
+    }
+  ],
+  "data_flow": [
+    "第1步：source setup.sh 把 RMW_IMPLEMENTATION 设为 rmw_cyclonedds_cpp 并绑定机器人网卡",
+    "第2步：ROS 2 节点启动后自动与机器人处于同一 DDS 域，直接发现对方话题",
+    "第3步：状态获取时，节点订阅 lowstate 或 sportmodestate 话题接收周期状态",
+    "第4步：回调里把消息的 motor_state、imu_state 等字段解析成关节角度与姿态",
+    "第5步：低层控制时，节点构造 LowCmd 并逐电机填 mode/q/dq/tau/kp/kd",
+    "第6步：调用 get_crc 计算 CRC32 写入 crc 字段，否则机器人会拒绝",
+    "第7步：把 LowCmd 发布到 /lowcmd 话题，机器人电机按 kp/kd 执行位置与阻尼控制",
+    "第8步：高层控制时，用 SportClient 生成带 api_id 的 Request 发到 /api/sport/request",
+    "第9步：机器人执行后在 /api/sport/response 返回同 id 的 Response",
+    "第10步：客户端匹配 api_id 取出 data 里的 JSON，解析成动作执行结果"
+  ],
+  "entry_points": [
+    {"path": "setup.sh", "what": "配置 RMW 与网卡，让 ROS 2 能与真机通信"},
+    {"path": "example/src/src/read_motion_state.cpp", "what": "订阅运动状态话题并打印位置速度的入门示例"},
+    {"path": "example/src/src/low_level_ctrl.cpp", "what": "向 Go2/B2 下发低层关节指令的示例"},
+    {"path": "example/src/src/h1-2/lowlevel/low_level_ctrl_hg.cpp", "what": "人形 H1-2 的低层控制示例，含 500Hz 控制循环"},
+    {"path": "example/src/src/go2/go2_robot_state_client.cpp", "what": "用高层客户端查询与设置机器人状态"},
+    {"path": "example/src/CMakeLists.txt", "what": "所有示例可执行目标的清单"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "讲清为什么 ROS 2 能直接和宇树机器人通信"},
+    {"path": "cyclonedds_ws/src/unitree/unitree_go/msg/LowCmd.msg", "why": "低层控制指令的字段定义，控制真机的核心"},
+    {"path": "cyclonedds_ws/src/unitree/unitree_go/msg/SportModeState.msg", "why": "运动状态字段，理解状态反馈"},
+    {"path": "cyclonedds_ws/src/unitree/unitree_api/msg/Request.msg", "why": "高层请求结构，理解 api_id 机制"},
+    {"path": "example/src/include/common/ros2_sport_client.h", "why": "高层动作如何映射成 Request"},
+    {"path": "example/src/include/common/base_client.hpp", "why": "请求响应同步等待的通用实现"},
+    {"path": "example/src/src/common/motor_crc.cpp", "why": "真机控制必须的 CRC 校验实现"},
+    {"path": "example/src/src/h1-2/lowlevel/low_level_ctrl_hg.cpp", "why": "完整真机控制链路样板"}
+  ],
+  "extension_points": [
+    "想加一个新机器人型号：在 cyclonedds_ws/src/unitree/ 下新增消息包目录，参照 unitree_hg 的 msg 与 CMakeLists.txt",
+    "想加一个新示例程序：在 example/src/src/<型号>/ 下写 cpp，并在 example/src/CMakeLists.txt 用 add_executable 注册",
+    "想加一个新高层动作：在 example/src/include/common/ros2_sport_client.h 加 api_id 常量与方法，实现放在对应 .cpp",
+    "想接不同 DDS 网卡：修改 setup.sh 里的 CYCLONEDDS_URI 的 NetworkInterface 名称",
+    "想换控制频率：修改示例里 create_wall_timer 的周期参数"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 理解 DDS 同构通信原理",
+    "第2步：读 unitree_go 与 unitree_hg 的 LowCmd/LowState 消息定义",
+    "第3步：读 setup.sh 理解通信环境如何配置",
+    "第4步：读 read_motion_state.cpp 学会订阅状态",
+    "第5步：读 low_level_ctrl.cpp 与 motor_crc.cpp 学会下发控制",
+    "第6步：读 ros2_sport_client.h 与 base_client.hpp 理解高层请求响应"
+  ],
+  "diagram_mermaid": "graph TD\n  ENV[setup.sh 配置 RMW 与网卡] --> DDS[CycloneDDS 通信域]\n  DDS --> ROBOT[宇树机器人真机]\n  NODE[ROS 2 控制节点] --> SUB[订阅 lowstate 与 sportmodestate]\n  SUB --> PARSE[解析电机与 IMU 状态]\n  NODE --> BUILD[构造 LowCmd 指令]\n  BUILD --> CRC[get_crc 计算校验]\n  CRC --> PUB[发布到 lowcmd 话题]\n  PUB --> DDS\n  NODE --> SPORT[SportClient 生成 Request]\n  SPORT --> API[发布到 api sport request]\n  API --> ROBOT\n  ROBOT --> RESP[返回 Response]\n  RESP --> SPORT",
+  "surprises": [
+    "仓库并不直接链接 unitree_sdk2，而是靠让 ROS 2 也使用 CycloneDDS 与机器人底层同构通信",
+    "低层 LowCmd 必须自己算 CRC32 写入 crc 字段，漏填机器人会静默丢弃指令",
+    "高层运动控制是 request/response 模式且靠 api_id 匹配响应，不是单纯发布话题",
+    "低层状态有高频 500Hz 的 lowstate 与低频 lf/lowstate 两套话题，选错会拿不到预期频率"
+  ],
+  "confidence": "高"
+}

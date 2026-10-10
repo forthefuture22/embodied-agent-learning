@@ -1,0 +1,142 @@
+{
+  "repo": "FlowiseAI/Flowise",
+  "name": "Flowise",
+  "one_liner": "拖拽式可视化搭建 LLM 应用与 Agent 流程的平台",
+  "problem": "让非工程师也能把 LLM、工具、向量库、记忆等能力用画布连成可运行的对话流或 Agent，并一键发布为 API 或聊天机器人。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {
+      "name": "INode",
+      "role": "节点契约：一个可拖拽组件的能力声明与执行接口，含 inputs、baseClasses、init 与 run 方法",
+      "file": "packages/components/src/Interface.ts"
+    },
+    {
+      "name": "NodesPool",
+      "role": "启动时扫描 dist/nodes 目录，require 每个 nodeClass 并实例化，注册成 name 到节点实例的字典",
+      "file": "packages/server/src/NodesPool.ts"
+    },
+    {
+      "name": "buildFlow",
+      "role": "画布 JSON 的执行引擎：把 ReactFlow 的 nodes/edges 当成有向图，按深度队列逐节点 import 并 init",
+      "file": "packages/server/src/utils/index.ts"
+    },
+    {
+      "name": "IReactFlowNode / IReactFlowObject",
+      "role": "画布数据模型，保存节点的 data.inputs 配置、位置、连线与输出锚点，是前后端交换的 JSON 结构",
+      "file": "packages/server/src/Interface.ts"
+    },
+    {
+      "name": "ChatFlow 实体",
+      "role": "TypeORM 持久化实体，把一条画布 flowData、名称、API 配置存进数据库",
+      "file": "packages/server/src/database/entities/ChatFlow.ts"
+    },
+    {
+      "name": "INodeParams",
+      "role": "单个输入参数的描述结构，type 决定 UI 渲染成下拉框、文本框还是凭据选择器",
+      "file": "packages/components/src/Interface.ts"
+    },
+    {
+      "name": "resolveVariables",
+      "role": "执行前把节点输入里的变量占位符、上游节点输出、全局变量解析成真实值",
+      "file": "packages/server/src/utils/index.ts"
+    },
+    {
+      "name": "SSEStreamer",
+      "role": "服务端事件流，把节点 token 增量推送给前端实现打字机效果",
+      "file": "packages/server/src/utils/SSEStreamer.ts"
+    }
+  ],
+  "layers": [
+    {
+      "name": "UI 层",
+      "responsibility": "React 前端：画布编辑、节点面板、聊天调试、凭据管理",
+      "modules": ["packages/ui/src"],
+      "files": ["packages/ui/src/index.jsx", "packages/ui/src/routes/CanvasRoutes.jsx", "packages/ui/src/views/canvas/index.jsx"]
+    },
+    {
+      "name": "Server 层",
+      "responsibility": "Express 后端：路由分发、控制器、服务、数据库、执行编排",
+      "modules": ["packages/server/src"],
+      "files": ["packages/server/src/index.ts", "packages/server/src/routes/index.ts", "packages/server/src/controllers/nodes/index.ts"]
+    },
+    {
+      "name": "Components 层",
+      "responsibility": "第三方集成节点库：LLM、工具、向量库、记忆等全部可插拔节点实现",
+      "modules": ["packages/components/nodes"],
+      "files": ["packages/components/nodes/index.ts", "packages/components/nodes/chatmodels/ChatOpenAI/ChatOpenAI.ts"]
+    },
+    {
+      "name": "执行引擎层",
+      "responsibility": "把画布图解释成执行顺序、解析变量、调用节点 init、组装返回结果",
+      "modules": ["packages/server/src/utils"],
+      "files": ["packages/server/src/utils/index.ts", "packages/server/src/utils/buildChatflow.ts", "packages/server/src/utils/buildAgentflow.ts"]
+    },
+    {
+      "name": "Agent 编排层",
+      "responsibility": "把对话流升级为多步 Agent 图执行，支持 AgentFlow 与工具循环",
+      "modules": ["packages/agentflow"],
+      "files": ["packages/server/src/utils/buildAgentGraph.ts"]
+    },
+    {
+      "name": "构建层",
+      "responsibility": "Gulp 拷贝图标、TS 编译输出 dist，供运行时动态 require",
+      "modules": ["packages/components"],
+      "files": ["packages/components/gulpfile.ts", "packages/components/package.json"]
+    }
+  ],
+  "data_flow": [
+    "第1步：前端画布把用户拖拽的节点与连线序列化成 flowData 的 nodes/edges JSON 存入数据库",
+    "第2步：用户点击对话或调用预测 API，请求进入 routes/predictions 或 routes/chatflows",
+    "第3步：控制器取出 ChatFlow 实体里的 flowData，解析出 nodes、edges",
+    "第4步：constructGraphs 把 nodes/edges 构建成邻接图，getStartingNodes 找出无入边的起点",
+    "第5步：buildFlow 建立节点队列，从起点按深度逐层处理",
+    "第6步：对每个节点，用 NodesPool 里注册的 filePath 动态 import 出 nodeClass 并实例化",
+    "第7步：resolveVariables 把输入里的变量、上游输出、全局变量替换成真实值",
+    "第8步：调用节点实例的 init 方法，节点内部调用 LangChain 或第三方 SDK 完成实际工作",
+    "第9步：输出写回 flowNodes 的 data.instance，作为下游节点的输入",
+    "第10步：若为流式，SSEStreamer 把 token 增量推给前端；否则汇总成最终响应返回"
+  ],
+  "entry_points": [
+    {"path": "packages/server/src/index.ts", "what": "Express 服务启动、数据库与 NodesPool 初始化、挂载全部路由"},
+    {"path": "packages/server/src/NodesPool.ts", "what": "扫描并注册所有节点与凭据"},
+    {"path": "packages/server/src/utils/buildChatflow.ts", "what": "处理一次对话流预测请求的完整编排"},
+    {"path": "packages/server/src/utils/index.ts", "what": "buildFlow 执行引擎本体"},
+    {"path": "packages/server/src/routes/index.ts", "what": "聚合所有 REST 路由"},
+    {"path": "packages/components/nodes/chatmodels/ChatOpenAI/ChatOpenAI.ts", "what": "最典型的一个节点实现，可作模板"},
+    {"path": "packages/ui/src/index.jsx", "what": "前端 React 应用入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立三包 monorepo 的整体认知"},
+    {"path": "packages/components/src/Interface.ts", "why": "INode/INodeData/INodeParams 定义，理解节点是什么"},
+    {"path": "packages/components/nodes/chatmodels/ChatOpenAI/ChatOpenAI.ts", "why": "一个完整节点的最小可读样本"},
+    {"path": "packages/server/src/NodesPool.ts", "why": "理解节点如何被发现和注册"},
+    {"path": "packages/server/src/utils/index.ts", "why": "buildFlow 是画布 JSON 变执行流的核心"},
+    {"path": "packages/server/src/utils/buildChatflow.ts", "why": "把执行引擎串成一次真实请求"},
+    {"path": "packages/server/src/Interface.ts", "why": "服务端数据模型与画布结构"},
+    {"path": "packages/ui/src/views/canvas/index.jsx", "why": "前端画布交互实现"}
+  ],
+  "extension_points": [
+    "想加一个新节点类型：在 packages/components/nodes/<分类>/ 下新建目录，写实现 INode 的类，导出 nodeClass，图标同目录，重启后自动被 NodesPool 扫描",
+    "想加一个新凭据类型：在 packages/components/credentials/ 下写实现 INodeCredential 的 credClass",
+    "想改执行顺序或并发策略：修改 packages/server/src/utils/index.ts 的 buildFlow 队列逻辑",
+    "想改画布输入渲染：修改 packages/ui/src/views/canvas/NodeInputHandler.jsx 与 INodeParams 的 type",
+    "想新增 REST 能力：在 packages/server/src/routes/ 加路由并在 routes/index.ts 挂载",
+    "想接入新的 Agent 编排：扩展 packages/server/src/utils/buildAgentGraph.ts"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 了解 server/ui/components 三包分工",
+    "第2步：读 packages/components/src/Interface.ts 弄清 INode 契约",
+    "第3步：读一个具体节点 ChatOpenAI.ts 看契约如何落地",
+    "第4步：读 NodesPool.ts 理解节点注册机制",
+    "第5步：读 buildFlow 理解画布 JSON 到执行流的映射",
+    "第6步：读 buildChatflow.ts 看一次请求如何串起全链路"
+  ],
+  "diagram_mermaid": "graph TD\n  UI[React 画布 UI] -->|flowData JSON| API[Express 路由]\n  API --> CTRL[控制器与服务层]\n  CTRL --> FLOW[buildFlow 执行引擎]\n  FLOW --> POOL[NodesPool 节点注册表]\n  POOL --> NODE[节点实例 init]\n  NODE --> LLM[LangChain 与第三方 SDK]\n  NODE --> DB[ChatFlow 数据库]\n  NODE -->|token 增量| SSE[SSEStreamer]\n  SSE --> UI",
+  "surprises": [
+    "节点不是编译进代码的类注册表，而是运行时用 require 动态加载 dist/nodes 下的 .js 文件，加节点只需放文件重启",
+    "buildFlow 用广度优先队列而非拓扑排序，还允许最多 3 次循环以支持回环节点",
+    "节点只需实现 init 或 run 之一，且通过 baseClasses 做类型兼容匹配来决定连线是否合法",
+    "doc loader 节点若连到非内存向量库会被执行引擎主动跳过，避免重复加载"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,202 @@
+{
+  "repo": "facebookresearch/faiss",
+  "name": "FAISS",
+  "one_liner": "Meta 出品的高效稠密向量相似度检索与聚类算法库",
+  "problem": "在单机甚至单卡上对十亿级稠密向量做近邻检索与聚类，需在召回率、内存、训练与查询时间之间灵活取舍。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "Index",
+      "role": "索引抽象基类，规定 train、add、search、range_search 等虚接口，所有索引类型都实现它",
+      "file": "faiss/Index.h"
+    },
+    {
+      "name": "index_factory",
+      "role": "字符串工厂函数，用类似 IVF4096,PQ32 的描述串组合出任意索引栈，是统一各种索引类型的门面",
+      "file": "faiss/index_factory.cpp"
+    },
+    {
+      "name": "IndexIVF 与 Level1Quantizer",
+      "role": "倒排索引抽象，用粗量化器把向量分配到倒排链，nprobe 决定检索多少个链",
+      "file": "faiss/IndexIVF.h"
+    },
+    {
+      "name": "ProductQuantizer",
+      "role": "乘积量化实现，把向量切成 M 段分别用码本编码，用查表近似距离大幅压缩内存",
+      "file": "faiss/impl/ProductQuantizer.h"
+    },
+    {
+      "name": "DistanceComputer",
+      "role": "距离计算抽象，封装 set_query 与对编码向量的距离求值，让扫描逻辑与编码方式解耦",
+      "file": "faiss/impl/DistanceComputer.h"
+    },
+    {
+      "name": "InvertedLists",
+      "role": "倒排链存储抽象，负责倒排表内 id 与编码的读写，可内存、可磁盘、可分块",
+      "file": "faiss/invlists/InvertedLists.h"
+    },
+    {
+      "name": "MetricType",
+      "role": "度量类型枚举，统一 L2、内积、L1、Linf 等，驱动索引的排序方向与距离计算",
+      "file": "faiss/MetricType.h"
+    },
+    {
+      "name": "VectorTransform",
+      "role": "向量变换抽象，用于 PCA、OPQ 等预处理，使预处理可像索引一样串联",
+      "file": "faiss/VectorTransform.h"
+    },
+    {
+      "name": "Clustering",
+      "role": "k-means 聚类实现，是 IVF 粗量化器与 PQ 码本训练的共同基础",
+      "file": "faiss/Clustering.h"
+    },
+    {
+      "name": "swigfaiss 绑定层",
+      "role": "SWIG 接口描述文件，把 C++ 类暴露为 Python 模块，是 C++ 核心与 Python 的边界",
+      "file": "faiss/python/swigfaiss.swig"
+    }
+  ],
+  "layers": [
+    {
+      "name": "Python 绑定层",
+      "responsibility": "通过 SWIG 与 numpy 把 C++ 索引暴露为 Python 对象，处理数组转换与惰性加载",
+      "modules": ["faiss/python"],
+      "files": ["faiss/python/swigfaiss.swig", "faiss/python/__init__.py", "faiss/python/class_wrappers.py", "faiss/python/loader.py"]
+    },
+    {
+      "name": "索引门面层",
+      "responsibility": "用字符串工厂与自动调参把底层索引类型组合成用户可用的索引栈",
+      "modules": ["faiss"],
+      "files": ["faiss/index_factory.cpp", "faiss/index_factory.h", "faiss/AutoTune.h"]
+    },
+    {
+      "name": "索引实现层",
+      "responsibility": "实现 Flat、IVF、HNSW、NSG、LSH、二进制等各类索引，均实现 Index 接口",
+      "modules": ["faiss"],
+      "files": ["faiss/Index.h", "faiss/IndexFlat.h", "faiss/IndexIVF.h", "faiss/IndexIVFPQ.h", "faiss/IndexHNSW.h"]
+    },
+    {
+      "name": "量化层",
+      "responsibility": "实现 PQ、SQ、RQ、LSQ、RaBitQ 等量化与编码，压缩向量与近似距离",
+      "modules": ["faiss/impl"],
+      "files": ["faiss/impl/ProductQuantizer.h", "faiss/impl/ProductQuantizer.cpp", "faiss/impl/ScalarQuantizer.h", "faiss/impl/DistanceComputer.h"]
+    },
+    {
+      "name": "倒排表与存储层",
+      "responsibility": "管理倒排链的内存、磁盘与分块存储，以及 id 到链的映射",
+      "modules": ["faiss/invlists"],
+      "files": ["faiss/invlists/InvertedLists.h", "faiss/invlists/InvertedLists.cpp"]
+    },
+    {
+      "name": "聚类与预处理层",
+      "responsibility": "提供 k-means 训练与向量变换，为量化与倒排提供码本和预处理",
+      "modules": ["faiss"],
+      "files": ["faiss/Clustering.h", "faiss/Clustering.cpp", "faiss/VectorTransform.h"]
+    },
+    {
+      "name": "序列化层",
+      "responsibility": "定义索引的读写与克隆，支持索引落盘与跨进程搬运",
+      "modules": ["faiss/impl"],
+      "files": ["faiss/impl/index_read.cpp", "faiss/impl/index_write.cpp", "faiss/impl/io.h"]
+    },
+    {
+      "name": "GPU 与 C API 层",
+      "responsibility": "提供 CUDA 加速的 GPU 索引实现与稳定的 C 语言接口",
+      "modules": ["faiss/gpu", "c_api"],
+      "files": ["c_api/Index_c.h", "c_api/index_factory_c.h", "c_api/index_io_c.h"]
+    }
+  ],
+  "data_flow": [
+    "第1步：Python 用户调用 faiss.index_factory 传入如 IVF4096,PQ32 的描述串",
+    "第2步：index_factory 解析描述串，逐层构造粗量化器、IVF 索引与 PQ 量化器，返回 Index 指针",
+    "第3步：SWIG 生成的包装类把 C++ Index 暴露给 Python，后续调用经 faiss/python/class_wrappers.py 做参数适配",
+    "第4步：add 时 IndexIVF 先用 Level1Quantizer 把每个向量分配到最近的倒排链",
+    "第5步：残差向量经 ProductQuantizer 编码为紧凑字节码，写入 InvertedLists 对应链",
+    "第6步：search 时先对查询向量做同样的粗量化，选出 nprobe 个最近的链",
+    "第7步：对每个候选链用 DistanceComputer 计算查询到各编码的距离，PQ 通过查距离表近似求值",
+    "第8步：用堆结构在扫描过程中维护 TopK，跨链合并后返回距离与 id",
+    "第9步：结果经 SWIG 转回 numpy 数组返回 Python 调用方"
+  ],
+  "entry_points": [
+    {
+      "path": "faiss/python/swigfaiss.swig",
+      "what": "SWIG 接口定义，Python 调用 C++ 的全部绑定入口"
+    },
+    {
+      "path": "faiss/index_factory.cpp",
+      "what": "index_factory 字符串工厂实现，是构造任意索引栈的统一入口"
+    },
+    {
+      "path": "faiss/python/__init__.py",
+      "what": "Python 包入口，加载 SWIG 扩展并注入便捷包装"
+    },
+    {
+      "path": "c_api/index_factory_c.h",
+      "what": "C 语言工厂接口，供非 Python 语言绑定使用"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "faiss/Index.h",
+      "why": "抽象基类，先看它才能理解所有索引类型共享的接口契约"
+    },
+    {
+      "path": "faiss/index_factory.cpp",
+      "why": "字符串工厂把各组件组装成索引栈，是理解整体架构的最佳索引页"
+    },
+    {
+      "path": "faiss/IndexIVF.h",
+      "why": "倒排索引与粗量化器结构，理解 nprobe 与链扫描的起点"
+    },
+    {
+      "path": "faiss/impl/ProductQuantizer.h",
+      "why": "乘积量化的核心结构与编解码接口，理解内存压缩的关键"
+    },
+    {
+      "path": "faiss/impl/DistanceComputer.h",
+      "why": "距离计算抽象，理解扫描时如何与编码解耦"
+    },
+    {
+      "path": "faiss/invlists/InvertedLists.h",
+      "why": "倒排链存储接口，理解索引数据如何落地"
+    },
+    {
+      "path": "faiss/Clustering.h",
+      "why": "k-means 训练实现，是量化码本与粗量化器训练的基础"
+    },
+    {
+      "path": "faiss/python/swigfaiss.swig",
+      "why": "看清 C++ 与 Python 的边界究竟在哪里"
+    },
+    {
+      "path": "faiss/impl/index_write.cpp",
+      "why": "索引序列化实现，理解落盘格式与跨进程搬运"
+    }
+  ],
+  "extension_points": [
+    "想新增索引类型：继承 faiss/Index.h 的 Index 抽象类实现 train/add/search，并在 faiss/index_factory.cpp 中注册解析分支",
+    "想新增量化方式：继承 faiss/impl/Quantizer.h 实现编解码，再接入对应 Index 实现",
+    "想新增距离度量：扩展 faiss/MetricType.h 枚举并实现相应 DistanceComputer",
+    "想改倒排链存储：实现 faiss/invlists/InvertedLists.h 接口并在 index_factory 的 own_invlists 路径接入",
+    "想暴露到 Python：在 faiss/python/swigfaiss.swig 中加入头文件与包装规则，必要时补 faiss/python/class_wrappers.py",
+    "想新增预处理变换：继承 faiss/VectorTransform.h 并配合 faiss/IndexPreTransform.h 串联"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 建立「索引类型 + 权衡维度」的整体认知",
+    "第2步：读 faiss/Index.h 理解抽象基类接口",
+    "第3步：读 faiss/index_factory.cpp 看各组件如何被字符串组装",
+    "第4步：读 faiss/IndexIVF.h 与 faiss/invlists/InvertedLists.h 理解倒排索引",
+    "第5步：读 faiss/impl/ProductQuantizer.h 与 faiss/impl/DistanceComputer.h 理解量化与距离计算",
+    "第6步：读 faiss/Clustering.h 理解码本训练",
+    "第7步：读 faiss/python/swigfaiss.swig 与 faiss/python/class_wrappers.py 理解 Python 绑定边界",
+    "第8步：读 faiss/gpu 下的实现理解 GPU 索引如何做到与 CPU 索引互换"
+  ],
+  "diagram_mermaid": "graph TD\n  User[Python 用户] --> PyInit[faiss python 包入口]\n  PyInit --> SWIG[swigfaiss 绑定层]\n  SWIG --> Factory[index_factory 字符串工厂]\n  Factory --> IndexBase[Index 抽象基类]\n  IndexBase --> IndexIVF[IndexIVF 倒排索引]\n  IndexBase --> IndexFlat[IndexFlat 暴力索引]\n  IndexBase --> IndexHNSW[IndexHNSW 图索引]\n  IndexIVF --> Quantizer[Level1Quantizer 粗量化]\n  IndexIVF --> PQ[ProductQuantizer 乘积量化]\n  Quantizer --> Clustering[Clustering kmeans 训练]\n  PQ --> Clustering\n  IndexIVF --> InvLists[InvertedLists 倒排链存储]\n  IndexIVF --> DistComp[DistanceComputer 距离计算]\n  DistComp --> MetricType[MetricType 度量类型]\n  IndexBase --> IO[索引序列化读写]\n  IndexBase --> GPU[faiss gpu 加速实现]",
+  "surprises": [
+    "整个库的核心不是某个算法，而是 index_factory 这个字符串工厂：所有索引类型都只是被组合出来的组件，用户几乎不直接 new 具体索引类",
+    "IVF 的粗量化器本身就是一个 Index，可以再嵌套 IVF 或 HNSW，因此索引结构是递归组合的，这解释了为何描述串能层层叠加",
+    "PQ 距离不是精确计算，而是预先算好查询向量到每个子码本的查表，扫描时只做查表加法，这是能在内存里装下十亿向量的关键",
+    "Python 绑定并非简单包装：faiss/python/loader.py 会根据 CPU 指令集在运行时动态选择对应的 C 扩展，导致同名包在不同机器上加载不同二进制"
+  ],
+  "confidence": "高"
+}

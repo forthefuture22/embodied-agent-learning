@@ -1,0 +1,94 @@
+{
+  "repo": "OpenBMB/AgentVerse",
+  "name": "AgentVerse",
+  "one_liner": "多 Agent 协作与仿真沙盒框架",
+  "problem": "研究多 Agent 行为需要可复现的实验平台：既要编排多个 LLM Agent 如何轮流发言、彼此可见，又要能评测任务完成度。AgentVerse 用可插拔的规则组件与统一注册表把环境、Agent、记忆、模型全部解耦。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "BaseEnvironment", "role": "环境基类：定义 step/reset/is_done 与 agents、rule、max_turns 等字段", "file": "agentverse/environments/base.py"},
+    {"name": "Registry", "role": "通用注册表：用装饰器注册类，并按 type 字符串从配置构建实例", "file": "agentverse/registry.py"},
+    {"name": "SimulationRule", "role": "仿真规则聚合：把 order/visibility/selector/updater/describer 五个子规则组合起来", "file": "agentverse/environments/simulation_env/rules/base.py"},
+    {"name": "五个规则组件", "role": "决定发言顺序、可见性、消息筛选、记忆更新与环境描述，是换环境的主要改动点", "file": "agentverse/environments/simulation_env/rules/order/base.py"},
+    {"name": "BasicEnvironment 仿真版", "role": "基础仿真环境实现，step 中按规则驱动一轮对话", "file": "agentverse/environments/simulation_env/basic.py"},
+    {"name": "TasksolvingRule", "role": "任务求解规则：组合 role_assigner/decision_maker/executor/evaluator 四个阶段", "file": "agentverse/environments/tasksolving_env/rules/base.py"},
+    {"name": "BasicEnvironment 任务求解版", "role": "任务求解环境实现，step 走角色分配、决策、执行、评测四阶段", "file": "agentverse/environments/tasksolving_env/basic.py"},
+    {"name": "BaseAgent", "role": "Agent 基类：持有 llm、memory、output_parser、prompt_template 与 step/astep", "file": "agentverse/agents/base.py"},
+    {"name": "ConversationAgent", "role": "仿真场景的对话 Agent，用提示词模板与记忆生成一条消息", "file": "agentverse/agents/simulation_agent/conversation.py"},
+    {"name": "BaseLLM", "role": "模型抽象：统一不同 LLM 提供方的调用接口与花费统计", "file": "agentverse/llms/base.py"},
+    {"name": "BaseMemory", "role": "记忆抽象：如 ChatHistoryMemory，决定 Agent 记住与遗忘什么", "file": "agentverse/memory/__init__.py"},
+    {"name": "OutputParser", "role": "输出解析：把 LLM 文本解析成结构化动作与参数，可按任务自定义", "file": "agentverse/output_parser/__init__.py"},
+    {"name": "prepare_task_config", "role": "配置加载器：读取 config.yaml 并逐层构建 memory/llm/parser/agent", "file": "agentverse/initialization.py"}
+  ],
+  "layers": [
+    {"name": "注册与配置层", "responsibility": "通用 Registry 与 YAML 配置加载，把字符串 type 映射到具体类", "modules": ["agentverse/registry.py", "agentverse/initialization.py"], "files": ["agentverse/registry.py", "agentverse/initialization.py"]},
+    {"name": "运行编排层", "responsibility": "Simulation 与 TaskSolving 从任务目录构建对象并驱动环境循环", "modules": ["agentverse"], "files": ["agentverse/simulation.py", "agentverse/tasksolving.py"]},
+    {"name": "环境层", "responsibility": "仿真环境与任务求解环境及其可插拔规则组件", "modules": ["agentverse/environments"], "files": ["agentverse/environments/base.py", "agentverse/environments/__init__.py", "agentverse/environments/simulation_env/basic.py"]},
+    {"name": "Agent 层", "responsibility": "仿真对话 Agent 与任务求解多角色 Agent 的实现", "modules": ["agentverse/agents"], "files": ["agentverse/agents/base.py", "agentverse/agents/__init__.py", "agentverse/agents/simulation_agent/conversation.py"]},
+    {"name": "模型层", "responsibility": "LLM 提供方封装、调用与花费统计", "modules": ["agentverse/llms"], "files": ["agentverse/llms/base.py", "agentverse/llms/openai.py"]},
+    {"name": "记忆与解析层", "responsibility": "记忆机制、记忆操作器与 LLM 输出解析", "modules": ["agentverse/memory", "agentverse/output_parser"], "files": ["agentverse/memory/__init__.py", "agentverse/output_parser/__init__.py"]},
+    {"name": "任务配置层", "responsibility": "内置仿真案例与任务求解案例的 YAML 配置", "modules": ["agentverse/tasks"], "files": ["agentverse/tasks/simulation/nlp_classroom_3players/config.yaml", "agentverse/tasks/tasksolving/brainstorming/config.yaml"]},
+    {"name": "命令与界面层", "responsibility": "仿真与任务求解的 CLI 入口以及 Gradio GUI 入口", "modules": ["agentverse_command"], "files": ["agentverse_command/main_simulation_cli.py", "agentverse_command/main_tasksolving_cli.py", "agentverse_command/main_simulation_gui.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户执行 main_simulation_cli.py，用 --task 指定 agentverse/tasks 下的任务目录",
+    "第2步：Simulation.from_task 调用 prepare_task_config 读取该目录的 config.yaml",
+    "第3步：prepare_task_config 依次构建 memory、llm、memory_manipulator、output_parser，再交 load_agent 构建 Agent",
+    "第4步：load_environment 按 env_type 从 env_registry 取出环境类，并把 rule 配置交给规则注册表构建子组件",
+    "第5步：仿真环境构造 SimulationRule，内部用五个注册表构建 order/visibility/selector/updater/describer",
+    "第6步：Simulation.run 循环调用 environment.step，直到 is_done",
+    "第7步：step 中先由 order 决定下一个发言的 Agent，由 describer 生成环境描述",
+    "第8步：被选中的 Agent 并发 astep，用 prompt_template 与记忆构造提示词调用 LLM",
+    "第9步：output_parser 把 LLM 输出解析成 Message，selector 筛选有效消息，updater 写入各 Agent 记忆",
+    "第10步：visibility 更新每个 Agent 可见的 Agent 集合，进入下一轮",
+    "第11步：任务求解模式下 step 依次走角色分配、决策、执行、评测，评测分数达标即标记 success",
+    "第12步：运行结束调用 report_metrics 汇总所有 Agent 的花费"
+  ],
+  "entry_points": [
+    {"path": "agentverse_command/main_simulation_cli.py", "what": "仿真环境命令行入口，加载任务并运行 Simulation"},
+    {"path": "agentverse_command/main_tasksolving_cli.py", "what": "任务求解命令行入口，加载任务并运行 TaskSolving"},
+    {"path": "agentverse_command/main_simulation_gui.py", "what": "仿真环境的 Gradio GUI 入口"},
+    {"path": "agentverse/simulation.py", "what": "Simulation 运行类与 from_task 构建流程"},
+    {"path": "agentverse/tasksolving.py", "what": "TaskSolving 运行类，按 AGENT_TYPES 组装多角色 Agent"},
+    {"path": "agentverse/initialization.py", "what": "配置加载与各注册表构建的统一入口"},
+    {"path": "pokemon_server.py", "what": "Pokémon 环境的本地服务端示例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读 Customize Your Own Environment 一节，建立环境等于五个规则组件的认知"},
+    {"path": "agentverse/registry.py", "why": "全框架的注册与构建机制，理解配置驱动设计的关键"},
+    {"path": "agentverse/initialization.py", "why": "配置如何逐层构建成 Agent 与环境"},
+    {"path": "agentverse/environments/base.py", "why": "环境基类与 step/reset/is_done 契约"},
+    {"path": "agentverse/environments/simulation_env/rules/base.py", "why": "五个子规则如何聚合成一个环境的规则"},
+    {"path": "agentverse/environments/simulation_env/basic.py", "why": "一轮对话 step 的完整执行顺序"},
+    {"path": "agentverse/environments/tasksolving_env/rules/base.py", "why": "任务求解四阶段规则的组织方式"},
+    {"path": "agentverse/agents/base.py", "why": "Agent 的字段与 step/astep 抽象"},
+    {"path": "agentverse/simulation.py", "why": "从任务目录到运行的完整链路"},
+    {"path": "agentverse/tasks/simulation/nlp_classroom_3players/config.yaml", "why": "最直观的配置示例，看懂环境与 Agent 如何声明"}
+  ],
+  "extension_points": [
+    "想加一个新仿真环境：继承 BaseEnvironment 并用 @env_registry.register 注册，再在 agentverse/environments/__init__.py 中导入",
+    "想自定义发言顺序或可见性：在 agentverse/environments/simulation_env/rules 下新增组件并注册到对应注册表",
+    "想加一个新任务求解流程：在 agentverse/environments/tasksolving_env/rules 下实现 decision_maker/executor/evaluator 组件并注册",
+    "想接入新 LLM：在 agentverse/llms 下实现 BaseLLM 子类并注册到 llm_registry",
+    "想自定义输出解析：实现 OutputParser 并用 @output_parser_registry.register 注册，再到 config.yaml 引用",
+    "想新增一个可运行任务：在 agentverse/tasks 下新建目录并编写 config.yaml"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 的 Customize Your Own Environment 一节，建立环境等于五个规则组件的认知",
+    "第2步：读 agentverse/registry.py 与 agentverse/initialization.py，理解注册表与配置加载机制",
+    "第3步：读 agentverse/environments/base.py 与 agentverse/environments/simulation_env/basic.py，理解环境 step 循环",
+    "第4步：读 agentverse/environments/simulation_env/rules/base.py，理解五个子规则如何组合",
+    "第5步：读 agentverse/agents/base.py 与 agentverse/agents/simulation_agent/conversation.py，理解 Agent 如何生成消息",
+    "第6步：读 agentverse/simulation.py，理解从任务目录到运行的完整链路",
+    "第7步：读一个 config.yaml 并动手改一个任务",
+    "第8步：读 agentverse/environments/tasksolving_env/rules/base.py 与 agentverse/tasksolving.py，理解任务求解与评测流程"
+  ],
+  "diagram_mermaid": "graph TD\n  A[CLI 或 GUI 入口] --> B[Simulation 或 TaskSolving]\n  B --> C[prepare_task_config 读取 config.yaml]\n  C --> D[构建 LLM 记忆 输出解析器]\n  C --> E[load_agent 构建 Agent]\n  C --> F[load_environment 构建环境]\n  F --> G[env_registry 按 env_type 取环境类]\n  F --> H[规则注册表构建子组件]\n  H --> I[order 发言顺序]\n  H --> J[visibility 可见性]\n  H --> K[selector 消息筛选]\n  H --> L[updater 记忆更新]\n  H --> M[describer 环境描述]\n  B --> N[循环 environment.step]\n  N --> O[Agent 调用 LLM 生成消息]\n  O --> P[output_parser 解析为 Message]\n  P --> K\n  K --> L\n  L --> Q[进入下一轮直到 is_done]",
+  "surprises": [
+    "环境不是写死的类，而是由五个可插拔规则组件组合而成，换环境往往只是换这几个组件的 type",
+    "环境、Agent、LLM、记忆、输出解析器都通过同一个通用 Registry 用字符串 type 从 YAML 构建，是配置驱动而非代码驱动",
+    "任务求解环境把一次任务拆成角色分配、决策、执行、评测四个阶段，评测不达标就带着 advice 进入下一轮重来",
+    "仓库同时包含 simulation 与 tasksolving 两套并行环境，共享 BaseEnvironment 但规则体系完全不同",
+    "配置文件用 YAML anchor 复用提示词模板，Agent 行为很大程度由 config.yaml 而非 Python 决定"
+  ],
+  "confidence": "高"
+}

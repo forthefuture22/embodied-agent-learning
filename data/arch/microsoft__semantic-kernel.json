@@ -1,0 +1,94 @@
+{
+  "repo": "microsoft/semantic-kernel",
+  "name": "Semantic Kernel",
+  "one_liner": "微软企业级 Agent 与多 Agent 编排 SDK",
+  "problem": "把 LLM、插件函数、记忆与向量库统一编排成可观测、可扩展的企业级 AI 应用，解决模型调用、工具调用与多 Agent 协作缺乏统一抽象和依赖注入的问题。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Kernel", "role": "依赖注入中心，持有并管理插件、AI 服务、过滤器与可靠性策略，是主入口", "file": "python/semantic_kernel/kernel.py"},
+    {"name": "KernelFunction", "role": "统一的可调用函数抽象，语义函数与原生函数在此收敛为同一调用接口", "file": "python/semantic_kernel/functions/kernel_function.py"},
+    {"name": "KernelFunctionFromPrompt", "role": "语义函数实现，渲染提示模板并调用 LLM 得到结果", "file": "python/semantic_kernel/functions/kernel_function_from_prompt.py"},
+    {"name": "KernelFunctionFromMethod", "role": "原生函数实现，把普通 Python 方法包装成 KernelFunction", "file": "python/semantic_kernel/functions/kernel_function_from_method.py"},
+    {"name": "KernelPlugin", "role": "函数集合与命名空间，提供 from_object/from_directory/from_openapi 注册方式", "file": "python/semantic_kernel/functions/kernel_plugin.py"},
+    {"name": "KernelArguments", "role": "调用参数容器，在函数链与模板渲染之间传递键值", "file": "python/semantic_kernel/functions/kernel_arguments.py"},
+    {"name": "KernelServicesExtension", "role": "AI 服务注册表与选择入口，按 service_id 与类型管理模型客户端", "file": "python/semantic_kernel/services/kernel_services_extension.py"},
+    {"name": "AIServiceSelector", "role": "根据函数与参数中的执行设置挑选实际使用的 AI 服务与 PromptExecutionSettings", "file": "python/semantic_kernel/services/ai_service_selector.py"},
+    {"name": "FunctionChoiceBehavior", "role": "决定 LLM 是否以及如何自动调用插件函数，是现代规划能力的核心开关", "file": "python/semantic_kernel/connectors/ai/function_choice_behavior.py"},
+    {"name": "Agent", "role": "Agent 基类，定义 get_response/invoke 与线程、消息模型", "file": "python/semantic_kernel/agents/agent.py"},
+    {"name": "ChatCompletionAgent", "role": "基于聊天补全的 Agent 实现，把 Kernel 与插件包成对话式智能体", "file": "python/semantic_kernel/agents/chat_completion/chat_completion_agent.py"},
+    {"name": "ProcessBuilder", "role": "流程框架入口，用步骤与事件建模有状态的业务流程", "file": "python/semantic_kernel/processes/process_builder.py"}
+  ],
+  "layers": [
+    {"name": "Kernel 核心层", "responsibility": "提供依赖注入容器，组合插件、服务、过滤器与可靠性扩展", "modules": ["python/semantic_kernel"], "files": ["python/semantic_kernel/kernel.py"]},
+    {"name": "函数与插件层", "responsibility": "定义 KernelFunction、KernelPlugin 与参数模型，统一语义函数与原生函数", "modules": ["python/semantic_kernel/functions"], "files": ["python/semantic_kernel/functions/kernel_function.py", "python/semantic_kernel/functions/kernel_plugin.py", "python/semantic_kernel/functions/kernel_arguments.py"]},
+    {"name": "服务与选择层", "responsibility": "注册 AI 服务并按其配置选择实际调用的模型客户端", "modules": ["python/semantic_kernel/services"], "files": ["python/semantic_kernel/services/kernel_services_extension.py", "python/semantic_kernel/services/ai_service_selector.py"]},
+    {"name": "连接器层", "responsibility": "对接各模型提供商、向量库、搜索与 OpenAPI、MCP", "modules": ["python/semantic_kernel/connectors"], "files": ["python/semantic_kernel/connectors/ai/chat_completion_client_base.py", "python/semantic_kernel/connectors/ai/function_choice_behavior.py", "python/semantic_kernel/connectors/memory.py"]},
+    {"name": "提示模板层", "responsibility": "管理提示模板与执行设置配置，支持 SK、Handlebars、Jinja2", "modules": ["python/semantic_kernel/prompt_template"], "files": ["python/semantic_kernel/prompt_template/prompt_template_config.py"]},
+    {"name": "内容与消息层", "responsibility": "定义 ChatHistory 与各类内容块，承载多模态消息与函数调用记录", "modules": ["python/semantic_kernel/contents"], "files": ["python/semantic_kernel/contents/chat_history.py"]},
+    {"name": "过滤器层", "responsibility": "提供函数调用、提示渲染、自动函数调用的横切钩子", "modules": ["python/semantic_kernel/filters"], "files": ["python/semantic_kernel/filters/kernel_filters_extension.py"]},
+    {"name": "Agent 与编排层", "responsibility": "把 Kernel 包成 Agent，并提供顺序、并发、群聊、交接等编排模式", "modules": ["python/semantic_kernel/agents"], "files": ["python/semantic_kernel/agents/agent.py", "python/semantic_kernel/agents/chat_completion/chat_completion_agent.py", "python/semantic_kernel/agents/orchestration/sequential.py"]},
+    {"name": "流程框架层", "responsibility": "以有状态步骤与事件驱动的方式建模复杂业务流程", "modules": ["python/semantic_kernel/processes"], "files": ["python/semantic_kernel/processes/process_builder.py"]},
+    {"name": "记忆与向量层", "responsibility": "提供语义记忆抽象与向量存储接口", "modules": ["python/semantic_kernel/memory"], "files": ["python/semantic_kernel/memory/semantic_text_memory.py"]}
+  ],
+  "data_flow": [
+    "第1步：构建 Kernel 并注册 AI 服务与插件，形成插件表与服务表",
+    "第2步：调用 kernel.invoke 或 kernel.invoke_prompt 发起一次函数执行",
+    "第3步：invoke 按 function_name 与 plugin_name 从 plugins 中 get_function",
+    "第4步：KernelFunction.invoke 先经过 function_invocation 过滤器",
+    "第5步：若是语义函数，渲染提示模板并选出目标 AI 服务",
+    "第6步：调用 LLM，得到文本或 function_call 内容",
+    "第7步：FunctionChoiceBehavior 决定是否触发自动函数调用",
+    "第8步：自动函数调用过滤器回调 kernel.invoke 执行插件中的原生函数",
+    "第9步：函数结果作为 function_result 回填对话历史，再次调用 LLM",
+    "第10步：循环直到模型给出最终答复，返回 FunctionResult"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "Python 与 .NET 双版本快速上手与核心概念导览"},
+    {"path": "python/semantic_kernel/kernel.py", "what": "Kernel.invoke 与 invoke_prompt 主执行入口"},
+    {"path": "python/semantic_kernel/functions/kernel_function.py", "what": "KernelFunction.invoke 的统一执行契约"},
+    {"path": "python/semantic_kernel/functions/kernel_function_extension.py", "what": "插件注册与按名查找的实现"},
+    {"path": "python/semantic_kernel/services/kernel_services_extension.py", "what": "AI 服务注册与选择入口"},
+    {"path": "python/semantic_kernel/agents/chat_completion/chat_completion_agent.py", "what": "对话式 Agent 的创建与调用入口"},
+    {"path": "python/semantic_kernel/processes/process_builder.py", "what": "业务流程编排的定义入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先看双版本快速上手，理解 Kernel 与 Agent 的定位"},
+    {"path": "python/semantic_kernel/kernel.py", "why": "Kernel 是 DI 中心，invoke 系列方法是理解一切调用的起点"},
+    {"path": "python/semantic_kernel/functions/kernel_function.py", "why": "语义函数与原生函数在此收敛为统一抽象"},
+    {"path": "python/semantic_kernel/functions/kernel_plugin.py", "why": "理解插件作为函数命名空间，以及三种注册方式"},
+    {"path": "python/semantic_kernel/functions/kernel_function_from_prompt.py", "why": "语义函数如何渲染模板并调用 LLM"},
+    {"path": "python/semantic_kernel/functions/kernel_function_from_method.py", "why": "原生函数如何被 @kernel_function 包装"},
+    {"path": "python/semantic_kernel/services/kernel_services_extension.py", "why": "服务注册与选择，多模型切换的关键"},
+    {"path": "python/semantic_kernel/connectors/ai/function_choice_behavior.py", "why": "现代版规划能力，自动函数调用的开关"},
+    {"path": "python/semantic_kernel/agents/chat_completion/chat_completion_agent.py", "why": "Agent 如何把 Kernel 与插件包成对话智能体"}
+  ],
+  "extension_points": [
+    "想接入新模型提供商：在 python/semantic_kernel/connectors/ai 下实现 ChatCompletionClientBase 子类并注册到 Kernel",
+    "想加插件函数：用 @kernel_function 装饰方法（见 functions/kernel_function_decorator.py），或用 KernelPlugin.from_object/from_directory",
+    "想从 OpenAPI 或 MCP 动态生成插件：用 connectors/openapi_plugin 或 connectors/mcp.py",
+    "想改函数调用策略：配置 FunctionChoiceBehavior 的 Auto/Required/None 模式",
+    "想加横切逻辑：注册 function、prompt、auto_function_invocation 三类过滤器",
+    "想接入向量库：实现 connectors/memory.py 中的 MemoryStore 基类",
+    "想扩展多 Agent 编排：在 agents/orchestration 下继承 OrchestrationBase 实现新编排模式",
+    "想加业务流程：用 processes/process_builder.py 定义步骤与事件"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 的 Python 快速上手，建立 Agent 与 Kernel 的直觉",
+    "第2步：读 python/semantic_kernel/kernel.py，理解 Kernel 作为依赖注入中心",
+    "第3步：读 functions/kernel_function.py 与 functions/kernel_plugin.py，理解函数与插件模型",
+    "第4步：读 functions/kernel_function_from_prompt.py，看语义函数如何调用 LLM",
+    "第5步：读 services/kernel_services_extension.py 与 services/ai_service_selector.py，看服务如何被选中",
+    "第6步：读 connectors/ai/function_choice_behavior.py，理解自动函数调用即现代规划",
+    "第7步：读 agents/chat_completion/chat_completion_agent.py，看 Agent 如何包 Kernel",
+    "第8步：读 agents/orchestration/sequential.py，理解多 Agent 编排"
+  ],
+  "diagram_mermaid": "graph TD\n  A[构建 Kernel] --> B[注册 AI 服务]\n  A --> C[注册 Plugin]\n  B --> D[Kernel.invoke]\n  C --> D\n  D --> E[查找 KernelFunction]\n  E --> F[函数调用过滤器]\n  F --> G[渲染提示模板]\n  G --> H[选择 AI 服务]\n  H --> I[调用 LLM]\n  I --> J{是否函数调用}\n  J -->|是| K[执行插件原生函数]\n  K --> L[回填对话历史]\n  L --> I\n  J -->|否| M[返回 FunctionResult]",
+  "surprises": [
+    "计划器 Planner 已移出本仓库：现在由 FunctionChoiceBehavior 加自动函数调用过滤器承担规划，仓库里已无 planners 目录",
+    "C# 与 Python 是两套独立实现：语义对齐但 API 命名不同，Python 版以 pydantic 模型为核心，dotnet 版在 dotnet/src 下",
+    "语义函数与原生函数在调用层面无差别：KernelFunctionFromPrompt 与 KernelFunctionFromMethod 都继承 KernelFunction",
+    "Kernel 本身几乎没有状态逻辑：它把插件、服务、过滤器、可靠性拆成四个 Mixin 扩展类，靠多继承组合而成",
+    "项目已进入维护期：README 明确推荐迁移到 Microsoft Agent Framework"
+  ],
+  "confidence": "高"
+}

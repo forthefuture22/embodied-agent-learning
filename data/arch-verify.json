@@ -171,6 +171,25 @@
   "warnings": []
  },
  {
+  "file": "FlowiseAI__Flowise.json",
+  "repo": "FlowiseAI/Flowise",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 6,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 37,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "Genesis-Embodied-AI__Genesis.json",
   "repo": "Genesis-Embodied-AI/Genesis",
   "confidence": "高",
@@ -198,6 +217,25 @@
   "flow": 10,
   "key_files": 10,
   "paths_checked": 54,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "OpenBMB__AgentVerse.json",
+  "repo": "OpenBMB/AgentVerse",
+  "confidence": "高",
+  "abstractions": 13,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 49,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -361,6 +399,25 @@
   "warnings": []
  },
  {
+  "file": "QwenLM__Qwen2.5-VL.json",
+  "repo": "QwenLM/Qwen2.5-VL",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 43,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "RoboTwin-Platform__RoboTwin.json",
   "repo": "RoboTwin-Platform/RoboTwin",
   "confidence": "高",
@@ -475,6 +532,25 @@
   "warnings": []
  },
  {
+  "file": "browserbase__stagehand.json",
+  "repo": "browserbase/stagehand",
+  "confidence": "高",
+  "abstractions": 13,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "camel-ai__camel.json",
   "repo": "camel-ai/camel",
   "confidence": "高",
@@ -559,6 +635,25 @@
   "flow": 10,
   "key_files": 10,
   "paths_checked": 48,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "facebookresearch__faiss.json",
+  "repo": "facebookresearch/faiss",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 9,
+  "key_files": 9,
+  "paths_checked": 50,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -893,6 +988,25 @@
   "warnings": []
  },
  {
+  "file": "microsoft__AirSim.json",
+  "repo": "microsoft/AirSim",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 7,
+  "flow": 10,
+  "key_files": 9,
+  "paths_checked": 44,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "microsoft__TaskWeaver.json",
   "repo": "microsoft/TaskWeaver",
   "confidence": "高",
@@ -964,6 +1078,63 @@
   "skipped": {
    "symbol": 0,
    "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "microsoft__semantic-kernel.json",
+  "repo": "microsoft/semantic-kernel",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 10,
+  "flow": 10,
+  "key_files": 9,
+  "paths_checked": 45,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "milvus-io__milvus.json",
+  "repo": "milvus-io/milvus",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 7,
+  "flow": 10,
+  "key_files": 9,
+  "paths_checked": 42,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "modelcontextprotocol__inspector.json",
+  "repo": "modelcontextprotocol/inspector",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 41,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
   },
   "errors": [],
   "warnings": []
@@ -1045,6 +1216,25 @@
   "warnings": []
  },
  {
+  "file": "openai__CLIP.json",
+  "repo": "openai/CLIP",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 37,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "openai__openai-agents-python.json",
   "repo": "openai/openai-agents-python",
   "confidence": "高",
@@ -1102,6 +1292,44 @@
   "warnings": []
  },
  {
+  "file": "pydantic__pydantic-ai.json",
+  "repo": "pydantic/pydantic-ai",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 9,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "qdrant__qdrant.json",
+  "repo": "qdrant/qdrant",
+  "confidence": "高",
+  "abstractions": 9,
+  "layers": 7,
+  "flow": 9,
+  "key_files": 9,
+  "paths_checked": 38,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "ray-project__ray.json",
   "repo": "ray-project/ray",
   "confidence": "高",
@@ -1148,6 +1376,25 @@
   "flow": 11,
   "key_files": 8,
   "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "run-llama__llama_index.json",
+  "repo": "run-llama/llama_index",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 9,
+  "key_files": 9,
+  "paths_checked": 41,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -1281,6 +1528,44 @@
   "flow": 11,
   "key_files": 10,
   "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "unitreerobotics__unitree_ros2.json",
+  "repo": "unitreerobotics/unitree_ros2",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 5,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 36,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "unslothai__unsloth.json",
+  "repo": "unslothai/unsloth",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 10,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 59,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],

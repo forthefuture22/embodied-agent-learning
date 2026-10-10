@@ -1,0 +1,93 @@
+{
+  "repo": "QwenLM/Qwen2.5-VL",
+  "name": "Qwen2.5-VL",
+  "one_liner": "通义千问视觉语言模型的工具、微调与演示仓库",
+  "problem": "把视觉编码器与语言模型对接，用动态分辨率与时间维位置编码处理图像与视频，并提供预处理工具、微调框架、评测与演示入口。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "process_vision_info", "role": "视觉预处理总入口：从对话消息里抽取图像视频，逐个读取并 resize，返回图像列表、视频列表与视频参数", "file": "qwen-vl-utils/src/qwen_vl_utils/vision_process.py"},
+    {"name": "smart_resize", "role": "动态分辨率核心：把高宽对齐到 patch 因子整数倍，并把总像素约束在 min_pixels 与 max_pixels 之间且尽量保持长宽比", "file": "qwen-vl-utils/src/qwen_vl_utils/vision_process.py"},
+    {"name": "fetch_image", "role": "读取单张图像：支持本地路径、http URL、base64 与 PIL 对象，转 RGB 后按 patch 因子 resize", "file": "qwen-vl-utils/src/qwen_vl_utils/vision_process.py"},
+    {"name": "fetch_video", "role": "读取视频：按后端抽帧、计算采样 fps、对整段视频统一 resize，并返回视频张量与元数据", "file": "qwen-vl-utils/src/qwen_vl_utils/vision_process.py"},
+    {"name": "smart_nframes", "role": "时间维核心：按 fps 或 nframes 参数并结合 min_frames 与 max_frames 决定实际抽帧数量，对齐到帧因子", "file": "qwen-vl-utils/src/qwen_vl_utils/vision_process.py"},
+    {"name": "get_rope_index_25", "role": "M-RoPE 位置编码：为图像视频生成 temporal/height/width 三组 position_ids，并返回 mrope_position_deltas", "file": "qwen-vl-finetune/qwenvl/data/rope2d.py"},
+    {"name": "get_rope_index_2", "role": "Qwen2-VL 版本的 M-RoPE：时间位置按帧序号递增，与 2.5 版本按时间戳递增的实现并存", "file": "qwen-vl-finetune/qwenvl/data/rope2d.py"},
+    {"name": "get_rope_index_3", "role": "Qwen3-VL 版本的 M-RoPE：时间维恒为 0，改用时间戳 token 编码时序信息", "file": "qwen-vl-finetune/qwenvl/data/rope2d.py"},
+    {"name": "preprocess_qwen_visual", "role": "把一条样本转成训练张量：用 chat 模板生成 input_ids，并按特殊 token 定位回答区间做 label 掩码", "file": "qwen-vl-finetune/qwenvl/data/data_processor.py"},
+    {"name": "LazySupervisedDataset", "role": "微调数据集：按需读取标注、选对应版本 rope 函数算 position_ids，并带重试机制容错坏样本", "file": "qwen-vl-finetune/qwenvl/data/data_processor.py"},
+    {"name": "DataCollatorForSupervisedDataset", "role": "批处理拼装：把多条的 input_ids、labels、position_ids 与像素张量 pad 并拼接成 batch", "file": "qwen-vl-finetune/qwenvl/data/data_processor.py"},
+    {"name": "replace_qwen2_vl_attention_class", "role": "打补丁入口：把 transformers 内 Qwen2VL/Qwen2.5VL/Qwen3VL 的注意力 forward 与因果掩码函数替换为自定义实现，以支持打包与展平序列", "file": "qwen-vl-finetune/qwenvl/train/trainer.py"}
+  ],
+  "layers": [
+    {"name": "文档与总览层", "responsibility": "模型谱系、能力说明、快速开始与 cookbook 索引", "modules": ["."], "files": ["README.md"]},
+    {"name": "视觉预处理工具层", "responsibility": "图像视频读取、动态分辨率、抽帧与统一预处理，是仓库内最核心的可读代码", "modules": ["qwen-vl-utils"], "files": ["qwen-vl-utils/src/qwen_vl_utils/vision_process.py", "qwen-vl-utils/src/qwen_vl_utils/__init__.py", "qwen-vl-utils/README.md"]},
+    {"name": "位置编码层", "responsibility": "各版本 M-RoPE 三维位置编码实现", "modules": ["qwen-vl-finetune/qwenvl/data"], "files": ["qwen-vl-finetune/qwenvl/data/rope2d.py"]},
+    {"name": "数据与微调层", "responsibility": "数据集注册、样本预处理、label 掩码与批处理拼接", "modules": ["qwen-vl-finetune/qwenvl/data"], "files": ["qwen-vl-finetune/qwenvl/data/data_processor.py", "qwen-vl-finetune/qwenvl/data/__init__.py"]},
+    {"name": "训练入口与补丁层", "responsibility": "参数解析、模型选择、注意力补丁、LoRA 与 Trainer 启动", "modules": ["qwen-vl-finetune/qwenvl/train"], "files": ["qwen-vl-finetune/qwenvl/train/train_qwen.py", "qwen-vl-finetune/qwenvl/train/trainer.py", "qwen-vl-finetune/qwenvl/train/argument.py"]},
+    {"name": "推理演示层", "responsibility": "Gradio Web Demo，支持 hf 与 vllm 两种后端", "modules": ["."], "files": ["web_demo_mm.py"]},
+    {"name": "评测层", "responsibility": "MMMU、MathVision、RealWorldQA、VideoMME、ODinW-13 等基准的推理与打分脚本", "modules": ["evaluation"], "files": ["evaluation/mmmu/run_mmmu.py", "evaluation/MathVision/run_mathv.py"]},
+    {"name": "示例与部署层", "responsibility": "各能力 cookbook 与 Docker 部署脚本", "modules": ["cookbooks", "docker"], "files": ["cookbooks/2d_grounding.ipynb", "cookbooks/computer_use.ipynb", "docker/docker_web_demo.sh"]}
+  ],
+  "data_flow": [
+    "第1步：用户用 messages 描述图像视频与文本，processor.apply_chat_template 生成含 vision_start 与 image_pad 占位符的文本",
+    "第2步：process_vision_info 调 extract_vision_info 抽出所有视觉元素",
+    "第3步：图像经 fetch_image 读取，再由 smart_resize 按 patch 因子与 min/max_pixels 动态调整分辨率",
+    "第4步：视频经 fetch_video 用 decord 或 torchvision 或 torchcodec 抽帧，smart_nframes 决定帧数后统一 resize",
+    "第5步：processor 把文本与视觉张量编码成 input_ids、pixel_values 与 image_grid_thw、video_grid_thw",
+    "第6步：模型侧由视觉编码器出特征，merger 把视觉 token 合并后替换进文本嵌入的占位符位置",
+    "第7步：M-RoPE 用 image_grid_thw 与 video_grid_thw 生成 t/h/w 三组 position_ids，视觉部分用三维、文本部分用一维",
+    "第8步：语言模型自回归生成，processor 解码得到文本回答",
+    "第9步：微调时 preprocess_qwen_visual 用 chat 模板生成 input_ids 并把非回答区间 label 置为忽略",
+    "第10步：LazySupervisedDataset 的 _get_item 调 get_rope_index_25 算 position_ids，交给 collator 拼 batch",
+    "第11步：若开启 data_flatten 或 data_packing，replace_qwen2_vl_attention_class 已把注意力替换为去因果掩码版本以支持拼接序列",
+    "第12步：Trainer 按 tune_mm_vision 与 tune_mm_mlp 与 tune_mm_llm 开关只训练指定组件"
+  ],
+  "entry_points": [
+    {"path": "web_demo_mm.py", "what": "Gradio 推理演示，支持 hf 与 vllm 后端与流式输出"},
+    {"path": "qwen-vl-finetune/qwenvl/train/train_qwen.py", "what": "微调训练主入口，解析三类参数并启动 Trainer"},
+    {"path": "qwen-vl-utils/src/qwen_vl_utils/vision_process.py", "what": "视觉预处理入口 process_vision_info，被推理与训练共用"},
+    {"path": "qwen-vl-finetune/scripts/sft.sh", "what": "单卡或小规模 SFT 启动脚本示例"},
+    {"path": "evaluation/mmmu/run_mmmu.py", "what": "MMMU 基准的推理与评测入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立认知：注意它已更新为 Qwen3-VL，讲清能力谱系与动态分辨率与视频用法"},
+    {"path": "qwen-vl-utils/README.md", "why": "看清各版本模型如何配合 process_vision_info 使用，是最小可运行样例"},
+    {"path": "qwen-vl-utils/src/qwen_vl_utils/vision_process.py", "why": "仓库内最核心代码：动态分辨率 smart_resize、抽帧 smart_nframes 与视频多后端"},
+    {"path": "qwen-vl-finetune/README.md", "why": "微调框架的目录说明、数据格式与参数含义"},
+    {"path": "qwen-vl-finetune/qwenvl/data/data_processor.py", "why": "样本如何变成训练张量、label 掩码与批处理拼接都在这里"},
+    {"path": "qwen-vl-finetune/qwenvl/data/rope2d.py", "why": "M-RoPE 三维位置编码实现，理解视觉与文本位置如何统一"},
+    {"path": "qwen-vl-finetune/qwenvl/train/train_qwen.py", "why": "训练主流程：模型选择、注意力补丁、LoRA 与 Trainer 组装"},
+    {"path": "qwen-vl-finetune/qwenvl/train/trainer.py", "why": "理解如何 monkey patch transformers 内部注意力以支持打包序列"},
+    {"path": "qwen-vl-finetune/qwenvl/train/argument.py", "why": "三类参数开关定义了可训练组件与像素预算，是理解配置体系的关键"},
+    {"path": "web_demo_mm.py", "why": "推理入口，看模型与 processor 如何被加载与流式生成"}
+  ],
+  "extension_points": [
+    "调整图像分辨率预算：改 vision_process.py 的 IMAGE_MIN_TOKEN_NUM 与 IMAGE_MAX_TOKEN_NUM 常量，或调用 fetch_image 时传 min_pixels 与 max_pixels",
+    "调整视频抽帧策略：改 vision_process.py 的 smart_nframes 与 FPS 及 FPS_MIN_FRAMES 与 FPS_MAX_FRAMES 常量",
+    "新增视频读取后端：在 vision_process.py 的 VIDEO_READER_BACKENDS 字典注册新的读取函数，并用环境变量 FORCE_QWENVL_VIDEO_READER 切换",
+    "修改位置编码：改 rope2d.py 中对应版本的 get_rope_index 函数，或新增版本并在 data_processor.py 的 model_type 分支里挂接",
+    "注册新数据集：在 qwen-vl-finetune/qwenvl/data/__init__.py 的 data_dict 里加条目，训练脚本用 dataset_use 引用",
+    "切换可训练组件：用 argument.py 的 tune_mm_vision 与 tune_mm_mlp 与 tune_mm_llm 开关，或在 train_qwen.py 的 set_model 里改",
+    "替换注意力实现：改 trainer.py 的 replace_qwen2_vl_attention_class 与 qwen2vl_forward，接入自定义注意力或掩码逻辑",
+    "改演示后端：web_demo_mm.py 的 --backend 在 hf 与 vllm 之间切换，可扩展新的推理引擎"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，先意识到仓库已更新到 Qwen3-VL，理清能力与各版本模型关系",
+    "第2步：读 qwen-vl-utils/README.md，跑通最小推理样例，理解 messages 与 process_vision_info 的配合",
+    "第3步：精读 vision_process.py，掌握动态分辨率 smart_resize 与时间维抽帧 smart_nframes",
+    "第4步：读 qwen-vl-finetune/README.md，理解数据格式、参数与训练脚本",
+    "第5步：读 data_processor.py，看样本如何被 tokenize、掩码并计算 position_ids",
+    "第6步：读 rope2d.py，理解 M-RoPE 如何把图像视频放进统一的三维位置空间",
+    "第7步：读 train_qwen.py 与 trainer.py，看模型选择、注意力补丁与训练启动"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户消息含图像视频文本] --> B[apply_chat_template 生成占位符文本]\n  B --> C[process_vision_info 抽取视觉元素]\n  C --> D[fetch_image 读取图像]\n  C --> E[fetch_video 读取视频]\n  D --> F[smart_resize 动态分辨率]\n  E --> G[smart_nframes 决定抽帧数]\n  F --> H[processor 编码为 input_ids 与 pixel_values]\n  G --> H\n  H --> I[视觉编码器出特征]\n  I --> J[merger 合并视觉 token]\n  J --> K[M-RoPE 生成三维 position_ids]\n  K --> L[语言模型自回归生成]\n  L --> M[解码输出文本回答]",
+  "surprises": [
+    "仓库目录名是 Qwen2.5-VL 但 README 顶部已改写为 Qwen3-VL，且模型架构代码并不在本仓库，Qwen2_5_VLForConditionalGeneration 与视觉塔都在 transformers 上游包内，本仓库只通过 from_pretrained 调用",
+    "本仓库真正可读的核心代码是预处理工具与微调框架，视觉编码器如何与 LLM 对接这一段需要去读 transformers 里的 modeling 文件，仓库内看不到",
+    "rope2d.py 里并存 get_rope_index_2 与 get_rope_index_25 与 get_rope_index_3 三个版本，靠 model_type 字符串选择，且 image_token_id 151655 与 vision_start_token_id 151652 等是硬编码 magic number",
+    "训练会用 replace_qwen2_vl_attention_class 直接 monkey patch transformers 内部类的 forward 与 create_causal_mask，把因果掩码换成恒等返回以支持 data_flatten 与 data_packing 的拼接序列",
+    "preprocess_qwen_visual 用硬编码 token id 77091 与 151645 来定位助手回答区间做 label 掩码，而不是用标准的模板切分，换模型或改模板时极易失效",
+    "视频读取后端按 torchcodec 优先于 decord 优先于 torchvision 的顺序自动挑选，可用环境变量 FORCE_QWENVL_VIDEO_READER 强制覆盖"
+  ],
+  "confidence": "高"
+}

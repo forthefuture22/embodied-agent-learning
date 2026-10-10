@@ -1,0 +1,202 @@
+{
+  "repo": "milvus-io/milvus",
+  "name": "Milvus",
+  "one_liner": "云原生分布式向量数据库，Go 调度加 C++ 检索内核",
+  "problem": "解决十亿级向量的分布式存储与近似检索：需要水平扩展、存算分离、读写分离，并在多节点间保证元数据一致与负载均衡。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "Proxy",
+      "role": "客户端统一入口，解析请求、做 schema 校验、分配时间戳与 ID、路由到协调器并聚合查询结果",
+      "file": "internal/proxy/proxy.go"
+    },
+    {
+      "name": "MixCoord",
+      "role": "协调器组合体，把 RootCoord、DataCoord、QueryCoord 合并为一个可独立部署的协调服务",
+      "file": "cmd/components/mix_coord.go"
+    },
+    {
+      "name": "RootCoord",
+      "role": "处理 DDL 与元数据，管理集合、分区、别名的定义并提供全局时间戳",
+      "file": "internal/rootcoord/root_coord.go"
+    },
+    {
+      "name": "DataCoord",
+      "role": "管理数据节点的段生命周期、binlog 落盘、索引构建任务与 compaction 策略",
+      "file": "internal/datacoord/server.go"
+    },
+    {
+      "name": "QueryCoord",
+      "role": "管理查询节点上的段分布、副本与负载均衡，决定每个段加载到哪个查询节点",
+      "file": "internal/querycoordv2/server.go"
+    },
+    {
+      "name": "QueryNode",
+      "role": "查询节点，负责加载段、执行检索与聚合，是查询侧的执行主体",
+      "file": "internal/querynodev2/server.go"
+    },
+    {
+      "name": "Segment 接口",
+      "role": "Go 侧段抽象，屏蔽 growing 与 sealed 两种段的差异，暴露检索、检索结果与加载信息",
+      "file": "internal/querynodev2/segments/segment_interface.go"
+    },
+    {
+      "name": "SegmentInterface",
+      "role": "C++ segcore 的段抽象，真正执行向量检索、标量过滤与结果归并",
+      "file": "internal/core/src/segcore/SegmentInterface.h"
+    },
+    {
+      "name": "Delegator",
+      "role": "查询节点上的段代理，合并 growing 与 sealed 段的结果并做删除过滤与去重",
+      "file": "internal/querynodev2/delegator/delegator.go"
+    },
+    {
+      "name": "ChunkManager",
+      "role": "对象存储抽象，统一本地磁盘与远端 S3 或 MinIO 的 binlog 与索引文件读写",
+      "file": "internal/storage/types.go"
+    }
+  ],
+  "layers": [
+    {
+      "name": "接入层",
+      "responsibility": "对外提供 gRPC 接口，做请求校验、限流、鉴权、时间戳与 ID 分配及结果聚合",
+      "modules": ["internal/proxy"],
+      "files": ["internal/proxy/proxy.go", "internal/proxy/impl.go"]
+    },
+    {
+      "name": "协调层",
+      "responsibility": "管理元数据、段生命周期与查询节点负载，是控制平面的核心",
+      "modules": ["internal/rootcoord", "internal/datacoord", "internal/querycoordv2"],
+      "files": ["internal/rootcoord/root_coord.go", "internal/datacoord/server.go", "internal/querycoordv2/server.go"]
+    },
+    {
+      "name": "查询执行层",
+      "responsibility": "在查询节点上加载段、执行检索与检索结果归并",
+      "modules": ["internal/querynodev2"],
+      "files": ["internal/querynodev2/server.go", "internal/querynodev2/segments/segment_loader.go", "internal/querynodev2/delegator/delegator.go"]
+    },
+    {
+      "name": "数据写入层",
+      "responsibility": "消费消息队列、写入 binlog、触发 flush 与 compaction",
+      "modules": ["internal/datanode", "internal/streamingnode", "internal/compaction"],
+      "files": ["internal/datanode/data_node.go", "internal/datanode/services.go"]
+    },
+    {
+      "name": "C++ 检索内核层",
+      "responsibility": "实现段的内存表示、索引、表达式求值与向量检索",
+      "modules": ["internal/core/src/segcore", "internal/core/src/index", "internal/core/src/query"],
+      "files": ["internal/core/src/segcore/SegmentInterface.h", "internal/core/src/segcore/segment_c.h", "internal/core/src/index/Index.h"]
+    },
+    {
+      "name": "存储与依赖层",
+      "responsibility": "提供对象存储、消息队列与元数据 KV 等外部依赖的抽象",
+      "modules": ["internal/storage", "internal/storagev2", "pkg/objectstorage", "pkg/util/etcd"],
+      "files": ["internal/storage/types.go", "internal/storage/remote_chunk_manager.go", "pkg/util/etcd/etcd_util.go"]
+    },
+    {
+      "name": "启动与角色装配层",
+      "responsibility": "解析命令行与环境变量，决定本进程启动哪些角色组件",
+      "modules": ["cmd"],
+      "files": ["cmd/main.go", "cmd/roles/roles.go", "cmd/components/query_node.go"]
+    }
+  ],
+  "data_flow": [
+    "第1步：客户端通过 SDK 以 gRPC 把请求发给 Proxy",
+    "第2步：Proxy 校验 schema 与权限，向 RootCoord 申请时间戳，DDL 类请求转发给 MixCoord 处理",
+    "第3步：DML 写入请求被 Proxy 转成消息写入消息队列，由 DataNode 消费",
+    "第4步：DataNode 把数据写入 binlog 并落到对象存储，向 DataCoord 汇报段信息",
+    "第5步：DataCoord 管理段状态与索引构建，把可加载的段信息同步给 QueryCoord",
+    "第6步：QueryCoord 根据负载与副本策略选出目标 QueryNode，下发加载段指令",
+    "第7步：QueryNode 的 Loader 从对象存储拉取 binlog 与索引文件，构造 Go 段并桥接到 C++ segcore",
+    "第8步：检索时 Proxy 按分片找到对应 QueryNode，Delegator 合并 growing 与 sealed 段",
+    "第9步：每个段调用 C++ segcore 的 Search 执行过滤与近邻检索，返回局部 TopK",
+    "第10步：QueryNode 归并各段结果，Proxy 再聚合多分片结果并返回客户端"
+  ],
+  "entry_points": [
+    {
+      "path": "cmd/main.go",
+      "what": "进程入口，调用 cmd/milvus 的 Main 分发 run 等子命令"
+    },
+    {
+      "path": "cmd/roles/roles.go",
+      "what": "角色装配核心，根据环境变量决定启动 Proxy、MixCoord、QueryNode、DataNode 等组件"
+    },
+    {
+      "path": "configs/milvus.yaml",
+      "what": "主配置文件，定义 etcd、minio、消息队列、查询与索引的全部参数"
+    },
+    {
+      "path": "docker-compose.yml",
+      "what": "单机部署编排，展示 Milvus 依赖的外部组件"
+    },
+    {
+      "path": "Makefile",
+      "what": "构建入口，milvus 目标串联 Go 编译与 C++ 内核构建"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "cmd/roles/roles.go",
+      "why": "先看它理解 Milvus 的角色模型：所有组件如何按部署模式被装配与启动"
+    },
+    {
+      "path": "internal/proxy/proxy.go",
+      "why": "Proxy 结构体字段展示了它依赖的协调器、消息通道与调度器，是请求入口全貌"
+    },
+    {
+      "path": "internal/querycoordv2/server.go",
+      "why": "QueryCoord 是分布式查询的调度大脑，理解段如何被分配到查询节点"
+    },
+    {
+      "path": "internal/querynodev2/segments/segment_loader.go",
+      "why": "段加载流程，串起对象存储、binlog 解析与 C++ 段的创建"
+    },
+    {
+      "path": "internal/querynodev2/segments/segment_interface.go",
+      "why": "Go 侧段接口，理解 Go 与 C++ 的边界在哪里"
+    },
+    {
+      "path": "internal/core/src/segcore/SegmentInterface.h",
+      "why": "C++ 侧段抽象，理解真正检索如何执行"
+    },
+    {
+      "path": "internal/datacoord/server.go",
+      "why": "DataCoord 结构体展示段生命周期与索引任务的管理方式"
+    },
+    {
+      "path": "internal/storage/types.go",
+      "why": "ChunkManager 等接口定义，理解存储抽象与外部依赖解耦"
+    },
+    {
+      "path": "internal/querynodev2/delegator/delegator.go",
+      "why": "Delegator 揭示 growing 与 sealed 段如何在查询时被统一处理"
+    }
+  ],
+  "extension_points": [
+    "想新增索引类型：在 internal/core/src/index 实现索引，并在 internal/util/vecindexmgr 与 proxy 的 indexparamcheck 中注册参数校验",
+    "想改负载均衡策略：改 internal/querycoordv2/balance 下的均衡器实现",
+    "想改段分配与副本策略：改 internal/querycoordv2/assign 与 internal/querycoordv2/checkers",
+    "想改数据写入与 compaction：改 internal/datanode 与 internal/datacoord 的 compaction 策略",
+    "想新增对象存储后端：实现 internal/storage 的 ChunkManager 或在 pkg/objectstorage 下扩展",
+    "想新增消息队列实现：在 pkg/mq 下扩展 Kafka、Pulsar 或 RocksMQ 等实现",
+    "想改检索表达式与过滤：改 internal/core/src/expr 与 internal/core/src/query"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 configs/milvus.yaml，建立分布式架构与依赖组件的整体认知",
+    "第2步：读 cmd/main.go 与 cmd/roles/roles.go，理解角色如何按部署模式装配",
+    "第3步：读 internal/proxy/proxy.go，理解请求入口与依赖",
+    "第4步：读 internal/rootcoord/root_coord.go 与 internal/datacoord/server.go，理解元数据与段生命周期",
+    "第5步：读 internal/querycoordv2/server.go 与 internal/querynodev2/server.go，理解查询侧调度与执行",
+    "第6步：读 internal/querynodev2/segments/segment_loader.go，理解段如何从对象存储加载",
+    "第7步：读 internal/querynodev2/segments/segment_interface.go 与 C++ 的 SegmentInterface.h，理解 Go 与 C++ 边界",
+    "第8步：读 internal/storage/types.go，理解对象存储抽象与外部依赖"
+  ],
+  "diagram_mermaid": "graph TD\n  Client[客户端 SDK] --> Proxy[Proxy 接入层]\n  Proxy --> RootCoord[RootCoord 元数据与时间戳]\n  Proxy --> MixCoord[MixCoord 协调器组合]\n  Proxy --> MsgQueue[消息队列]\n  MsgQueue --> DataNode[DataNode 数据写入]\n  DataNode --> DataCoord[DataCoord 段与索引管理]\n  DataNode --> ObjectStore[对象存储 binlog 与索引]\n  DataCoord --> QueryCoord[QueryCoord 查询调度]\n  QueryCoord --> QueryNode[QueryNode 查询执行]\n  QueryNode --> Delegator[Delegator 段代理]\n  Delegator --> Segment[Go Segment 段包装]\n  Segment --> SegCore[C++ segcore 检索内核]\n  QueryNode --> ChunkManager[ChunkManager 存储抽象]\n  ChunkManager --> ObjectStore\n  RootCoord --> Etcd[etcd 元数据与发现]\n  QueryCoord --> Etcd",
+  "surprises": [
+    "Go 与 C++ 通过 cgo 桥接：Go 侧的 Segment 只是 C++ segcore 对象的句柄，真正的过滤与检索全部在 C++ 中完成",
+    "etcd 只承担元数据与服务发现，向量数据实际存放在对象存储，增量数据走消息队列，三者职责被严格分离",
+    "RootCoord、DataCoord、QueryCoord 在 standalone 与 mixcoord 模式下会合并进同一个进程，角色划分由 cmd/roles/roles.go 的环境变量在运行时决定",
+    "段一旦 sealed 就不可变，新写入进入 growing 段，查询时由 Delegator 同时查两类段并合并，这种读写分离是分布式扩展的基础"
+  ],
+  "confidence": "高"
+}

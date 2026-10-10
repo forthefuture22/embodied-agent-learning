@@ -1,0 +1,94 @@
+{
+  "repo": "pydantic/pydantic-ai",
+  "name": "Pydantic AI",
+  "one_liner": "类型安全的 Python Agent 框架，端到端静态类型",
+  "problem": "让 Agent 的依赖、工具参数与结构化输出都由 Pydantic 类型系统约束，把大量运行期错误前移到编写期，解决 Agent 开发中类型不透明、输出不可靠的问题。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Agent", "role": "泛型 Agent 定义，用 AgentDepsT 与 OutputDataT 约束依赖类型与输出类型", "file": "pydantic_ai_slim/pydantic_ai/agent/__init__.py"},
+    {"name": "AbstractAgent", "role": "Agent 抽象基类，定义 run/run_sync/run_stream 等运行契约", "file": "pydantic_ai_slim/pydantic_ai/agent/abstract.py"},
+    {"name": "RunContext", "role": "运行时上下文，携带 deps、model、usage、messages 并注入到每个工具", "file": "pydantic_ai_slim/pydantic_ai/_run_context.py"},
+    {"name": "Tool", "role": "工具定义，把函数签名与 docstring 转成给模型看的 JSON schema", "file": "pydantic_ai_slim/pydantic_ai/tools.py"},
+    {"name": "FunctionSchema", "role": "从 Python 函数抽取参数 schema，并在调用前用 pydantic 校验参数", "file": "pydantic_ai_slim/pydantic_ai/_function_schema.py"},
+    {"name": "OutputSchema", "role": "结构化输出契约，决定如何把模型输出解析并校验为目标类型", "file": "pydantic_ai_slim/pydantic_ai/_output.py"},
+    {"name": "AbstractToolset", "role": "工具集合抽象，负责列出、校验与调用一组工具", "file": "pydantic_ai_slim/pydantic_ai/toolsets/abstract.py"},
+    {"name": "AbstractModel", "role": "模型抽象，统一不同提供商的请求构造与响应解析", "file": "pydantic_ai_slim/pydantic_ai/models/_abstract.py"},
+    {"name": "ModelRequest / ModelResponse", "role": "消息模型，承载系统提示、用户输入、工具调用与工具返回", "file": "pydantic_ai_slim/pydantic_ai/messages.py"},
+    {"name": "GraphAgentState / GraphAgentDeps", "role": "驱动 Agent 循环的图状态与依赖，贯穿整个运行", "file": "pydantic_ai_slim/pydantic_ai/_agent_graph.py"},
+    {"name": "AgentRunResult", "role": "运行结果封装，result.output 即 output_type 指定类型的实例", "file": "pydantic_ai_slim/pydantic_ai/result.py"}
+  ],
+  "layers": [
+    {"name": "Agent 定义层", "responsibility": "声明 Agent 的模型、依赖类型、输出类型、工具与能力", "modules": ["pydantic_ai_slim/pydantic_ai/agent"], "files": ["pydantic_ai_slim/pydantic_ai/agent/__init__.py", "pydantic_ai_slim/pydantic_ai/agent/abstract.py"]},
+    {"name": "运行循环层", "responsibility": "以图节点方式驱动模型请求、工具调用与输出校验的循环", "modules": ["pydantic_ai_slim/pydantic_ai"], "files": ["pydantic_ai_slim/pydantic_ai/_agent_graph.py", "pydantic_ai_slim/pydantic_ai/_run_context.py"]},
+    {"name": "工具与工具集层", "responsibility": "定义工具 schema、参数校验与工具集组合", "modules": ["pydantic_ai_slim/pydantic_ai/toolsets"], "files": ["pydantic_ai_slim/pydantic_ai/tools.py", "pydantic_ai_slim/pydantic_ai/toolsets/abstract.py", "pydantic_ai_slim/pydantic_ai/toolsets/function.py"]},
+    {"name": "输出与类型层", "responsibility": "实现结构化输出、输出校验与失败重试", "modules": ["pydantic_ai_slim/pydantic_ai"], "files": ["pydantic_ai_slim/pydantic_ai/output.py", "pydantic_ai_slim/pydantic_ai/_output.py", "pydantic_ai_slim/pydantic_ai/_function_schema.py"]},
+    {"name": "模型接入层", "responsibility": "抽象并实现各提供商的模型客户端，用字符串切换模型", "modules": ["pydantic_ai_slim/pydantic_ai/models"], "files": ["pydantic_ai_slim/pydantic_ai/models/_abstract.py", "pydantic_ai_slim/pydantic_ai/models/__init__.py"]},
+    {"name": "消息层", "responsibility": "定义请求与响应的消息与内容块结构", "modules": ["pydantic_ai_slim/pydantic_ai"], "files": ["pydantic_ai_slim/pydantic_ai/messages.py"]},
+    {"name": "能力与扩展层", "responsibility": "以 Capability 组合工具、指令、钩子与设置", "modules": ["pydantic_ai_slim/pydantic_ai/capabilities"], "files": ["pydantic_ai_slim/pydantic_ai/capabilities/__init__.py"]},
+    {"name": "图引擎层", "responsibility": "提供类型化的图状态机，支撑 Agent 循环与自定义工作流", "modules": ["pydantic_graph/pydantic_graph"], "files": ["pydantic_graph/pydantic_graph/graph_builder.py", "pydantic_graph/pydantic_graph/node.py"]},
+    {"name": "评测与持久化层", "responsibility": "用数据集与 evaluator 测试 Agent 行为，并支持 Temporal 等持久执行", "modules": ["pydantic_evals/pydantic_evals", "pydantic_ai_slim/pydantic_ai/durable_exec"], "files": ["pydantic_evals/pydantic_evals/dataset.py", "pydantic_ai_slim/pydantic_ai/durable_exec/temporal/__init__.py"]}
+  ],
+  "data_flow": [
+    "第1步：用 Agent 声明模型、deps_type、output_type 与工具",
+    "第2步：调用 agent.run 或 run_sync 并传入 prompt 与 deps",
+    "第3步：构造 RunContext，把 deps 注入运行上下文",
+    "第4步：进入图循环，UserPromptNode 把 prompt 转为 ModelRequest",
+    "第5步：ModelRequestNode 调用 AbstractModel 向 LLM 发起请求",
+    "第6步：模型返回 ModelResponse，可能包含 ToolCallPart",
+    "第7步：CallToolsNode 用 FunctionSchema 校验参数并执行对应工具",
+    "第8步：工具结果作为 ToolReturnPart 回填消息历史，回到第5步",
+    "第9步：当输出匹配 output_type 时，OutputSchema 校验并生成结构化结果",
+    "第10步：校验失败则生成重试提示回到模型，最多 max_output_retries 次",
+    "第11步：循环结束，返回 AgentRunResult，result.output 即目标类型实例"
+  ],
+  "entry_points": [
+    {"path": "README.md", "what": "类型安全 Agent 的最小示例与能力总览"},
+    {"path": "pydantic_ai_slim/pydantic_ai/agent/__init__.py", "what": "Agent 类定义，含 deps_type 与 output_type 泛型约束"},
+    {"path": "pydantic_ai_slim/pydantic_ai/agent/abstract.py", "what": "run/run_sync/run_stream 契约与运行实现"},
+    {"path": "pydantic_ai_slim/pydantic_ai/_agent_graph.py", "what": "Agent 图循环的节点实现，理解运行主循环"},
+    {"path": "pydantic_ai_slim/pydantic_ai/tools.py", "what": "Tool 定义与 @agent.tool 的底层"},
+    {"path": "pydantic_ai_slim/pydantic_ai/output.py", "what": "结构化输出类型入口 ToolOutput/NativeOutput/PromptedOutput"},
+    {"path": "pydantic_ai_slim/pydantic_ai/models/_abstract.py", "what": "模型抽象入口，接入新提供商的起点"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先看类型安全 Agent 的示例，建立整体直觉"},
+    {"path": "pydantic_ai_slim/pydantic_ai/agent/__init__.py", "why": "Agent 类的全部字段与构造逻辑，理解泛型如何约束类型"},
+    {"path": "pydantic_ai_slim/pydantic_ai/agent/abstract.py", "why": "run 方法如何驱动图循环并返回结果"},
+    {"path": "pydantic_ai_slim/pydantic_ai/_agent_graph.py", "why": "AgentNode 三类节点构成的核心循环"},
+    {"path": "pydantic_ai_slim/pydantic_ai/_run_context.py", "why": "RunContext 与 deps 注入机制"},
+    {"path": "pydantic_ai_slim/pydantic_ai/tools.py", "why": "Tool 定义与参数 schema 的绑定"},
+    {"path": "pydantic_ai_slim/pydantic_ai/_function_schema.py", "why": "函数签名如何变成 JSON schema 并在调用前校验"},
+    {"path": "pydantic_ai_slim/pydantic_ai/output.py", "why": "结构化输出与输出工具的几种模式"},
+    {"path": "pydantic_ai_slim/pydantic_ai/messages.py", "why": "消息模型是所有模型交互的通用语言"},
+    {"path": "pydantic_ai_slim/pydantic_ai/models/_abstract.py", "why": "模型抽象，理解多提供商如何统一"}
+  ],
+  "extension_points": [
+    "想接入新模型：在 pydantic_ai_slim/pydantic_ai/models 下实现 AbstractModel 子类，用 'provider:model' 字符串选择",
+    "想加工具：用 @agent.tool 或 @agent.tool_plain 装饰函数，或直接构造 pydantic_ai_slim/pydantic_ai/tools.py 的 Tool",
+    "想加工具集：实现 pydantic_ai_slim/pydantic_ai/toolsets/abstract.py 的 AbstractToolset",
+    "想自定义输出方式：用 pydantic_ai_slim/pydantic_ai/output.py 的 ToolOutput、NativeOutput、PromptedOutput、TextOutput",
+    "想打包可复用能力：在 capabilities 下实现 Capability，组合工具、指令与钩子",
+    "想加运行钩子：使用 Agent 的 hook 装饰器或 Capability 的事件回调",
+    "想做持久执行：用 pydantic_ai_slim/pydantic_ai/durable_exec/temporal 等集成",
+    "想评测 Agent：用 pydantic_evals/pydantic_evals/dataset.py 定义数据集与 evaluator"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 的类型安全示例，理解 deps_type 与 output_type 的用法",
+    "第2步：读 agent/__init__.py 与 agent/abstract.py，理解 Agent 定义与 run",
+    "第3步：读 _run_context.py，理解 deps 如何注入到工具",
+    "第4步：读 tools.py 与 _function_schema.py，理解工具 schema 如何生成与校验",
+    "第5步：读 _agent_graph.py，看模型请求与工具调用如何循环",
+    "第6步：读 output.py 与 _output.py，理解结构化输出与校验重试",
+    "第7步：读 messages.py，理解请求与响应的消息模型",
+    "第8步：读 models/_abstract.py 与某个 provider，理解模型接入"
+  ],
+  "diagram_mermaid": "graph TD\n  A[定义 Agent] --> B[传入 deps 与 prompt]\n  B --> C[构造 RunContext]\n  C --> D[UserPromptNode 生成请求]\n  D --> E[ModelRequestNode 调用模型]\n  E --> F[ModelResponse 响应]\n  F --> G{是否工具调用}\n  G -->|是| H[CallToolsNode 校验参数]\n  H --> I[执行工具函数]\n  I --> J[回填工具结果]\n  J --> E\n  G -->|否| K[OutputSchema 校验输出]\n  K --> L{校验通过}\n  L -->|否| E\n  L -->|是| M[返回 AgentRunResult]",
+  "surprises": [
+    "Agent 循环其实由 pydantic_graph 驱动的状态机：UserPromptNode、ModelRequestNode、CallToolsNode 三类节点轮转",
+    "结构化输出可以走输出工具：ToolOutput 把最终结果做成一次 tool call 而非纯文本解析，可靠性更高",
+    "工具参数在进入你的函数前就被 pydantic 校验：非法参数不会执行函数，而是变成给模型的重试提示",
+    "deps_type 与 output_type 只是泛型参数：类型检查器据此推断 result.output 类型，运行时并不强制 deps 的具体类型",
+    "仓库是多包结构：pydantic_ai_slim 是核心包，pydantic_graph 与 pydantic_evals 是并列的独立包"
+  ],
+  "confidence": "高"
+}

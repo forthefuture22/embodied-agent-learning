@@ -1,0 +1,191 @@
+{
+  "repo": "qdrant/qdrant",
+  "name": "Qdrant",
+  "one_liner": "Rust 编写的高性能向量数据库与相似度检索引擎",
+  "problem": "解决海量向量在带结构化过滤条件下的近邻检索：既要低延迟高吞吐，又要支持 payload 过滤、量化压缩与分布式水平扩展。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "Segment",
+      "role": "独立管理一组点的最小存储与索引单元，持有向量存储、payload 索引、id 映射与版本号，可被冻结后重建",
+      "file": "lib/segment/src/segment/mod.rs"
+    },
+    {
+      "name": "VectorStorage",
+      "role": "向量存储抽象，屏蔽内存、mmap、分块、量化等物理实现，向上提供按 offset 读写向量与构建打分器的能力",
+      "file": "lib/segment/src/vector_storage/vector_storage_base.rs"
+    },
+    {
+      "name": "VectorIndexEnum",
+      "role": "索引枚举抽象，统一 Plain 暴力索引、HNSW 图索引与多种稀疏倒排索引，让 Segment 无需关心具体算法",
+      "file": "lib/segment/src/index/vector_index_base.rs"
+    },
+    {
+      "name": "Metric",
+      "role": "距离度量抽象，定义 similarity 打分与 preprocess 预处理，是新增距离度量的唯一扩展接口",
+      "file": "lib/segment/src/spaces/metric.rs"
+    },
+    {
+      "name": "Distance",
+      "role": "距离类型枚举 Cosine/Euclid/Dot/Manhattan，决定排序方向、预处理与分数后处理的分发",
+      "file": "lib/segment/src/types.rs"
+    },
+    {
+      "name": "Collection",
+      "role": "面向用户的逻辑集合，管理分片与副本、配置、优化器调度与跨分片查询合并",
+      "file": "lib/collection/src/collection/mod.rs"
+    },
+    {
+      "name": "SegmentHolder",
+      "role": "单个分片内的段管理器，负责多段并发读写、段优化合并与代理只读段",
+      "file": "lib/shard/src/segment_holder/mod.rs"
+    },
+    {
+      "name": "TableOfContent",
+      "role": "存储层总入口，持有所有 Collection 与运行时，负责集合生命周期与持久化",
+      "file": "lib/storage/src/content_manager/toc/mod.rs"
+    },
+    {
+      "name": "Dispatcher",
+      "role": "请求路由器，决定请求直接进 TableOfContent 还是经 Raft 共识层，是单机与分布式统一入口",
+      "file": "lib/storage/src/dispatcher.rs"
+    }
+  ],
+  "layers": [
+    {
+      "name": "API 层",
+      "responsibility": "对外暴露 REST 与 gRPC 接口，做请求解析、鉴权与遥测埋点",
+      "modules": ["src/actix", "src/tonic", "lib/api"],
+      "files": ["src/main.rs", "config/config.yaml"]
+    },
+    {
+      "name": "存储控制层",
+      "responsibility": "总控所有集合、路由请求、Raft 共识与快照恢复",
+      "modules": ["lib/storage/src/content_manager", "lib/storage/src/dispatcher.rs"],
+      "files": ["lib/storage/src/content_manager/toc/mod.rs", "lib/storage/src/content_manager/consensus_manager.rs"]
+    },
+    {
+      "name": "集合层",
+      "responsibility": "管理集合的分片副本分布、优化器重建与跨分片查询聚合",
+      "modules": ["lib/collection/src"],
+      "files": ["lib/collection/src/collection/mod.rs", "lib/collection/src/config.rs", "lib/collection/src/update_handler.rs"]
+    },
+    {
+      "name": "分片层",
+      "responsibility": "管理单分片内的多个 Segment、读写锁、优化合并与 WAL 回放",
+      "modules": ["lib/shard/src"],
+      "files": ["lib/shard/src/segment_holder/mod.rs", "lib/shard/src/search.rs"]
+    },
+    {
+      "name": "段层",
+      "responsibility": "提供点的存储、版本跟踪、payload 索引与向量索引，是过滤与检索协同的核心",
+      "modules": ["lib/segment/src"],
+      "files": ["lib/segment/src/segment/mod.rs", "lib/segment/src/segment_constructor/segment_builder.rs"]
+    },
+    {
+      "name": "向量索引与存储层",
+      "responsibility": "实现 HNSW 图索引、暴力索引、稀疏倒排索引与多种向量存储后端",
+      "modules": ["lib/segment/src/index", "lib/segment/src/vector_storage"],
+      "files": ["lib/segment/src/index/hnsw_index/mod.rs", "lib/segment/src/vector_storage/vector_storage_base.rs"]
+    },
+    {
+      "name": "度量与基础层",
+      "responsibility": "提供距离度量实现、SIMD 加速、通用类型、WAL 与量化等基础设施",
+      "modules": ["lib/segment/src/spaces", "lib/common", "lib/wal", "lib/quantization"],
+      "files": ["lib/segment/src/spaces/metric.rs", "lib/segment/src/spaces/simple.rs", "lib/segment/src/types.rs"]
+    }
+  ],
+  "data_flow": [
+    "第1步：客户端通过 REST 或 gRPC 发起检索请求，actix 或 tonic 服务层解析为内部请求结构",
+    "第2步：Dispatcher 判断是否分布式，单机直接转发给 TableOfContent，分布式则经 Raft 共识提交后由状态机应用",
+    "第3步：TableOfContent 定位到目标 Collection",
+    "第4步：Collection 按分片键与哈希环选出目标分片，转发给对应的 ShardReplicaSet",
+    "第5步：LocalShard 通过 SegmentHolder 并发查询其下所有 Segment",
+    "第6步：每个 Segment 先用 payload 索引与过滤器求候选集，再交给向量索引",
+    "第7步：HNSW 索引用打分器沿图遍历近邻，打分器从 VectorStorage 读取向量并按 Metric 计算相似度",
+    "第8步：各 Segment 与各分片的结果按分数做聚合与截断，得到最终 TopK",
+    "第9步：按 with_payload 与 with_vector 选项回填载荷与向量，序列化返回客户端"
+  ],
+  "entry_points": [
+    {
+      "path": "src/main.rs",
+      "what": "服务进程入口，初始化配置、日志、共识、TableOfContent，并启动 REST/gRPC/metrics 线程"
+    },
+    {
+      "path": "config/config.yaml",
+      "what": "默认配置模板，定义存储路径、服务端口、集群、优化器等全部参数体系"
+    },
+    {
+      "path": "lib/segment/src/segment_constructor/simple_segment_constructor.rs",
+      "what": "从磁盘目录构造 Segment 的入口，串起向量存储、payload 索引与 id 映射的加载"
+    },
+    {
+      "path": "lib/storage/src/content_manager/toc/mod.rs",
+      "what": "TableOfContent 定义，存储层对外主入口"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "src/main.rs",
+      "why": "先看它能建立整体骨架：配置、共识、存储、API 服务如何被装配与启动"
+    },
+    {
+      "path": "lib/segment/src/segment/mod.rs",
+      "why": "Segment 与 VectorData 结构定义了单段的数据组织，是理解整个数据模型的支点"
+    },
+    {
+      "path": "lib/segment/src/vector_storage/vector_storage_base.rs",
+      "why": "VectorStorage trait 与枚举展示向量存储的所有物理后端与统一接口"
+    },
+    {
+      "path": "lib/segment/src/index/hnsw_index/mod.rs",
+      "why": "HNSW 索引模块入口，理解图索引如何组织、打分器从何而来"
+    },
+    {
+      "path": "lib/segment/src/spaces/metric.rs",
+      "why": "Metric trait 只有三个方法，是新增距离度量的最小改动面"
+    },
+    {
+      "path": "lib/segment/src/types.rs",
+      "why": "Distance 等核心类型枚举，串起度量、排序与序列化"
+    },
+    {
+      "path": "lib/collection/src/collection/mod.rs",
+      "why": "Collection 展示分片副本管理与查询聚合的上层逻辑"
+    },
+    {
+      "path": "lib/shard/src/segment_holder/mod.rs",
+      "why": "多 Segment 并发读写与优化合并的实现，理解段生命周期"
+    },
+    {
+      "path": "lib/storage/src/dispatcher.rs",
+      "why": "单机与分布式请求路由的分叉点，理解共识如何接入"
+    }
+  ],
+  "extension_points": [
+    "想新增距离度量：在 lib/segment/src/spaces/simple.rs 实现 Metric 与 MetricPostProcessing，并在 lib/segment/src/types.rs 的 Distance 枚举与分发中加入新分支",
+    "想新增向量存储后端：实现 lib/segment/src/vector_storage/vector_storage_base.rs 的 VectorStorage trait 并扩展其枚举",
+    "想新增索引算法：在 lib/segment/src/index/ 下新增模块并扩展 lib/segment/src/index/vector_index_base.rs 的 VectorIndexEnum",
+    "想改分片与副本策略：改 lib/collection/src/shards/ 下的 replica_set 与 shard_holder 逻辑",
+    "想调整段优化合并策略：改 lib/shard/src/optimizers 与 lib/collection/src/optimizers_builder.rs",
+    "想新增量化方式：在 lib/quantization 下实现并接入 lib/segment/src/vector_storage/quantized"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 config/config.yaml，建立「向量库 + 过滤 + 分布式」的整体印象与参数体系",
+    "第2步：读 src/main.rs，理清服务启动时各组件如何装配",
+    "第3步：读 lib/segment/src/segment/mod.rs，掌握 Segment 与 VectorData 的数据模型",
+    "第4步：读 lib/segment/src/vector_storage/vector_storage_base.rs 与 lib/segment/src/index/vector_index_base.rs，理解存储与索引的抽象边界",
+    "第5步：读 lib/segment/src/spaces/metric.rs 与 simple.rs，理解距离度量与 SIMD 分发",
+    "第6步：读 lib/segment/src/index/hnsw_index/ 下的 hnsw.rs 与 point_scorer.rs，理解过滤如何与图遍历协同",
+    "第7步：读 lib/collection/src/collection/mod.rs 与 lib/shard/src/segment_holder/mod.rs，理解分片、副本与段管理",
+    "第8步：读 lib/storage/src/content_manager/toc/mod.rs 与 consensus_manager.rs，理解分布式与持久化"
+  ],
+  "diagram_mermaid": "graph TD\n  Client[客户端 REST 或 gRPC] --> API[actix 与 tonic 服务层]\n  API --> Dispatcher[Dispatcher 请求路由]\n  Dispatcher --> TOC[TableOfContent 存储总控]\n  Dispatcher --> Consensus[Raft 共识层]\n  Consensus --> TOC\n  TOC --> Collection[Collection 集合]\n  Collection --> ShardReplica[ShardReplicaSet 分片副本]\n  ShardReplica --> LocalShard[LocalShard 本地分片]\n  LocalShard --> SegmentHolder[SegmentHolder 段管理]\n  SegmentHolder --> Segment[Segment 段]\n  Segment --> PayloadIndex[Payload 索引与过滤]\n  Segment --> VectorIndex[向量索引 HNSW]\n  VectorIndex --> VectorStorage[VectorStorage 向量存储]\n  VectorStorage --> Metric[Metric 距离度量]\n  Segment --> WAL[WAL 预写日志]",
+  "surprises": [
+    "Cosine 距离并不是独立算法，而是对向量做归一化预处理后复用点积，见 lib/segment/src/spaces/simple.rs 中 CosineMetric 直接调用 DotProductMetric::similarity",
+    "欧氏与曼哈顿距离在内部用负数表示相似度以求「越大越近」，最终展示时再经 MetricPostProcessing 取绝对值与开方还原",
+    "过滤不是先检索后过滤，而是在 HNSW 图遍历过程中由 point_scorer 的 FilteredScorer 实时判断，避免召回率塌陷",
+    "Segment 一旦被优化合并就不可再写，写入永远落在可追加段上，这种不可变段加合并的设计是并发读写的关键"
+  ],
+  "confidence": "高"
+}

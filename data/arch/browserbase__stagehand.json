@@ -1,0 +1,92 @@
+{
+  "repo": "browserbase/stagehand",
+  "name": "Stagehand",
+  "one_liner": "用自然语言驱动浏览器的 AI Agent SDK",
+  "problem": "传统浏览器自动化依赖易碎的 CSS 选择器，网站一改版脚本就失效；Stagehand 让开发者用自然语言 act/observe/extract 操作网页，由 LLM 决定怎么点、怎么填，并具备自愈能力。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Stagehand", "role": "SDK 主类：持有浏览器句柄，把 act/observe/extract 转成 RPC 请求发给浏览器内运行时", "file": "packages/sdk-ts/src/stagehand.ts"},
+    {"name": "RPCClient", "role": "SDK 侧 JSON-RPC 客户端：经 CDP 隧道收发消息，处理超时、通知与 OpenTelemetry 追踪", "file": "packages/sdk-ts/src/rpcClient.ts"},
+    {"name": "CDPClient", "role": "用 Chrome DevTools Protocol 连接浏览器，发现并激活扩展的 service worker", "file": "packages/sdk-ts/src/cdpClient.ts"},
+    {"name": "StagehandBrowser 抽象", "role": "统一本地 Chrome 与 Browserbase 云浏览器两种来源，对外只暴露 CDP 连接", "file": "packages/sdk-ts/src/browser/factories.ts"},
+    {"name": "Page 与 Locator", "role": "Playwright 风格的浏览器操作 API，是用户直接使用的对象模型", "file": "packages/sdk-ts/src/page.ts"},
+    {"name": "RPCRouter", "role": "扩展侧请求路由：把 JSON-RPC 方法分派到 stagehand/page/locator 等 controller", "file": "packages/extension/rpcRouter.ts"},
+    {"name": "actService", "role": "act 模式实现：构建提示词、调用推理、执行动作并在失败时自愈", "file": "packages/extension/services/actService.ts"},
+    {"name": "observeService", "role": "observe 模式实现：只返回候选元素与真实选择器，不执行操作", "file": "packages/extension/services/observeService.ts"},
+    {"name": "inference", "role": "推理层：把自然语言加页面快照交给 LLM，产出结构化元素与动作", "file": "packages/extension/inference.ts"},
+    {"name": "SupportedUnderstudyAction", "role": "受限动作枚举：LLM 只能从中选一个动作，保证输出可控可执行", "file": "packages/extension/types/private/handlers.ts"},
+    {"name": "understudy Page 与 BrowserContext", "role": "浏览器内对 CDP 的封装，负责 a11y 快照、元素定位与动作执行", "file": "packages/extension/understudy/page.ts"},
+    {"name": "LLMProvider", "role": "多模型提供方抽象：统一 OpenAI/Anthropic/Google/Groq/Cerebras 等客户端", "file": "packages/extension/llm/LLMProvider.ts"},
+    {"name": "protocol schema registry", "role": "SDK 与扩展共享的 JSON-RPC 方法注册表，是跨语言契约的事实来源", "file": "packages/protocol/schema-registry.ts"}
+  ],
+  "layers": [
+    {"name": "契约层", "responsibility": "定义 SDK 与扩展之间所有 JSON-RPC 方法与类型的共享 schema", "modules": ["packages/protocol"], "files": ["packages/protocol/schema-registry.ts", "packages/protocol/README.md"]},
+    {"name": "SDK 客户端层", "responsibility": "用户 API、RPC 客户端、CDP 连接与浏览器来源抽象，运行在用户进程内", "modules": ["packages/sdk-ts/src"], "files": ["packages/sdk-ts/src/stagehand.ts", "packages/sdk-ts/src/rpcClient.ts", "packages/sdk-ts/src/cdpClient.ts"]},
+    {"name": "浏览器内运行时层", "responsibility": "以 Chrome 扩展 service worker 形式运行，接收 RPC 请求并路由到控制器", "modules": ["packages/extension"], "files": ["packages/extension/service-worker.ts", "packages/extension/rpcRouter.ts"]},
+    {"name": "智能服务层", "responsibility": "act/observe/extract 三种模式的实现，含提示词构建、推理与自愈逻辑", "modules": ["packages/extension/services", "packages/extension/handlers"], "files": ["packages/extension/services/actService.ts", "packages/extension/inference.ts", "packages/extension/prompt.ts"]},
+    {"name": "模型层", "responsibility": "多提供方 LLM 客户端、模型网关与客户端侧 LLM 回退", "modules": ["packages/extension/llm"], "files": ["packages/extension/llm/LLMProvider.ts", "packages/extension/llm/LLMClient.ts"]},
+    {"name": "浏览器自动化层", "responsibility": "understudy 对 CDP、页面、定位器、a11y 快照与网络事件的底层封装", "modules": ["packages/extension/understudy"], "files": ["packages/extension/understudy/page.ts", "packages/extension/understudy/context.ts"]},
+    {"name": "多语言 SDK 层", "responsibility": "Python 与 Go SDK 由 protocol 生成，保持与 TypeScript 行为一致", "modules": ["packages/sdk-python", "packages/sdk-go"], "files": ["packages/sdk-python/README.md", "packages/sdk-go/README.md"]},
+    {"name": "评测层", "responsibility": "evals 测试框架，驱动真实浏览器与多模型对 act/observe/extract 做回归评测", "modules": ["packages/evals"], "files": ["packages/evals/cli.ts"]}
+  ],
+  "data_flow": [
+    "第1步：用户调用 Stagehand.create，传入 localBrowser 或 browserbase 句柄与模型配置",
+    "第2步：SDK 通过 CDPClient 连接浏览器，发现并激活扩展的 service worker",
+    "第3步：扩展启动 RPCClient 与 RPCRouter，双方经 Chrome DevTools Protocol 建立 JSON-RPC 通道",
+    "第4步：用户调用 stagehand.act，SDK 把指令序列化为 stagehandAct 请求发送",
+    "第5步：扩展 RPCRouter 分派到 stagehandController，再交给 actService.act",
+    "第6步：actService 用 buildActPrompt 构造提示词，并抓取页面的可访问性树快照",
+    "第7步：inference 调用 LLM，得到结构化结果：目标元素加上一个 SupportedUnderstudyAction",
+    "第8步：performUnderstudyMethod 通过 understudy 的 Page 与 Locator 在浏览器执行该动作",
+    "第9步：动作失败时 selfHealAction 重新推理并重试，实现自愈",
+    "第10步：结果沿 JSON-RPC 原路返回 SDK，必要时用 zod schema 校验后交给用户",
+    "第11步：observe 只返回候选元素与真实选择器，extract 用 schema 约束抽取结构化数据"
+  ],
+  "entry_points": [
+    {"path": "packages/sdk-ts/src/index.ts", "what": "SDK 公开导出入口，暴露 Stagehand、Page、Locator 等 API"},
+    {"path": "packages/sdk-ts/src/stagehand.ts", "what": "Stagehand 类定义与 create/act/observe/extract 方法"},
+    {"path": "packages/extension/service-worker.ts", "what": "浏览器内运行时入口，组装 Chrome 绑定、RPC 客户端与请求路由"},
+    {"path": "packages/sdk-ts/examples/act.ts", "what": "最小可运行的 act 示例，用于本地验证环境"},
+    {"path": "packages/evals/cli.ts", "what": "评测框架的命令行入口"},
+    {"path": "justfile", "what": "仓库根的统一构建、测试与示例命令入口"},
+    {"path": "packages/protocol/schema-registry.ts", "what": "协议方法注册表，理解跨端契约的入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读它建立 act/observe/extract 的使用直觉"},
+    {"path": "CONTRIBUTING.md", "why": "How the repository fits together 一节讲清了 SDK 与扩展两半架构"},
+    {"path": "packages/protocol/schema-registry.ts", "why": "跨端 JSON-RPC 契约，理解所有方法名的来源"},
+    {"path": "packages/sdk-ts/src/stagehand.ts", "why": "用户 API 如何转成 RPC 请求的核心"},
+    {"path": "packages/sdk-ts/src/rpcClient.ts", "why": "CDP 隧道上的 JSON-RPC 收发与超时处理"},
+    {"path": "packages/extension/rpcRouter.ts", "why": "扩展侧如何把方法分派到各控制器"},
+    {"path": "packages/extension/services/actService.ts", "why": "自然语言到浏览器动作的完整实现与自愈逻辑"},
+    {"path": "packages/extension/inference.ts", "why": "LLM 结构化输出如何被约束成元素加动作"},
+    {"path": "packages/extension/types/private/handlers.ts", "why": "受限动作枚举，理解可控性的关键"},
+    {"path": "packages/extension/understudy/page.ts", "why": "底层浏览器执行与定位的封装"}
+  ],
+  "extension_points": [
+    "想加一个新的自然语言操作模式：先在 packages/protocol 定义方法与 schema，再在 packages/extension 的 controllers 与 services 实现，最后在 packages/sdk-ts 暴露 API",
+    "想接入新的 LLM 提供方：在 packages/extension/llm/LLMProvider.ts 的 AISDKProviderFactories 增加一个 provider 工厂",
+    "想支持一种新浏览器来源：实现 StagehandBrowser 接口并在 packages/sdk-ts/src/browser/factories.ts 注册",
+    "想扩展可执行动作种类：修改 packages/extension/types/private/handlers.ts 的 SupportedUnderstudyAction 并实现对应执行逻辑",
+    "想调整自愈行为：修改 packages/extension/services/actService.ts 中的 selfHealAction 与重试策略"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 CONTRIBUTING.md 的 How the repository fits together，理解 SDK 与扩展两半架构",
+    "第2步：读 packages/protocol/schema-registry.ts，理解 SDK 与扩展之间的 JSON-RPC 契约",
+    "第3步：读 packages/sdk-ts/src/stagehand.ts，理解用户 API 如何转成 RPC 请求",
+    "第4步：读 packages/sdk-ts/src/rpcClient.ts 与 packages/sdk-ts/src/cdpClient.ts，理解 CDP 隧道如何建立",
+    "第5步：读 packages/extension/service-worker.ts 与 packages/extension/rpcRouter.ts，理解扩展侧如何接收请求",
+    "第6步：读 packages/extension/services/actService.ts 与 packages/extension/inference.ts，理解自然语言如何映射成浏览器动作",
+    "第7步：读 packages/extension/understudy/page.ts，理解底层浏览器执行",
+    "第8步：跑 packages/sdk-ts/examples/act.ts 动手验证"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户代码 Stagehand.create] --> B[SDK Stagehand 类]\n  B --> C[RPCClient JSON-RPC 客户端]\n  C --> D[CDPClient 连接浏览器]\n  D --> E[扩展 service worker]\n  E --> F[RPCRouter 请求路由]\n  F --> G[stagehandController]\n  G --> H[actService 或 observeService 或 extractService]\n  H --> I[buildActPrompt 构建提示词]\n  H --> J[inference 调用 LLM]\n  J --> K[结构化结果 元素加动作枚举]\n  K --> L[performUnderstudyMethod 执行]\n  L --> M[understudy Page 与 Locator]\n  M --> N[真实浏览器 DOM]\n  H --> O[selfHealAction 自愈重试]\n  P[protocol schema registry 契约] --> C\n  P --> F",
+  "surprises": [
+    "真正的 act/observe/extract 逻辑不在 SDK 里，而在以 Chrome 扩展形式运行的浏览器内运行时，SDK 只是薄客户端",
+    "SDK 与扩展之间不是普通函数调用，而是把 JSON-RPC 经 Chrome DevTools Protocol 隧道传输",
+    "LLM 不能自由生成任意浏览器命令，只能从 SupportedUnderstudyAction 枚举里选一个动作，保证可控与安全",
+    "扩展被打包进每个 SDK 一起发布，所以修一个扩展 bug 需要发一次 SDK 版本",
+    "Python 与 Go SDK 由 protocol 生成，改协议必须重新生成而不能手改生成文件"
+  ],
+  "confidence": "高"
+}
