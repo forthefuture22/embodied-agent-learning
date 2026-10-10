@@ -1,0 +1,90 @@
+{
+  "repo": "SWE-agent/SWE-agent",
+  "name": "SWE-agent",
+  "one_liner": "让语言模型用命令自主修复 GitHub Issue 的编码 Agent 框架",
+  "problem": "把真实仓库的 Issue 交给大模型，自动完成定位、复现、改代码、提交补丁，并在 SWE-bench 上可复现地评测，核心是设计好 Agent 与计算机之间的交互界面。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "DefaultAgent", "role": "核心决策循环：组织 history、查询模型、解析动作、执行、写 trajectory", "file": "sweagent/agent/agents.py"},
+    {"name": "ToolHandler", "role": "工具运行时：安装 bundle、解析与守卫多行命令、拦截禁用命令、读取环境状态", "file": "sweagent/tools/tools.py"},
+    {"name": "ToolConfig", "role": "工具配置：声明启用的 bundle、命令文档、超时与提交命令，是 ACI 的参数入口", "file": "sweagent/tools/tools.py"},
+    {"name": "Command", "role": "单个工具/命令的定义：名称、签名、参数、end_name，并可导出为 function calling schema", "file": "sweagent/tools/commands.py"},
+    {"name": "ParseFunction", "role": "解析器族：把模型输出解析成 thought 与 action，支持 function calling、XML、JSON、代码块等格式", "file": "sweagent/tools/parsing.py"},
+    {"name": "Bundle", "role": "工具包：一个目录加 config.yaml，声明一组命令与状态命令，可插拔装载", "file": "sweagent/tools/bundle.py"},
+    {"name": "SWEEnv", "role": "环境抽象：通过 SWE-ReX deployment 管理沙箱容器、仓库克隆、执行命令与读写文件", "file": "sweagent/environment/swe_env.py"},
+    {"name": "ProblemStatement", "role": "任务输入协议：从文本/文件/GitHub Issue/SWE-bench 记录构造问题陈述与实例 id", "file": "sweagent/agent/problem_statement.py"},
+    {"name": "TrajectoryStep", "role": "单步记录：action、observation、response、thought、state、query，构成可回放的轨迹", "file": "sweagent/types.py"},
+    {"name": "AbstractModel", "role": "模型后端抽象：封装不同 LLM 调用、重试、成本统计与重放模型", "file": "sweagent/agent/models.py"},
+    {"name": "HistoryProcessor", "role": "历史后处理链：在每次查询前对消息历史做裁剪、缓存控制等变换", "file": "sweagent/agent/history_processors.py"},
+    {"name": "RetryAgent", "role": "多次尝试封装：对同一实例跑多轮并借助 reviewer 选出最佳提交", "file": "sweagent/agent/agents.py"}
+  ],
+  "layers": [
+    {"name": "运行入口层", "responsibility": "CLI 解析、单实例/批量/回放运行编排、输出目录与预测文件保存", "modules": ["sweagent/run"], "files": ["sweagent/run/run_single.py", "sweagent/run/run_batch.py", "sweagent/run/run_replay.py"]},
+    {"name": "Agent 决策层", "responsibility": "实现模型-动作-观察循环、错误重查、轨迹记录与多轮重试", "modules": ["sweagent/agent"], "files": ["sweagent/agent/agents.py", "sweagent/agent/models.py", "sweagent/agent/reviewer.py"]},
+    {"name": "工具与 ACI 层", "responsibility": "定义命令集、解析模型输出、守卫多行输入、拦截危险命令", "modules": ["sweagent/tools"], "files": ["sweagent/tools/tools.py", "sweagent/tools/commands.py", "sweagent/tools/parsing.py", "sweagent/tools/bundle.py"]},
+    {"name": "环境与沙箱层", "responsibility": "管理容器部署、仓库克隆、命令执行、文件读写与状态提取", "modules": ["sweagent/environment"], "files": ["sweagent/environment/swe_env.py", "sweagent/environment/repo.py"]},
+    {"name": "配置层", "responsibility": "以 yaml 定义 prompt 模板、工具 bundle、模型与历史处理，单文件驱动整个 Agent", "modules": ["config"], "files": ["config/default.yaml", "config/bash_only.yaml"]},
+    {"name": "工具包资源层", "responsibility": "存放可插拔工具 bundle 的 config.yaml、bin 脚本与安装脚本", "modules": ["tools"], "files": ["tools/edit_anthropic/config.yaml", "tools/registry/config.yaml", "tools/review_on_submit_m/config.yaml"]},
+    {"name": "回放与检视层", "responsibility": "回放 trajectory、生成演示、网页查看器浏览轨迹", "modules": ["sweagent/inspector"], "files": ["sweagent/run/run_replay.py", "sweagent/inspector/server.py"]},
+    {"name": "评测对接层", "responsibility": "批量加载 SWE-bench 实例、保存预测、触发 SWE-bench 评测、应用补丁与开 PR", "modules": ["sweagent/run/hooks"], "files": ["sweagent/run/batch_instances.py", "sweagent/run/hooks/swe_bench_evaluate.py", "sweagent/run/hooks/apply_patch.py"]}
+  ],
+  "data_flow": [
+    "第1步：CLI 入口 sweagent run 解析 RunSingleConfig，合并 yaml 配置与命令行参数，构造环境、Agent 与问题陈述",
+    "第2步：SWEEnv 依据 DeploymentConfig 启动沙箱容器，克隆目标仓库到工作目录并执行 reset 命令",
+    "第3步：ToolHandler.install 上传并安装各 bundle 的工具，校验命令可用，写入 state.json",
+    "第4步：DefaultAgent.setup 渲染 system/instance 模板，把命令文档 command_docs 与问题陈述写入 history",
+    "第5步：主循环调用 step，先经 history_processors 得到 messages，再交给模型查询",
+    "第6步：模型输出经 parse_function 解析为 thought 与 action，action 被守卫多行输入并做拦截检查",
+    "第7步：action 通过 SWEEnv.communicate 在容器内执行，返回 observation，并读取环境 state",
+    "第8步：action/observation 追加进 history，同时写入 trajectory 并保存 traj 文件",
+    "第9步：遇到格式错误、命令被拦截或 bash 语法错误时，用 error 模板重查模型最多 max_requeries 次",
+    "第10步：当模型执行 submit 命令时，从 /root/model.patch 读取补丁作为 submission，标记 done",
+    "第11步：若为 RetryAgent，则由 reviewer 在多次尝试中选出最佳提交，最终写出轨迹与预测",
+    "第12步：批量模式下 batch_instances 加载 SWE-bench 实例，线程池并发跑实例，save_predictions 输出预测文件供评测"
+  ],
+  "entry_points": [
+    {"path": "sweagent/run/run_single.py", "what": "单实例运行入口，定义 RunSingleConfig 与 sweagent run 主流程"},
+    {"path": "sweagent/run/run_batch.py", "what": "批量运行入口 sweagent run-batch，并发跑 SWE-bench 等数据集"},
+    {"path": "sweagent/run/run_replay.py", "what": "回放 trajectory 或 demo，在环境中重放动作以生成完整轨迹"},
+    {"path": "sweagent/__main__.py", "what": "python -m sweagent 的模块入口，分发到 run 子命令"},
+    {"path": "sweagent/run/run.py", "what": "CLI 子命令注册与分发，pyproject 中 sweagent 脚本指向它"},
+    {"path": "sweagent/inspector/server.py", "what": "轨迹检视网页服务，用于浏览与分析 trajectory"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体定位、能力边界与文档入口的认知"},
+    {"path": "config/default.yaml", "why": "理解 Agent 行为的最佳入口：prompt 模板、工具 bundle、解析器一次看全"},
+    {"path": "sweagent/agent/agents.py", "why": "核心决策循环与错误处理、提交逻辑都在这，是理解 ACI 的主干"},
+    {"path": "sweagent/tools/tools.py", "why": "工具运行时与 ACI 的安装、解析、拦截、状态读取全在这里"},
+    {"path": "sweagent/tools/commands.py", "why": "命令与参数的抽象定义，决定工具如何暴露给模型"},
+    {"path": "sweagent/tools/parsing.py", "why": "各种解析器决定模型输出如何变成可执行动作，是易踩坑处"},
+    {"path": "sweagent/environment/swe_env.py", "why": "沙箱与 SWE-ReX 的对接层，理解执行与状态来源"},
+    {"path": "sweagent/run/batch_instances.py", "why": "看 SWE-bench 实例如何被加载并转成环境与问题陈述"},
+    {"path": "sweagent/types.py", "why": "StepOutput/TrajectoryStep 定义，理解轨迹数据结构"}
+  ],
+  "extension_points": [
+    "新增一个工具：在 tools/ 下建 bundle 目录，写 config.yaml 声明命令与参数、在 bin/ 放脚本，再在 config/default.yaml 的 bundles 里加 path",
+    "新增输出解析格式：在 sweagent/tools/parsing.py 增加 ParseFunction 子类并在 ParseFunction 联合类型中注册",
+    "新增任务来源：在 sweagent/agent/problem_statement.py 实现 ProblemStatement 协议并在 ProblemStatementConfig 联合中注册",
+    "新增运行期行为：在 sweagent/run/hooks/ 实现 RunHook，或在 sweagent/agent/hooks/ 实现 AgentHook 挂到 Agent",
+    "换执行后端：在 EnvironmentConfig.deployment 选择 SWE-ReX 的 docker/modal/local 等部署类型",
+    "改历史处理策略：在 sweagent/agent/history_processors.py 新增 HistoryProcessor 并写进配置的 history_processors"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 config/default.yaml，弄清 Agent 的输入输出与配置驱动方式",
+    "第2步：读 sweagent/agent/agents.py 的 run/step/forward_with_handling，掌握主循环",
+    "第3步：读 sweagent/tools/tools.py 与 commands.py，理解工具如何定义、安装与被拦截",
+    "第4步：读 sweagent/tools/parsing.py，理解模型输出到动作的解析与错误重查",
+    "第5步：读 sweagent/environment/swe_env.py 与 repo.py，理解沙箱执行与仓库准备",
+    "第6步：读 sweagent/run/run_single.py 与 run_batch.py，打通从 CLI 到批量评测的链路",
+    "第7步：挑一个 tools 下的 bundle 看 config.yaml，练习新增一个自定义工具"
+  ],
+  "diagram_mermaid": "graph TD\n  CLI[CLI 入口 run_single/run_batch] --> CFG[加载 yaml 配置]\n  CFG --> ENV[SWEEnv 启动沙箱并克隆仓库]\n  CFG --> AG[DefaultAgent 构造]\n  ENV --> TOOLS[ToolHandler 安装 bundle 工具]\n  TOOLS --> HIST[渲染模板写入 history]\n  HIST --> LOOP[主循环 step]\n  LOOP --> MODEL[模型查询]\n  MODEL --> PARSE[ParseFunction 解析为动作]\n  PARSE --> GUARD[多行守卫与命令拦截]\n  GUARD --> EXEC[SWEEnv 执行命令]\n  EXEC --> OBS[返回 observation 与 state]\n  OBS --> HIST\n  OBS --> TRAJ[写入 trajectory 与 traj 文件]\n  OBS --> SUBMIT{是否为 submit}\n  SUBMIT -->|是| PATCH[读取 model.patch 作为提交]\n  SUBMIT -->|否| LOOP\n  PATCH --> REVIEW[reviewer 选最佳提交]\n  REVIEW --> PRED[保存预测供 SWE-bench 评测]",
+  "surprises": [
+    "工具不是 Python 函数而是 bash 脚本 bundle：每个工具本质是容器内可执行文件，Agent 通过命令名调用，配置在 config.yaml",
+    "提交补丁靠约定而非 API：模型执行 submit 命令后，框架读取 /root/model.patch 文件内容作为最终提交",
+    "解析器与工具强耦合：用 function calling 时无需在 prompt 里写命令文档，用其他解析器则必须包含 command_docs",
+    "history 与 trajectory 是两套数据：history 可被处理器裁剪后喂给模型，trajectory 保留完整原始记录用于回放",
+    "环境通过 SWE-ReX 外部库部署：SWE-agent 本身不实现容器，执行、读写文件都委托给 deployment"
+  ],
+  "confidence": "高"
+}

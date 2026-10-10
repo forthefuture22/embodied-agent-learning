@@ -1,0 +1,199 @@
+{
+  "repo": "modelscope/agentscope",
+  "name": "AgentScope",
+  "one_liner": "阿里系生产级多智能体开发平台，用统一 Agent 抽象与事件流搭建应用",
+  "problem": "解决多智能体应用从原型到生产的工程化难题：把 Agent、工具、模型、记忆、权限、协作流水线统一抽象，再用事件流和中间件组装成可部署的服务。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "Agent",
+      "role": "唯一的智能体实现，内建 ReAct 推理-行动循环、上下文压缩、中间件与事件流，可被当作单体或流水线执行器",
+      "file": "src/agentscope/agent/_agent.py"
+    },
+    {
+      "name": "Msg",
+      "role": "Agent 之间传递的统一消息对象，承载角色、内容块、用量、结束原因与结构化输出",
+      "file": "src/agentscope/message/_base.py"
+    },
+    {
+      "name": "Toolkit",
+      "role": "统一管理 Python 函数工具、MCP 服务器与 skill，供 Agent 按需检索与调用",
+      "file": "src/agentscope/tool/_toolkit.py"
+    },
+    {
+      "name": "ChatModelBase",
+      "role": "所有大模型提供方的统一接口，屏蔽 OpenAI、Anthropic、DashScope 等差异",
+      "file": "src/agentscope/model/_base.py"
+    },
+    {
+      "name": "MiddlewareBase",
+      "role": "在 reply、reasoning、acting、模型调用、权限、上下文压缩等钩子点注入行为的可组合中间件基类",
+      "file": "src/agentscope/middleware/_base.py"
+    },
+    {
+      "name": "PipelineProtocol",
+      "role": "流水线的统一协议，规定任何编排都必须实现与 Agent 相同的 reply_stream 流式接口",
+      "file": "src/agentscope/pipeline/_base.py"
+    },
+    {
+      "name": "TeamPipeline",
+      "role": "领导者-成员协作流水线，领导者通过 TeamAssign 工具把任务派发给成员并汇总结果",
+      "file": "src/agentscope/pipeline/_team_pipeline.py"
+    },
+    {
+      "name": "GoalPipeline",
+      "role": "执行者-验证者循环流水线，反复执行与校验直到目标达成或达到迭代上限",
+      "file": "src/agentscope/pipeline/_goal_pipeline.py"
+    },
+    {
+      "name": "EventBase",
+      "role": "统一事件总线的基类，把推理、工具调用、多模态内容流式推给前端",
+      "file": "src/agentscope/event/_event.py"
+    },
+    {
+      "name": "MessageBus",
+      "role": "服务层消息总线抽象，提供内存与 Redis 两种实现以支持多进程分布式部署",
+      "file": "src/agentscope/app/message_bus/_base.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "Agent 核心层",
+      "responsibility": "实现单个智能体的 ReAct 循环、上下文管理、工具执行与权限校验",
+      "modules": ["src/agentscope/agent"],
+      "files": ["src/agentscope/agent/_agent.py", "src/agentscope/agent/_config.py"]
+    },
+    {
+      "name": "消息与事件层",
+      "responsibility": "定义 Agent 间消息格式与向前端流式推送的事件体系",
+      "modules": ["src/agentscope/message", "src/agentscope/event"],
+      "files": ["src/agentscope/message/_base.py", "src/agentscope/message/_block.py", "src/agentscope/event/_event.py"]
+    },
+    {
+      "name": "工具与工作区层",
+      "responsibility": "管理函数工具、MCP、skill 以及隔离的代码执行沙箱",
+      "modules": ["src/agentscope/tool", "src/agentscope/workspace", "src/agentscope/mcp"],
+      "files": ["src/agentscope/tool/_toolkit.py", "src/agentscope/tool/_base.py"]
+    },
+    {
+      "name": "模型与格式化层",
+      "responsibility": "统一各大模型接口并把消息格式化为各家 API 所需的输入",
+      "modules": ["src/agentscope/model", "src/agentscope/formatter", "src/agentscope/embedding"],
+      "files": ["src/agentscope/model/_base.py", "src/agentscope/formatter/_formatter_base.py"]
+    },
+    {
+      "name": "中间件层",
+      "responsibility": "提供可组合的钩子以改造 Agent 行为，如长期记忆、模型路由、RAG、追踪",
+      "modules": ["src/agentscope/middleware"],
+      "files": ["src/agentscope/middleware/_base.py", "src/agentscope/middleware/_model_router.py"]
+    },
+    {
+      "name": "流水线编排层",
+      "responsibility": "把多个 Agent 组织成团队或目标循环等协作模式",
+      "modules": ["src/agentscope/pipeline"],
+      "files": ["src/agentscope/pipeline/_base.py", "src/agentscope/pipeline/_team_pipeline.py", "src/agentscope/pipeline/_goal_pipeline.py"]
+    },
+    {
+      "name": "应用服务层",
+      "responsibility": "FastAPI 后端把 Agent 变成多租户多会话服务，含存储、消息总线、频道接入与资源中心",
+      "modules": ["src/agentscope/app"],
+      "files": ["src/agentscope/app/_app.py", "src/agentscope/app/message_bus/_base.py"]
+    },
+    {
+      "name": "示例与入口层",
+      "responsibility": "提供可运行的样例脚本，覆盖控制台、服务、流水线等场景",
+      "modules": ["examples"],
+      "files": ["examples/agent_service/main.py", "examples/console/main.py"]
+    }
+  ],
+  "data_flow": [
+    "第1步：用户构造 Agent，注入模型、系统提示与 Toolkit",
+    "第2步：调用 reply 或 reply_stream 并传入 Msg 输入",
+    "第3步：Agent 把输入写入自身 state 的上下文并按需压缩",
+    "第4步：推理阶段调用模型，产出思考、文本与工具调用事件",
+    "第5步：中间件在模型调用、推理、行动等钩子点拦截并改造行为",
+    "第6步：行动阶段对工具调用做权限校验后顺序或并发执行",
+    "第7步：工具结果作为消息回填上下文，进入下一轮推理",
+    "第8步：达到结束条件后生成 ReplyEndEvent 与最终 Msg",
+    "第9步：若使用 TeamPipeline，领导者通过 TeamAssign 工具派发任务给成员并汇总",
+    "第10步：若使用 GoalPipeline，执行者产出后由验证者判定是否达成目标",
+    "第11步：服务模式下事件经 MessageBus 广播，由 FastAPI 推送给前端会话"
+  ],
+  "entry_points": [
+    {
+      "path": "examples/agent_service/main.py",
+      "what": "启动完整 Agent 服务，用 create_app 组装存储、消息总线、工作区、知识库与频道"
+    },
+    {
+      "path": "examples/console/main.py",
+      "what": "在终端里与单个 Agent 对话，含流式输出、工具确认与中断"
+    },
+    {
+      "path": "src/agentscope/console/_console.py",
+      "what": "launch_console 函数实现终端交互循环与事件渲染"
+    },
+    {
+      "path": "src/agentscope/agent/_agent.py",
+      "what": "Agent 类定义，reply_stream 是驱动整个 ReAct 循环的入口"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "README.md",
+      "why": "先读它建立 AgentScope 2.0 的整体心智模型与能力清单"
+    },
+    {
+      "path": "src/agentscope/agent/_agent.py",
+      "why": "核心中的核心，理解 ReAct 循环、上下文压缩与工具执行的关键"
+    },
+    {
+      "path": "src/agentscope/agent/_config.py",
+      "why": "ModelConfig、ContextConfig、ReActConfig、InjectionConfig 揭示参数体系"
+    },
+    {
+      "path": "src/agentscope/message/_base.py",
+      "why": "Msg 是 Agent 间通信的统一载体，理解它才能读懂消息流转"
+    },
+    {
+      "path": "src/agentscope/event/_event.py",
+      "why": "事件类型枚举定义了前端能看到的全部流式状态"
+    },
+    {
+      "path": "src/agentscope/middleware/_base.py",
+      "why": "列出全部可插拔钩子，是理解扩展机制的最佳入口"
+    },
+    {
+      "path": "src/agentscope/pipeline/_team_pipeline.py",
+      "why": "看多 Agent 协作如何用工具调用实现，而非硬编码流程"
+    },
+    {
+      "path": "src/agentscope/app/_app.py",
+      "why": "create_app 展示服务化时各组件如何装配"
+    }
+  ],
+  "extension_points": [
+    "想新增一个 Agent 类型：继承或组合 src/agentscope/agent/_agent.py 中的 Agent，并通过 _config.py 调整 ReActConfig 与 ContextConfig",
+    "想新增一种协作模式：实现 src/agentscope/pipeline/_base.py 的 PipelineProtocol，参考 _team_pipeline.py 或 _goal_pipeline.py",
+    "想新增一个工具：在 src/agentscope/tool 下继承 ToolBase 并注册进 Toolkit，或直接加进 tool/_builtin",
+    "想改造 Agent 行为而不改源码：编写 MiddlewareBase 子类，在 src/agentscope/middleware/_base.py 的钩子上挂载",
+    "想接入新的大模型：在 src/agentscope/model 下实现 ChatModelBase，并在 formatter 下加对应格式化器",
+    "想接入新的消息渠道：在 src/agentscope/app/channel 下按现有 DingTalk、Discord、Feishu 实现扩展",
+    "想支持分布式部署：把 InMemoryMessageBus 换成 RedisMessageBus，见 src/agentscope/app/message_bus/_redis_message_bus.py"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 examples/console/main.py，跑通一个最小 Agent",
+    "第2步：读 src/agentscope/agent/_agent.py 的 __init__ 与 reply_stream，理解构造与循环入口",
+    "第3步：读 src/agentscope/message/_base.py 与 event/_event.py，理解消息与事件",
+    "第4步：读 src/agentscope/middleware/_base.py 与 tool/_toolkit.py，理解扩展机制",
+    "第5步：读 src/agentscope/pipeline 下的 team 与 goal 流水线，理解多 Agent 编排",
+    "第6步：读 examples/agent_service/main.py 与 src/agentscope/app/_app.py，理解服务化与分布式"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户输入 Msg] --> A[Agent reply_stream]\n  A --> C[上下文与压缩]\n  C --> R[推理阶段 调用模型]\n  R --> M[中间件钩子]\n  R --> T[工具调用]\n  T --> P[权限校验]\n  P --> E[顺序或并发执行工具]\n  E --> C\n  R --> F[ReplyEndEvent 与最终 Msg]\n  F --> S[服务层 MessageBus]\n  S --> W[前端会话流]",
+  "surprises": [
+    "README 标题已是 AgentScope 2.0，但仓库内不存在旧版的 MsgHub 与分布式 Agent 类，消息广播被重构进 app 层的 MessageBus",
+    "Agent 只有一个类，没有 ReActAgent、DialogAgent 等子类，行为差异全靠配置与中间件组合实现",
+    "团队协作 TeamAssign 是一个被标记为 external 的工具，由流水线而非 Agent 自己执行，成员之间不能直接对话",
+    "Agent 与 Pipeline 都实现同一个 reply_stream 协议，因此流水线可以像单个 Agent 一样被调用与嵌套"
+  ],
+  "confidence": "高"
+}

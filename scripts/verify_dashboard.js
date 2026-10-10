@@ -42,9 +42,14 @@ const noLeak = (html, label) => {
   check(u === 0 && n === 0, `${label} 无 undefined/NaN 泄漏（undefined ${u} / NaN ${n}）`);
 };
 
+// 语义架构份数随批次增长，以 data/arch/ 目录实际文件数为准
+const archFiles = fs.readdirSync(path.join(__dirname, '..', 'data', 'arch'))
+  .filter(f => f.endsWith('.json')).length;
+
 console.log('=== 数据层 ===');
 check(PROJECTS.length === 109, `项目 109 个（实际 ${PROJECTS.length}）`);
-check(Object.keys(ARCH).length === 9, `语义架构 9 份（实际 ${Object.keys(ARCH).length}）`);
+check(Object.keys(ARCH).length === archFiles,
+  `语义架构 ${archFiles} 份全部内嵌（实际 ${Object.keys(ARCH).length}）`);
 check(Object.keys(DOMAINS).length === 3, `域 3 个（实际 ${Object.keys(DOMAINS).length}）`);
 const totalBranches = Object.values(DOMAINS).reduce((a, d) => a + d.branches.length, 0);
 check(totalBranches === 25, `分支 25 个（实际 ${totalBranches}）`);

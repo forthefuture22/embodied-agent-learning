@@ -1,5 +1,24 @@
 [
  {
+  "file": "ARISE-Initiative__robomimic.json",
+  "repo": "ARISE-Initiative/robomimic",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 52,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "AgentOps-AI__agentops.json",
   "repo": "AgentOps-AI/agentops",
   "confidence": "高",
@@ -8,6 +27,25 @@
   "flow": 12,
   "key_files": 10,
   "paths_checked": 49,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "Cinnamon__kotaemon.json",
+  "repo": "Cinnamon/kotaemon",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 9,
+  "paths_checked": 46,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -57,6 +95,25 @@
   "warnings": []
  },
  {
+  "file": "Firecrawl__firecrawl.json",
+  "repo": "Firecrawl/firecrawl",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 9,
+  "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "Genesis-Embodied-AI__Genesis.json",
   "repo": "Genesis-Embodied-AI/Genesis",
   "confidence": "高",
@@ -95,6 +152,25 @@
   "warnings": []
  },
  {
+  "file": "OpenBMB__OmniLMM.json",
+  "repo": "OpenBMB/OmniLMM",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 5,
+  "flow": 7,
+  "key_files": 8,
+  "paths_checked": 32,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "Physical-Intelligence__openpi.json",
   "repo": "Physical-Intelligence/openpi",
   "confidence": "高",
@@ -102,6 +178,25 @@
   "layers": 7,
   "flow": 10,
   "key_files": 8,
+  "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "QwenLM__Qwen-Agent.json",
+  "repo": "QwenLM/Qwen-Agent",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 10,
   "paths_checked": 47,
   "paths_bad": 0,
   "path_rate": 1.0,
@@ -133,6 +228,44 @@
   "warnings": []
  },
  {
+  "file": "SWE-agent__SWE-agent.json",
+  "repo": "SWE-agent/SWE-agent",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 9,
+  "paths_checked": 49,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "assafelovic__gpt-researcher.json",
+  "repo": "assafelovic/gpt-researcher",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 9,
+  "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "browser-use__browser-use.json",
   "repo": "browser-use/browser-use",
   "confidence": "高",
@@ -141,6 +274,25 @@
   "flow": 12,
   "key_files": 10,
   "paths_checked": 53,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "camel-ai__camel.json",
+  "repo": "camel-ai/camel",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 8,
+  "paths_checked": 44,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -209,6 +361,25 @@
   "warnings": []
  },
  {
+  "file": "google-deepmind__mujoco.json",
+  "repo": "google-deepmind/mujoco",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 58,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "haosulab__ManiSkill.json",
   "repo": "haosulab/ManiSkill",
   "confidence": "高",
@@ -217,6 +388,25 @@
   "flow": 12,
   "key_files": 9,
   "paths_checked": 62,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "haotian-liu__LLaVA.json",
+  "repo": "haotian-liu/LLaVA",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 6,
+  "flow": 9,
+  "key_files": 8,
+  "paths_checked": 35,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -342,6 +532,25 @@
   "warnings": []
  },
  {
+  "file": "microsoft__agent-lightning.json",
+  "repo": "microsoft/agent-lightning",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 6,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "modelcontextprotocol__python-sdk.json",
   "repo": "modelcontextprotocol/python-sdk",
   "confidence": "高",
@@ -350,6 +559,25 @@
   "flow": 12,
   "key_files": 10,
   "paths_checked": 57,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "modelscope__agentscope.json",
+  "repo": "modelscope/agentscope",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 8,
+  "paths_checked": 40,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -418,6 +646,25 @@
   "warnings": []
  },
  {
+  "file": "reworkd__AgentGPT.json",
+  "repo": "reworkd/AgentGPT",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 8,
+  "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "stanfordnlp__dspy.json",
   "repo": "stanfordnlp/dspy",
   "confidence": "高",
@@ -426,6 +673,25 @@
   "flow": 11,
   "key_files": 8,
   "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "thu-ml__RoboticsDiffusionTransformer.json",
+  "repo": "thu-ml/RoboticsDiffusionTransformer",
+  "confidence": "高",
+  "abstractions": 9,
+  "layers": 6,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 40,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -451,6 +717,25 @@
   "skipped": {
    "symbol": 0,
    "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "unitreerobotics__unitree_rl_gym.json",
+  "repo": "unitreerobotics/unitree_rl_gym",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
   },
   "errors": [],
   "warnings": []

@@ -1,0 +1,86 @@
+{
+  "repo": "Cinnamon/kotaemon",
+  "name": "kotaemon",
+  "one_liner": "开箱即用、可二次开发的文档问答 RAG 界面与框架",
+  "problem": "让用户直接对私有文档做可溯源的问答，同时让开发者能自由替换解析、切分、检索、重排、生成各环节，并把结果落到一个多用户 Gradio 界面里。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "BaseComponent", "role": "所有管线组件的基类，基于 theflow 的 Function 实现依赖注入、自动装配与缓存，是组合 RAG 管线的最小单元", "file": "libs/kotaemon/kotaemon/base/component.py"},
+    {"name": "Document / RetrievedDocument", "role": "贯穿全流程的数据载体，继承 llama-index 的 Document，RetrievedDocument 额外携带 score 与 retrieval_metadata", "file": "libs/kotaemon/kotaemon/base/schema.py"},
+    {"name": "VectorIndexing / VectorRetrieval", "role": "核心检索内核：前者做 embedding 并写库，后者实现 vector/text/hybrid 三种检索模式与重排", "file": "libs/kotaemon/kotaemon/indices/vectorindex.py"},
+    {"name": "BaseVectorStore / BaseDocumentStore", "role": "向量库与文档库的存储抽象，决定底层用 Chroma、LanceDB、Qdrant 还是 Milvus", "file": "libs/kotaemon/kotaemon/storages/vectorstores/base.py"},
+    {"name": "FileIndex", "role": "应用级索引：管理 SQL 关系表、向量库、文档库、文件存储四类资源，并装配索引与检索管线", "file": "libs/ktem/ktem/index/file/index.py"},
+    {"name": "BaseFileIndexIndexing / BaseFileIndexRetriever", "role": "索引管线与检索管线的接口契约，定义 get_pipeline 与 run/stream 的扩展方式", "file": "libs/ktem/ktem/index/file/base.py"},
+    {"name": "BaseReasoning / FullQAPipeline", "role": "推理管线基类与默认 QA 实现，串联检索、证据组织、生成与引用展示", "file": "libs/ktem/ktem/reasoning/base.py"},
+    {"name": "LLMManager / ModelPool", "role": "模型注册表，从 SQLite 加载 LLM/Embedding/Reranking 配置并按名字或默认值取用", "file": "libs/ktem/ktem/llms/manager.py"},
+    {"name": "BaseApp", "role": "Gradio 应用装配器，负责注册扩展、推理管线与索引，并声明和订阅界面事件", "file": "libs/ktem/ktem/app.py"},
+    {"name": "SettingGroup", "role": "把 flowsettings 与各组件声明的用户设置组织成可在 UI 上编辑的参数体系", "file": "libs/ktem/ktem/settings.py"}
+  ],
+  "layers": [
+    {"name": "核心 RAG 框架层", "responsibility": "提供与 UI 无关的通用组件：数据模型、检索内核、存储与模型抽象", "modules": ["libs/kotaemon/kotaemon"], "files": ["libs/kotaemon/kotaemon/base/component.py", "libs/kotaemon/kotaemon/base/schema.py", "libs/kotaemon/kotaemon/indices/vectorindex.py", "libs/kotaemon/kotaemon/indices/base.py"]},
+    {"name": "存储抽象层", "responsibility": "向量库与文档库的统一接口及多种后端实现", "modules": ["libs/kotaemon/kotaemon/storages"], "files": ["libs/kotaemon/kotaemon/storages/vectorstores/base.py", "libs/kotaemon/kotaemon/storages/docstores/base.py"]},
+    {"name": "重排与检索扩展层", "responsibility": "提供重排器与网页检索等可插拔检索增强组件", "modules": ["libs/kotaemon/kotaemon/indices/rankings", "libs/kotaemon/kotaemon/indices/retrievers"], "files": ["libs/kotaemon/kotaemon/indices/rankings/base.py", "libs/kotaemon/kotaemon/indices/rankings/llm.py"]},
+    {"name": "应用装配层", "responsibility": "ktem 应用：装配 Gradio 界面、注册扩展与索引、组织设置", "modules": ["libs/ktem/ktem"], "files": ["libs/ktem/ktem/app.py", "libs/ktem/ktem/main.py", "libs/ktem/ktem/components.py", "libs/ktem/ktem/settings.py"]},
+    {"name": "索引与管线层", "responsibility": "文件索引的资源管理以及索引/检索管线的具体实现", "modules": ["libs/ktem/ktem/index"], "files": ["libs/ktem/ktem/index/file/index.py", "libs/ktem/ktem/index/file/pipelines.py", "libs/ktem/ktem/index/manager.py"]},
+    {"name": "推理层", "responsibility": "把检索结果与 LLM 组合成带引用、可流式的问答管线", "modules": ["libs/ktem/ktem/reasoning"], "files": ["libs/ktem/ktem/reasoning/simple.py", "libs/ktem/ktem/reasoning/react.py", "libs/ktem/ktem/reasoning/rewoo.py"]},
+    {"name": "界面层", "responsibility": "Gradio 页面：对话、资源、设置、索引管理，并把用户操作接到后端管线", "modules": ["libs/ktem/ktem/pages"], "files": ["libs/ktem/ktem/pages/chat/__init__.py", "libs/ktem/ktem/pages/chat/chat_panel.py"]},
+    {"name": "配置层", "responsibility": "集中定义数据目录、数据库、向量库/文档库类型与可用的模型清单", "modules": ["."], "files": ["flowsettings.py", "app.py"]}
+  ],
+  "data_flow": [
+    "第1步：python app.py 调用 App.make 构建 Gradio Blocks，BaseApp 初始化时注册扩展、推理管线与索引",
+    "第2步：用户上传文件，FileIndex.get_indexing_pipeline 构造索引管线",
+    "第3步：IndexDocumentPipeline.stream 遍历文件，route 按扩展名选择 loader 解析成文本块",
+    "第4步：TokenSplitter 按 chunk_size 切分，Document 经 embedding 后同时写入向量库、文档库与 SQL 关系表",
+    "第5步：用户提问，chat 页面按设置选出 reasoning 类并为每个索引收集 retrievers",
+    "第6步：reasoning_cls.get_pipeline 注入选定 LLM 与 retrievers，构造可执行推理管线",
+    "第7步：FullQAPipeline.stream 调用 retrieve，VectorRetrieval 以 hybrid 模式并行做向量检索与全文检索并合并",
+    "第8步：rerankers 对候选文档重排，可选 LLM 相关度打分",
+    "第9步：PrepareEvidencePipeline 组织证据文本，AnswerWithContextPipeline 生成带引用的回答",
+    "第10步：管线流式 yield 不同 channel 的 Document，Gradio 分别渲染到聊天、信息、图表面板"
+  ],
+  "entry_points": [
+    {"path": "app.py", "what": "应用启动入口：创建 App 并 launch Gradio 服务"},
+    {"path": "libs/ktem/ktem/main.py:App.make", "what": "渲染主界面并串联各页面事件"},
+    {"path": "libs/ktem/ktem/app.py:BaseApp", "what": "应用装配核心：注册扩展、推理管线、索引与设置"},
+    {"path": "libs/ktem/ktem/pages/chat/__init__.py:chat_fn", "what": "对话主流程，负责组装 retrievers 与 reasoning 管线并驱动生成"},
+    {"path": "libs/ktem/ktem/index/file/pipelines.py:DocumentRetrievalPipeline", "what": "默认检索管线入口，展示混合检索与重排如何串联"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先分清 end user / developer / contributor 三层定位与两包结构"},
+    {"path": "flowsettings.py", "why": "一份文件看懂全局配置：数据目录、向量库/文档库类型、模型清单、索引与推理注册"},
+    {"path": "libs/ktem/ktem/app.py", "why": "理解应用如何把扩展、索引、推理管线装配进 Gradio"},
+    {"path": "libs/ktem/ktem/index/file/index.py", "why": "FileIndex 是索引的资源中枢，看 Source/Index/VS/DS 如何组织"},
+    {"path": "libs/ktem/ktem/index/file/pipelines.py", "why": "索引与检索管线的完整实现，含 loader 路由、切分、混合检索与重排"},
+    {"path": "libs/kotaemon/kotaemon/indices/vectorindex.py", "why": "检索内核：三种检索模式与 reranker 调用都在这"},
+    {"path": "libs/ktem/ktem/reasoning/simple.py", "why": "默认 QA 推理管线，理解检索结果如何变成带引用的回答"},
+    {"path": "libs/ktem/ktem/llms/manager.py", "why": "模型注册表，理解 LLM 如何被配置与取用"},
+    {"path": "libs/kotaemon/kotaemon/base/component.py", "why": "组件模型基础，理解 theflow 依赖注入是读懂全部管线的钥匙"}
+  ],
+  "extension_points": [
+    "加新推理管线：在 libs/ktem/ktem/reasoning/ 新增实现并注册到 flowsettings.py 的 KH_REASONINGS",
+    "加新索引或检索管线：实现 libs/ktem/ktem/index/file/base.py 的接口，并通过 FILE_INDEX_PIPELINE / FILE_INDEX_RETRIEVER_PIPELINES 指定",
+    "换向量库或文档库：改 flowsettings.py 的 KH_VECTORSTORE / KH_DOCSTORE 的 __type__",
+    "加新 LLM 或 Embedding：在 flowsettings.py 的 KH_LLMS / KH_EMBEDDINGS 增加 spec，或在 Resources 页动态添加",
+    "加新文件解析器：在 IndexDocumentPipeline.readers 增加扩展名到 reader 的映射，reader 定义见 kotaemon/indices/ingests/files.py",
+    "加新重排器：继承 BaseReranking，参考 libs/kotaemon/kotaemon/indices/rankings/base.py"
+  ],
+  "learning_path": [
+    "第1步：读 README 与 flowsettings.py，建立 kotaemon 与 ktem 两包分工的认知",
+    "第2步：读 base/component.py，理解 theflow 的组件与依赖注入模型",
+    "第3步：读 ktem/app.py，看应用如何注册扩展、索引与推理管线",
+    "第4步：读 index/file/index.py 与 pipelines.py，掌握索引与检索管线",
+    "第5步：读 indices/vectorindex.py，吃透混合检索与重排",
+    "第6步：读 reasoning/simple.py，理解证据组织与带引用生成",
+    "第7步：读 pages/chat/__init__.py，看 UI 如何把检索与推理串起来"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户上传文件] --> FI[FileIndex 资源中枢]\n  FI --> IP[IndexDocumentPipeline]\n  IP --> LD[Loader 解析]\n  LD --> SP[TokenSplitter 切分]\n  SP --> EM[Embedding 向量化]\n  EM --> VS[VectorStore 向量库]\n  SP --> DS[DocStore 文档库]\n  SP --> DB[SQL 关系表]\n  Q[用户提问] --> CP[Chat Page 组装]\n  CP --> RT[Retriever 列表]\n  RT --> VR[VectorRetrieval 混合检索]\n  VS --> VR\n  DS --> VR\n  VR --> RK[Reranker 重排]\n  RK --> EV[PrepareEvidence 组织证据]\n  EV --> QA[AnswerWithContext 生成回答]\n  QA --> UI[Gradio 面板展示]",
+  "surprises": [
+    "项目其实是两层包：kotaemon 是可独立 import 的通用 RAG 框架，ktem 才是那个开箱即用的应用；改行为多数时候在改 ktem 而非 kotaemon",
+    "所有管线组件不是普通类，而是 theflow 的 Function，靠 @Node.auto / Param.auto 声明依赖并自动装配，不熟悉 theflow 会看不懂构造函数为何没有显式传参",
+    "hybrid 检索并非分数融合，而是向量检索与全文检索两个线程并行执行后按 doc_id 去重拼接，全文检索命中项 score 固定为 -1",
+    "索引一次写三处：SQL 关系表、向量库、文档库，删除文件时必须三处同步清理，否则残留",
+    "模型配置在首次启动时写入 SQLite，之后修改 .env 不再生效，需在 Resources 页调整",
+    "文件名与内容的关联靠 Index 表的 source_id 到 target_id 关系过滤，而不是文档自身元数据"
+  ],
+  "confidence": "高"
+}

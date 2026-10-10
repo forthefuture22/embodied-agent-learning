@@ -1,0 +1,88 @@
+{
+  "repo": "ARISE-Initiative/robomimic",
+  "name": "robomimic",
+  "one_liner": "从离线人类示教中学习机器人操作策略的标准化训练与评测框架",
+  "problem": "机器人模仿学习缺少统一的数据格式、算法实现与评测协议，导致不同论文结果无法公平对比。robomimic 用统一的 hdf5 示教数据集、模块化的算法/网络抽象与标准化的 rollout 评测，让任务与算法可复现地基准测试。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Algo", "role": "所有学习算法的抽象基类，规定 _create_networks、train_on_batch、log_info、serialize 等标准接口，供 train_utils 的 run_epoch 统一驱动", "file": "robomimic/algo/algo.py"},
+    {"name": "algo_factory", "role": "算法工厂：通过 @register_algo_factory_func 注册表把算法名映射到工厂函数，再由 algo_factory 按 config.algo 实例化具体算法类", "file": "robomimic/algo/algo.py"},
+    {"name": "RolloutPolicy", "role": "把训练用 Algo 包装成推理接口，处理观测/动作归一化与张量转换，是训练中评测与部署共用的策略封装", "file": "robomimic/algo/algo.py"},
+    {"name": "BC", "role": "行为克隆的参考实现，通过工厂函数按 gaussian/gmm/vae/rnn/transformer 开关派生出多种 BC 变体", "file": "robomimic/algo/bc.py"},
+    {"name": "Config", "role": "支持属性访问与 lock/unlock 的嵌套字典，保证运行期不可随意新增或修改键，是实验可复现的核心", "file": "robomimic/config/config.py"},
+    {"name": "BaseConfig", "role": "算法配置基类，用 ConfigMeta 元类按 ALGO_NAME 注册到全局表，config_factory 据此构建默认配置", "file": "robomimic/config/base_config.py"},
+    {"name": "SequenceDataset", "role": "读取 hdf5 示教数据并按 seq_length 采样序列，提供动作/观测归一化统计与加权采样器", "file": "robomimic/utils/dataset.py"},
+    {"name": "EnvBase", "role": "环境包装抽象基类，统一 step/reset/reset_to/render/get_state 接口，屏蔽 robosuite、gym、ig_momart 差异", "file": "robomimic/envs/env_base.py"},
+    {"name": "ObservationEncoder", "role": "按模态把观测字典编码成特征，是低维与视觉策略共用的输入编码层", "file": "robomimic/models/obs_nets.py"},
+    {"name": "run_epoch", "role": "训练/验证的通用单轮循环，驱动 Algo.train_on_batch 与 log_info，是训练与评测分离的枢纽", "file": "robomimic/utils/train_utils.py"}
+  ],
+  "layers": [
+    {"name": "配置层", "responsibility": "用可加锁的嵌套 Config 组织实验、训练、算法、观测四类参数，并注册算法专属配置类", "modules": ["robomimic/config"], "files": ["robomimic/config/base_config.py", "robomimic/config/config.py", "robomimic/config/bc_config.py"]},
+    {"name": "算法层", "responsibility": "实现 BC、BCQ、CQL、IQL、IRIS、TD3-BC、Diffusion Policy 等算法，通过工厂注册表被按名实例化", "modules": ["robomimic/algo"], "files": ["robomimic/algo/algo.py", "robomimic/algo/bc.py", "robomimic/algo/diffusion_policy.py"]},
+    {"name": "网络层", "responsibility": "提供观测编码器、Actor/Critic 网络、RNN、Transformer、VAE、扩散网络等可复用模块", "modules": ["robomimic/models"], "files": ["robomimic/models/obs_nets.py", "robomimic/models/policy_nets.py", "robomimic/models/base_nets.py", "robomimic/models/diffusion_policy_nets.py"]},
+    {"name": "数据层", "responsibility": "读取 hdf5 示教数据、按序列采样、计算归一化统计，并从数据集/checkpoint 中提取环境元数据", "modules": ["robomimic/utils"], "files": ["robomimic/utils/dataset.py", "robomimic/utils/file_utils.py", "robomimic/utils/obs_utils.py"]},
+    {"name": "环境层", "responsibility": "把 robosuite、gym、ig_momart 等仿真环境包装成统一 EnvBase 接口，并支持帧堆叠等 wrapper", "modules": ["robomimic/envs"], "files": ["robomimic/envs/env_base.py", "robomimic/envs/env_robosuite.py", "robomimic/envs/wrappers.py"]},
+    {"name": "训练与评测层", "responsibility": "提供单轮训练循环、rollout 评测、checkpoint 保存与实验目录管理", "modules": ["robomimic/utils"], "files": ["robomimic/utils/train_utils.py", "robomimic/utils/torch_utils.py", "robomimic/utils/log_utils.py"]},
+    {"name": "入口脚本层", "responsibility": "提供训练、跑训练好的策略、数据集转换与下载、配置模板生成等命令行入口", "modules": ["robomimic/scripts"], "files": ["robomimic/scripts/train.py", "robomimic/scripts/run_trained_agent.py", "robomimic/scripts/dataset_states_to_obs.py"]},
+    {"name": "示例层", "responsibility": "用最小示例展示配置、观测网络、训练循环与新增模态的用法", "modules": ["examples"], "files": ["examples/simple_config.py", "examples/simple_train_loop.py", "examples/add_new_modality.py"]}
+  ],
+  "data_flow": [
+    "第1步：运行 robomimic/scripts/train.py，用 --algo 或 --config 通过 config_factory 构建并加载算法配置",
+    "第2步：FileUtils.get_env_metadata_from_dataset 从 hdf5 数据集读取环境元数据，get_shape_metadata_from_dataset 推断观测与动作形状",
+    "第3步：若开启 rollout，EnvUtils.create_env_from_metadata 依据元数据创建并包装验证用仿真环境",
+    "第4步：TrainUtils.load_data_for_training 构建 SequenceDataset，读取 hdf5 并按 seq_length 组织示教序列",
+    "第5步：从数据集计算观测与动作的归一化统计，交给后续 RolloutPolicy 与 Algo 使用",
+    "第6步：algo_factory 依据 config.algo_name 与观测形状实例化具体 Algo，并在内部构建 PolicyNets 与 ObservationEncoder",
+    "第7步：train_utils.run_epoch 驱动 DataLoader 取 batch，调用 Algo.train_on_batch 前向、算损失、反向更新",
+    "第8步：按 config.experiment 频率用 RolloutPolicy 在仿真环境 rollout，统计成功率并渲染视频",
+    "第9步：TrainUtils.save_model 把权重、配置、环境与形状元数据一并写入 checkpoint",
+    "第10步：推理时 run_trained_agent.py 用 policy_from_checkpoint 还原 Algo 与归一化统计，在环境中执行动作"
+  ],
+  "entry_points": [
+    {"path": "robomimic/scripts/train.py", "what": "训练主入口，解析配置、加载数据、实例化算法并跑训练/评测循环"},
+    {"path": "robomimic/scripts/run_trained_agent.py", "what": "加载 checkpoint 还原策略并在环境中 rollout，用于可视化与复现结果"},
+    {"path": "robomimic/scripts/dataset_states_to_obs.py", "what": "把仅含状态的示教数据渲染成图像/深度观测，生成视觉数据集"},
+    {"path": "robomimic/scripts/playback_dataset.py", "what": "回放 hdf5 数据集中的示教轨迹，用于检查数据质量"},
+    {"path": "robomimic/scripts/download_datasets.py", "what": "下载官方示教数据集"},
+    {"path": "robomimic/scripts/generate_config_templates.py", "what": "为每种算法生成默认配置 json 模板"},
+    {"path": "examples/simple_train_loop.py", "what": "最小训练循环示例，跳过脚本层直接演示 Algo 与 run_epoch 用法"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：框架定位、核心特性、数据集与 Docker 使用方式"},
+    {"path": "robomimic/scripts/train.py", "why": "主入口，一眼看清配置、数据、环境、算法、评测如何被串起来"},
+    {"path": "robomimic/utils/train_utils.py", "why": "run_epoch 与 rollout_with_stats 是训练与评测分离的关键实现"},
+    {"path": "robomimic/algo/algo.py", "why": "Algo 基类与 algo_factory 注册机制，理解算法如何被解耦实例化"},
+    {"path": "robomimic/algo/bc.py", "why": "最典型的算法实现，看工厂函数如何按开关派生子类"},
+    {"path": "robomimic/config/base_config.py", "why": "配置体系与注册元类，理解参数如何组织与加锁"},
+    {"path": "robomimic/config/bc_config.py", "why": "算法专属配置示例，看 gaussian/gmm/vae/rnn 等参数如何声明"},
+    {"path": "robomimic/utils/dataset.py", "why": "SequenceDataset 揭示 hdf5 数据如何被读取、采样与归一化"},
+    {"path": "robomimic/envs/env_base.py", "why": "环境抽象接口，理解算法与仿真环境如何解耦"},
+    {"path": "robomimic/models/obs_nets.py", "why": "观测编码器与多模态网络，理解输入如何被编码成特征"}
+  ],
+  "extension_points": [
+    "想加新算法：在 robomimic/algo/ 下新建文件，写一个被 @register_algo_factory_func 装饰的工厂函数并定义 Algo 子类，再在 config/ 下加对应的 Config 子类",
+    "想加新观测模态：参考 examples/add_new_modality.py，在 utils/obs_utils.py 注册新的 Modality 与观测键，并在配置 observation.modalities 中声明",
+    "想加新环境：实现继承 EnvBase 的类并在 utils/env_utils.py 的 get_env_class 中注册新的 EnvType 分支",
+    "想换策略网络：在 models/ 下新增网络类，在对应算法的 _create_networks 中替换 PolicyNets 的构建",
+    "想改训练/评测流程：改 utils/train_utils.py 的 run_epoch 与 rollout_with_stats，或直接改 scripts/train.py 的主循环",
+    "想支持新数据集格式：在 utils/dataset.py 新增 Dataset 子类，并让 train_utils.dataset_factory 认识它"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 docs/introduction/overview，建立框架定位与工作流直觉",
+    "第2步：读 robomimic/scripts/train.py，把配置、数据、环境、算法、评测的调用链串起来",
+    "第3步：读 robomimic/utils/train_utils.py 的 run_epoch 与 rollout_with_stats，理解训练与评测如何分离",
+    "第4步：读 robomimic/algo/algo.py 与 bc.py，理解 Algo 基类接口与工厂注册机制",
+    "第5步：读 robomimic/config/base_config.py 与 bc_config.py，理解参数体系与配置加锁",
+    "第6步：读 robomimic/utils/dataset.py，理解 hdf5 示教数据如何被读取、采样与归一化",
+    "第7步：读 robomimic/envs/env_base.py 与 env_robosuite.py，理解环境抽象与解耦"
+  ],
+  "diagram_mermaid": "graph TD\n  CFG[Config 配置体系] --> FACT[algo_factory 算法工厂]\n  HDF5[hdf5 示教数据集] --> DS[SequenceDataset 序列采样]\n  DS --> NORM[计算观测与动作归一化统计]\n  HDF5 --> META[提取环境与形状元数据]\n  META --> ENV[EnvBase 仿真环境]\n  FACT --> ALGO[Algo 具体算法]\n  ALGO --> NET[ObservationEncoder 与策略网络]\n  NORM --> ALGO\n  DS --> EPOCH[run_epoch 训练循环]\n  EPOCH --> ALGO\n  ALGO --> CKPT[保存 checkpoint]\n  ALGO --> ROLL[RolloutPolicy 评测封装]\n  ROLL --> ENV\n  ENV --> STATS[成功率与视频统计]\n  CKPT --> AGENT[run_trained_agent 部署推理]",
+  "surprises": [
+    "环境类型不是显式配置的，而是从 hdf5 数据集的 env_meta 里读取 type 字段推断，训练时环境其实是数据集自带的元数据还原出来的",
+    "Config 默认加锁，运行期新增或修改键会直接报错，扩展算法时若忘了在 Config 子类里声明新参数会在运行时报 key 错误",
+    "算法与配置是双注册表：算法用 @register_algo_factory_func 注册，配置用 ConfigMeta 元类按 ALGO_NAME 注册，两者名字必须一致",
+    "同一个 BC 类通过 gaussian/gmm/vae/rnn/transformer 五个开关在工厂函数里派生出多种变体，读 bc.py 时容易误以为只有一种实现",
+    "训练与评测共用 RolloutPolicy 封装，但归一化统计来自数据集而非模型，换数据集评测时统计不匹配会导致动作尺度错误"
+  ],
+  "confidence": "高"
+}

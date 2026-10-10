@@ -1,0 +1,87 @@
+{
+  "repo": "microsoft/agent-lightning",
+  "name": "agent-lightning",
+  "one_liner": "用 OpenAI 代理把任意 Agent 零改动接入 RL 训练的轻量框架",
+  "problem": "把已有 Agent 的推理轨迹变成可训练的 RL 数据：Agent 照常用真实工具与环境跑，框架通过模型代理旁路捕获每次请求与奖励，训练算法无需侵入 Agent 代码。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Rollout", "role": "一次 Agent 执行的工作单元，含输入、配置、生命周期状态，是训练与控制器之间的核心契约", "file": "agentlightning/schemas.py"},
+    {"name": "Event", "role": "轨迹中的单条事件，只有 model_request 与 reward 有约定结构，其余为不透明透传，是训练数据的原子载体", "file": "agentlightning/schemas.py"},
+    {"name": "Model", "role": "已注册的模型推理端点，按 model 与 endpoint 建索引，训练器把 vLLM 地址注册进来供网关选择", "file": "agentlightning/schemas.py"},
+    {"name": "ProxyRouter", "role": "网关侧模型代理：按 rollout_id 稳定选择端点、改写温度与 logprobs 等参数并转发到 vLLM", "file": "agentlightning/server/proxy.py"},
+    {"name": "RolloutHooks", "role": "Rollout 生命周期钩子基类，在入队、成功、失败时回调，是算法侧注入自定义数据处理的扩展点", "file": "agentlightning/hooks.py"},
+    {"name": "AglRolloutManager", "role": "训练器侧的 rollout 客户端：注册端点、批量创建 rollout、轮询终态、拉取事件并组装 CompletedRollout", "file": "agentlightning/verl/agl_rollout_manager.py"},
+    {"name": "AgentLightningRayPPOTrainer", "role": "继承 verl RayPPOTrainer 的自定义训练器，用 Agent Lightning 的 rollout 替换原生 agent loop 并驱动 PPO", "file": "agentlightning/verl/trainer.py"},
+    {"name": "RolloutAdapter", "role": "把 CompletedRollout 的模型调用三元组转换成 verl 的 DataProto 训练样本，并做长度截断与奖励填充", "file": "agentlightning/verl/rollout_adapter.py"},
+    {"name": "LocalReconciler", "role": "本地模式控制器：轮询排队 rollout，以子进程方式启动 agent，并回收终态与超时", "file": "agentlightning/controller/local_reconciler.py"},
+    {"name": "ProxyPauseState", "role": "网关暂停与排空状态，异步训练在切换策略前暂停新请求并等待在途请求清零", "file": "agentlightning/server/proxy.py"}
+  ],
+  "layers": [
+    {"name": "契约层", "responsibility": "定义 Rollout/Event/Model 等跨组件共享的 Pydantic 数据结构与状态机，以及带重试的 HTTP 客户端", "modules": ["agentlightning"], "files": ["agentlightning/schemas.py", "agentlightning/client.py", "agentlightning/hooks.py"]},
+    {"name": "API 网关层", "responsibility": "FastAPI 服务，维护内存中的 rollout 与事件存储，提供 OpenAI 兼容代理并自动记录模型调用事件", "modules": ["agentlightning/server"], "files": ["agentlightning/server/app.py", "agentlightning/server/proxy.py", "agentlightning/server/store.py", "agentlightning/server/routes/rollouts.py", "agentlightning/server/routes/events.py", "agentlightning/server/routes/proxy.py"]},
+    {"name": "控制器层", "responsibility": "把排队 rollout 变成真实执行：本地子进程或 K8s Job，并回写运行状态", "modules": ["agentlightning/controller"], "files": ["agentlightning/controller/__main__.py", "agentlightning/controller/local_reconciler.py", "agentlightning/controller/k8s_reconciler.py"]},
+    {"name": "训练层", "responsibility": "在 verl 之上驱动 PPO：注册端点、创建 rollout、转换训练样本、计算优势并更新策略", "modules": ["agentlightning/verl"], "files": ["agentlightning/verl/entrypoint.py", "agentlightning/verl/trainer.py", "agentlightning/verl/agl_rollout_manager.py", "agentlightning/verl/rollout_adapter.py"]},
+    {"name": "配置层", "responsibility": "Hydra YAML 集中管理网关、控制器与训练器的参数体系", "modules": ["agentlightning/config"], "files": ["agentlightning/config/server.yaml", "agentlightning/config/controller.yaml", "agentlightning/verl/config.yaml"]},
+    {"name": "示例层", "responsibility": "提供可端到端运行的 Agent 与训练脚本，展示零改动接入方式", "modules": ["examples"], "files": ["examples/gsm8k/gsm8k_agent.py", "examples/gsm8k/train_gsm8k_agent.py"]}
+  ],
+  "data_flow": [
+    "第1步：训练器启动，把当前 vLLM 推理端点通过 POST /api/models 注册到网关",
+    "第2步：训练器为每个训练样本创建 Rollout，POST /api/rollouts 写入内存 store 并置为 QUEUING",
+    "第3步：Controller 轮询排队中的 Rollout，本地模式为每个 rollout 拉起一个 agent 子进程",
+    "第4步：子进程 agent 读取环境变量，把 OpenAI base_url 指向网关的 rollout 专属代理 URL",
+    "第5步：网关 ProxyRouter 按 rollout_id 哈希选择端点、改写温度与 return_token_ids，转发到 vLLM 并记录 model_request 事件",
+    "第6步：agent 执行结束，向事件接口 POST 一条 reward 事件",
+    "第7步：Controller 观察到子进程退出，把 Rollout 状态补丁为 SUCCEEDED 或 FAILED",
+    "第8步：训练器轮询终态 Rollout，拉取 raw 与 triplet 两种格式的事件",
+    "第9步：RolloutAdapter 把模型调用三元组转成左填充的 DataProto 训练样本，写入 token_level_scores",
+    "第10步：verl 计算优势并更新 actor 权重，checkpoint_manager 推送新权重到推理端点",
+    "第11步：异步模式下训练器暂停并排空网关在途请求，再进入下一步",
+    "第12步：删除已消费的 rollout 以约束网关内存占用，进入下一训练步"
+  ],
+  "entry_points": [
+    {"path": "agentlightning/server/__main__.py", "what": "Hydra 启动 API 网关，创建 FastAPI 应用并监听端口"},
+    {"path": "agentlightning/controller/__main__.py", "what": "Hydra 启动 Rollout 控制器，按 runner_type 选择本地或 K8s reconciler"},
+    {"path": "agentlightning/verl/entrypoint.py:run_ppo", "what": "训练入口：初始化 Ray、加载数据集并启动 AgentLightningRayPPOTrainer"},
+    {"path": "examples/gsm8k/train_gsm8k_agent.py:main", "what": "端到端示例：构建配置并调用 run_ppo 训练 GSM8K agent"},
+    {"path": "examples/gsm8k/gsm8k_agent.py:ChatAgent.run", "what": "Agent 侧入口，展示零改动接入：只把 base_url 指向网关并上报 reward"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立 v1.0 三组件架构认知：Trainer、API Gateway、Rollout Controller"},
+    {"path": "docs/05-basics.md", "why": "官方对 rollout、事件、代理 URL 与控制器职责的最佳导览"},
+    {"path": "agentlightning/schemas.py", "why": "Rollout/Event/Model 契约与状态机定义，理解全部跨组件语义的起点"},
+    {"path": "agentlightning/server/proxy.py", "why": "网关代理核心：端点选择、参数改写、事件捕获与暂停排空都在这"},
+    {"path": "agentlightning/server/routes/rollouts.py", "why": "Rollout 生命周期 API 与终态游标分页，理解状态如何被驱动"},
+    {"path": "agentlightning/controller/local_reconciler.py", "why": "看 rollout 如何真正变成子进程，以及 agent 环境变量如何注入"},
+    {"path": "agentlightning/verl/trainer.py", "why": "训练主循环：_rollout 与 _train_step 展示 rollout 如何融入 PPO"},
+    {"path": "agentlightning/verl/agl_rollout_manager.py", "why": "训练器侧 rollout 客户端，含同步与异步两种等待策略"},
+    {"path": "agentlightning/verl/rollout_adapter.py", "why": "轨迹到训练样本的转换与轨迹级合并逻辑，决定数据质量"},
+    {"path": "agentlightning/hooks.py", "why": "RolloutHooks 扩展点与动态加载机制，改数据流先看这里"}
+  ],
+  "extension_points": [
+    "想换/加 RL 算法：改 agentlightning/verl/trainer.py 的 _train_step，或换 config 的 algorithm.adv_estimator；rollout 级优势见 agentlightning/verl/rollout_level_advantage.py",
+    "想加新执行环境：实现新 Reconciler，参考 agentlightning/controller/local_reconciler.py 与 k8s_reconciler.py 的轮询与回写模式",
+    "想定制训练数据后处理：继承 RolloutHooks 实现 on_enqueue/on_succeeded，并在 config.agentlightning.hooks 指向文件",
+    "想换奖励来源：在 agent 内 POST reward 事件，或在 hooks.on_succeeded 中补算奖励",
+    "想换模型或采样温度：改 agentlightning/config/server.yaml 的 default_proxy",
+    "想改训练样本拼接/截断：改 agentlightning/verl/rollout_adapter.py 的 get_train_data_batch"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 docs/05-basics.md，记住 Trainer/Gateway/Controller 三角色",
+    "第2步：读 agentlightning/schemas.py，掌握 Rollout 状态机与 Event 结构",
+    "第3步：读 agentlightning/server/app.py 与 proxy.py，理解网关如何代理并记录事件",
+    "第4步：读 agentlightning/controller/local_reconciler.py，看 rollout 如何变成子进程",
+    "第5步：跑通 examples/gsm8k，对照 gsm8k_agent.py 看零改动接入",
+    "第6步：读 agentlightning/verl/trainer.py 与 agl_rollout_manager.py，理解训练循环",
+    "第7步：读 agentlightning/verl/rollout_adapter.py，掌握轨迹到训练样本的转换"
+  ],
+  "diagram_mermaid": "graph TD\n  T[训练器 verl Trainer] -->|注册 vLLM 端点| GW[API 网关]\n  T -->|创建 Rollout| GW\n  GW --> ST[内存 Store 保存 rollout 与事件]\n  CT[Rollout 控制器] -->|轮询排队 rollout| GW\n  CT -->|拉起| AG[Agent 子进程 或 K8s Job]\n  AG -->|OpenAI 请求 指向 rollout 专属 URL| GW\n  GW -->|改写参数并转发| VS[vLLM 推理端点]\n  GW -->|记录 model_request 事件| ST\n  AG -->|上报 reward 事件| GW\n  CT -->|补丁状态为终态| GW\n  T -->|拉取终态 rollout 与事件| GW\n  T --> AD[RolloutAdapter 转 DataProto]\n  AD -->|计算优势更新策略| T",
+  "surprises": [
+    "v1.0 与旧版完全不同：README 曾强调的 LightningStore 概念已消失，store.py 现在只是几个模块级 dict，单线程无锁，靠 FastAPI 事件循环保证一致性",
+    "Agent 真正做到零改动：只需把 OpenAI base_url 换成 /proxy/rollout/{id}/.../openai/v1 并把 model 写 auto，工具、上下文与控制流全留在 Agent 侧",
+    "网关默认不鉴权：key 为空时只打印警告，生产部署必须显式设置 AGL_KEY",
+    "不支持流式：请求体带 stream=true 会被网关直接拒绝并返回 400",
+    "本地模式在原生 Windows 不可用，需 Linux 或 WSL，因为依赖 os.killpg 与进程组语义",
+    "每个 rollout 按 rollout_id 的 SHA256 稳定绑定到同一推理端点，目的是复用 prefix cache，但会让负载分布不均"
+  ],
+  "confidence": "高"
+}

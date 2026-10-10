@@ -1,0 +1,88 @@
+{
+  "repo": "QwenLM/Qwen-Agent",
+  "name": "Qwen-Agent",
+  "one_liner": "通义千问官方 Agent 框架，主打工具调用与 RAG",
+  "problem": "为 Qwen 系列模型提供一套原子与高层组件，让开发者用统一接口把函数调用、代码解释器、超长文档 RAG 与 MCP 工具组合成可流式的 Agent 应用。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Agent", "role": "Agent 抽象基类：统一消息类型转换、注入 system message，子类只需实现 _run 工作流", "file": "qwen_agent/agent.py"},
+    {"name": "BaseChatModel", "role": "LLM 抽象基类：统一 chat 入口，负责缓存、消息截断、function calling 模式判定与重试", "file": "qwen_agent/llm/base.py"},
+    {"name": "BaseFnCallModel", "role": "支持函数调用的 LLM 子类：决定用哪套 fncall prompt 模板并驱动前处理与后处理", "file": "qwen_agent/llm/function_calling.py"},
+    {"name": "NousFnCallPrompt", "role": "默认 Function Call 模板：把工具描述注入提示词，并把模型输出的 tool_call 标签解析成结构化 FunctionCall", "file": "qwen_agent/llm/fncall_prompts/nous_fncall_prompt.py"},
+    {"name": "BaseTool / TOOL_REGISTRY", "role": "工具抽象与全局注册表，register_tool 装饰器把类按名字注册供 Agent 实例化", "file": "qwen_agent/tools/base.py"},
+    {"name": "Message / FunctionCall", "role": "统一的消息与函数调用数据结构，是 Agent、LLM、工具之间传递信息的载体", "file": "qwen_agent/llm/schema.py"},
+    {"name": "FnCallAgent", "role": "通用函数调用 Agent：循环调用 LLM、检测并执行工具、回填结果直到收敛", "file": "qwen_agent/agents/fncall_agent.py"},
+    {"name": "Memory", "role": "文件与 RAG 管理子 Agent，解析消息中的文件、生成检索关键词并调用 retrieval 工具", "file": "qwen_agent/memory/memory.py"},
+    {"name": "MCPManager", "role": "MCP 工具管理器单例，在独立线程的事件循环里连接 MCP server 并动态生成工具类", "file": "qwen_agent/tools/mcp_manager.py"},
+    {"name": "get_chat_model / LLM_REGISTRY", "role": "模型工厂：按 model_type 或从模型名与 model_server 推断出具体 LLM 实现", "file": "qwen_agent/llm/__init__.py"}
+  ],
+  "layers": [
+    {"name": "数据契约层", "responsibility": "定义 Message、FunctionCall、ContentItem 等跨模块共享的数据结构", "modules": ["qwen_agent/llm"], "files": ["qwen_agent/llm/schema.py"]},
+    {"name": "LLM 抽象层", "responsibility": "统一 chat 接口、缓存与截断策略，提供各模型服务的具体实现", "modules": ["qwen_agent/llm"], "files": ["qwen_agent/llm/base.py", "qwen_agent/llm/__init__.py", "qwen_agent/llm/qwen_dashscope.py", "qwen_agent/llm/oai.py"]},
+    {"name": "Function Call 解析层", "responsibility": "把工具描述注入提示词，并把模型文本输出解析成结构化函数调用", "modules": ["qwen_agent/llm/fncall_prompts"], "files": ["qwen_agent/llm/function_calling.py", "qwen_agent/llm/fncall_prompts/base_fncall_prompt.py", "qwen_agent/llm/fncall_prompts/nous_fncall_prompt.py"]},
+    {"name": "工具层", "responsibility": "内置工具实现、工具注册表以及 MCP 外部工具接入", "modules": ["qwen_agent/tools"], "files": ["qwen_agent/tools/base.py", "qwen_agent/tools/retrieval.py", "qwen_agent/tools/code_interpreter.py", "qwen_agent/tools/mcp_manager.py"]},
+    {"name": "Agent 层", "responsibility": "各类 Agent 工作流：基础 Agent、函数调用 Agent、ReAct、多 Agent 与写作等", "modules": ["qwen_agent/agents"], "files": ["qwen_agent/agent.py", "qwen_agent/agents/fncall_agent.py", "qwen_agent/agents/assistant.py", "qwen_agent/agents/react_chat.py"]},
+    {"name": "记忆与 RAG 层", "responsibility": "管理文件、关键词生成与检索增强，为 Assistant 提供长文档问答能力", "modules": ["qwen_agent/memory"], "files": ["qwen_agent/memory/memory.py"]},
+    {"name": "界面层", "responsibility": "基于 Gradio 的 WebUI，支持多模态输入与流式展示", "modules": ["qwen_agent/gui"], "files": ["qwen_agent/gui/web_ui.py", "qwen_agent/gui/gradio_utils.py"]},
+    {"name": "示例层", "responsibility": "覆盖不同模型与场景的可运行示例，是上手的最佳入口", "modules": ["examples"], "files": ["examples/assistant_qwen3.py", "examples/function_calling.py", "examples/assistant_rag.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户给出 llm_cfg，get_chat_model 按 model_type 或从模型名与 model_server 推断出具体 LLM 类",
+    "第2步：Agent 初始化时 _init_tool 从 TOOL_REGISTRY 实例化工具，或经 MCPManager 拉取 MCP 工具，填入 function_map",
+    "第3步：Agent.run 统一消息类型、补上 system message，并把请求交给子类 _run",
+    "第4步：FnCallAgent._run 进入循环，把 function_map 的工具 schema 通过 _call_llm 传给 LLM",
+    "第5步：LLM.chat 前处理：fncall_prompt 把工具描述注入 system prompt，并把历史 function_call 反解析成 tool_call 文本",
+    "第6步：模型流式输出，postprocess_fncall_messages 解析 tool_call 标签，产出结构化 FunctionCall 消息",
+    "第7步：Agent._detect_tool 检测到函数调用，_call_tool 执行对应工具并把结果序列化为字符串",
+    "第8步：工具结果封装成 role 为 function 的消息追加回对话历史",
+    "第9步：若本轮没有新的工具调用则退出循环，否则继续下一轮 LLM 调用",
+    "第10步：Assistant 额外通过 Memory 解析消息中的文件、生成检索关键词并注入知识后生成回答",
+    "第11步：最终结果以生成器形式逐帧 yield 完整消息列表给调用方或 WebUI"
+  ],
+  "entry_points": [
+    {"path": "qwen_agent/agents/assistant.py:Assistant", "what": "最常用的 Agent，集成 RAG 与函数调用，示例与文档的默认入口"},
+    {"path": "qwen_agent/agent.py:Agent.run", "what": "所有 Agent 的统一对外入口，负责类型转换与 system message 注入"},
+    {"path": "qwen_agent/llm/__init__.py:get_chat_model", "what": "模型工厂，理解模型配置如何映射到具体 LLM 实现"},
+    {"path": "qwen_agent/gui/web_ui.py:WebUI", "what": "Gradio 界面入口，一行代码即可为 Agent 部署 Demo"},
+    {"path": "examples/assistant_qwen3.py", "what": "Qwen3 工具调用示例，展示完整的 Agent 组装方式"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立原子组件 LLM 与 Tool、高层组件 Agent 的分层认知与快速上手示例"},
+    {"path": "qwen_agent/agent.py", "why": "Agent 基类与 run 的统一处理逻辑，理解所有 Agent 的共同骨架"},
+    {"path": "qwen_agent/llm/base.py", "why": "LLM 抽象核心：chat 流程、fncall 模式判定、消息截断与重试都在这"},
+    {"path": "qwen_agent/llm/function_calling.py", "why": "函数调用模型基类，串起 fncall prompt 的前处理与后处理"},
+    {"path": "qwen_agent/llm/fncall_prompts/nous_fncall_prompt.py", "why": "默认模板：工具描述注入与 tool_call 文本解析的实际实现"},
+    {"path": "qwen_agent/tools/base.py", "why": "工具基类与注册机制，加新工具必读"},
+    {"path": "qwen_agent/agents/fncall_agent.py", "why": "通用函数调用 Agent 的循环逻辑，理解工具如何被反复执行"},
+    {"path": "qwen_agent/llm/__init__.py", "why": "模型类型推断规则，理解 Qwen 与 OpenAI 兼容服务的绑定方式"},
+    {"path": "qwen_agent/memory/memory.py", "why": "RAG 与文件管理如何嵌入 Agent 流程"},
+    {"path": "qwen_agent/agents/react_chat.py", "why": "另一套基于文本 Action 的解析路径，对比理解 function call 设计"}
+  ],
+  "extension_points": [
+    "加新工具：继承 BaseTool 并用 @register_tool 注册，实现 call 与 parameters，见 qwen_agent/tools/base.py",
+    "加新 LLM 后端：继承 BaseChatModel 或 BaseFnCallModel 并用 @register_llm 注册，见 qwen_agent/llm/base.py",
+    "加新 Agent 工作流：继承 Agent 实现 _run，参考 qwen_agent/agents/react_chat.py",
+    "换 Function Call 模板：设置 generate_cfg.fncall_prompt_type 或在 qwen_agent/llm/fncall_prompts 下新增 prompt 类",
+    "接入 MCP 工具：function_list 中传入含 mcpServers 的 dict，由 qwen_agent/tools/mcp_manager.py 处理",
+    "自定义 RAG：向 Agent 传 rag_cfg 调整 max_ref_token、rag_searchers 与 rag_keygen_strategy"
+  ],
+  "learning_path": [
+    "第1步：读 README，分清 LLM 与 Tool 原子组件和 Agent 高层组件的分工",
+    "第2步：读 qwen_agent/agent.py 的 run 与 _run，理解 Agent 骨架",
+    "第3步：读 llm/schema.py 与 llm/base.py，掌握消息结构与 chat 流程",
+    "第4步：读 llm/function_calling.py 与 nous_fncall_prompt.py，吃透函数调用解析",
+    "第5步：读 tools/base.py 与 tools/retrieval.py，理解工具注册与 RAG 工具",
+    "第6步：读 agents/fncall_agent.py，看工具调用循环如何运转",
+    "第7步：读 agents/assistant.py 与 memory/memory.py，掌握 RAG 与 Agent 的结合"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户消息] --> A[Agent.run 统一类型与系统提示]\n  A --> F[FnCallAgent._run 循环]\n  F --> C[_call_llm 携带工具 schema]\n  C --> P[fncall_prompt 注入工具描述]\n  P --> M[LLM 生成含 tool_call 标签的输出]\n  M --> PP[postprocess 解析为 FunctionCall]\n  PP --> D[_detect_tool 检测调用]\n  D --> T[_call_tool 执行工具]\n  T --> R[工具结果作为 function 消息回填]\n  R --> F\n  D -->|无工具调用| O[输出最终回答]\n  A -.-> MM[Memory 解析文件并检索]\n  MM -.-> A\n  T -.-> MCP[MCPManager 远程工具]\n  T -.-> CI[CodeInterpreter Docker 沙箱]",
+  "surprises": [
+    "默认不依赖 API 原生 tool call，而是把工具描述写进 system prompt，让模型输出 tool_call 标签再由 fncall_prompt 解析；只有 Qwen3-Max 会自动切到 use_raw_api 走原生接口",
+    "历史 function_call 会被反向还原成 tool_call 文本再喂给模型，以保证多轮与训练数据格式一致",
+    "Agent.run 返回生成器，流式每次 yield 的是完整消息列表而不是增量 delta",
+    "ReActChat 虽然继承 FnCallAgent，却改用文本 Action 与 Observation 的解析，与 function call 是完全独立的两条解析路径",
+    "MCPManager 是单例并在独立线程运行事件循环，还对 mcp 库做了 monkey patch，只为在进程退出时清理 MCP 子进程",
+    "code_interpreter 依赖本地 Docker，把代码送进容器里的 Jupyter kernel 执行，未安装 Docker 会直接初始化失败"
+  ],
+  "confidence": "高"
+}

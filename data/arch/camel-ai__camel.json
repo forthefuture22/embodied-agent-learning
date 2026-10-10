@@ -1,0 +1,209 @@
+{
+  "repo": "camel-ai/camel",
+  "name": "CAMEL",
+  "one_liner": "用角色扮演让两个 Agent 自主对话协作的多智能体研究框架",
+  "problem": "解决如何让多个 LLM Agent 在没有人类干预下自主协作：通过角色扮演与任务提示让 Agent 分工对话，并提供 Workforce 把任务分解派发给多个 Worker。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "ChatAgent",
+      "role": "最核心的单体 Agent，实现 step 单步循环、工具调用、记忆管理与终止判定",
+      "file": "camel/agents/chat_agent.py"
+    },
+    {
+      "name": "BaseAgent",
+      "role": "所有 Agent 的抽象基类，只规定 reset 与 step 两个方法",
+      "file": "camel/agents/base.py"
+    },
+    {
+      "name": "RolePlaying",
+      "role": "两 Agent 角色扮演协作，用任务提示驱动 Assistant 与 User 交替对话",
+      "file": "camel/societies/role_playing.py"
+    },
+    {
+      "name": "Workforce",
+      "role": "多 Worker 协作系统，内含协调者与任务规划者，负责分配、分解与重试任务",
+      "file": "camel/societies/workforce/workforce.py"
+    },
+    {
+      "name": "TaskChannel",
+      "role": "任务发布订阅通道，Worker 通过它领取任务并回传结果，实现解耦并发",
+      "file": "camel/societies/workforce/task_channel.py"
+    },
+    {
+      "name": "Worker",
+      "role": "Workforce 中工作节点的抽象，定义监听通道与处理任务的协议",
+      "file": "camel/societies/workforce/worker.py"
+    },
+    {
+      "name": "Task",
+      "role": "可分解的任务对象，携带内容、依赖关系与状态，是 Workforce 的调度单位",
+      "file": "camel/tasks/task.py"
+    },
+    {
+      "name": "BaseMessage",
+      "role": "角色扮演对话中传递的消息对象，携带角色名、角色类型与多模态内容",
+      "file": "camel/messages/base.py"
+    },
+    {
+      "name": "ModelFactory",
+      "role": "统一的模型工厂，按平台与类型创建后端模型，屏蔽几十家模型差异",
+      "file": "camel/models/model_factory.py"
+    },
+    {
+      "name": "SystemMessageGenerator",
+      "role": "根据任务类型与角色名生成系统提示词，是角色扮演提示词工程的入口",
+      "file": "camel/generators.py"
+    },
+    {
+      "name": "BaseTerminator",
+      "role": "对话终止判定抽象，决定角色扮演循环何时结束",
+      "file": "camel/terminators/base.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "Agent 层",
+      "responsibility": "定义单体 Agent 的推理循环、工具调用与记忆，是所有协作的基础单元",
+      "modules": ["camel/agents"],
+      "files": ["camel/agents/chat_agent.py", "camel/agents/base.py", "camel/agents/role_assignment_agent.py"]
+    },
+    {
+      "name": "Society 协作层",
+      "responsibility": "把多个 Agent 组织成角色扮演或 Workforce 两种协作形态",
+      "modules": ["camel/societies"],
+      "files": ["camel/societies/role_playing.py", "camel/societies/workforce/workforce.py", "camel/societies/workforce/task_channel.py"]
+    },
+    {
+      "name": "消息层",
+      "responsibility": "定义 Agent 间传递的消息格式与多模态内容封装",
+      "modules": ["camel/messages"],
+      "files": ["camel/messages/base.py", "camel/messages/func_message.py"]
+    },
+    {
+      "name": "模型层",
+      "responsibility": "封装各大模型平台，提供统一的模型后端与工厂",
+      "modules": ["camel/models", "camel/configs"],
+      "files": ["camel/models/model_factory.py", "camel/models/base_model.py", "camel/configs/base_config.py"]
+    },
+    {
+      "name": "提示词层",
+      "responsibility": "提供角色扮演、任务生成、评估等各类提示词模板与系统消息生成",
+      "modules": ["camel/prompts"],
+      "files": ["camel/prompts/base.py", "camel/prompts/ai_society.py", "camel/prompts/task_prompt_template.py"]
+    },
+    {
+      "name": "工具层",
+      "responsibility": "提供搜索、代码执行、浏览器等大量可挂载工具",
+      "modules": ["camel/toolkits"],
+      "files": ["camel/toolkits/__init__.py"]
+    },
+    {
+      "name": "记忆与任务层",
+      "responsibility": "管理 Agent 记忆以及 Workforce 调度的任务对象与终止条件",
+      "modules": ["camel/memories", "camel/tasks", "camel/terminators"],
+      "files": ["camel/memories/agent_memories.py", "camel/tasks/task.py", "camel/terminators/base.py"]
+    },
+    {
+      "name": "示例层",
+      "responsibility": "提供角色扮演与 Workforce 的可运行样例",
+      "modules": ["examples"],
+      "files": ["examples/ai_society/role_playing.py", "examples/workforce/multiple_single_agents.py"]
+    }
+  ],
+  "data_flow": [
+    "第1步：用 ModelFactory 创建模型后端并构造 ChatAgent",
+    "第2步：角色扮演场景下，RolePlaying 用 SystemMessageGenerator 生成双方系统提示词",
+    "第3步：可选地由 TaskSpecifyAgent 把原始任务细化为指定任务提示",
+    "第4步：init_chat 生成起始消息交给 Assistant Agent",
+    "第5步：调用 step，Assistant 先通过 ChatAgent.step 生成回复",
+    "第6步：该回复作为输入交给 User Agent，User 再生成回复",
+    "第7步：循环往复，每轮检查终止条件与 CAMEL_TASK_DONE 标记",
+    "第8步：Workforce 场景下，人类任务经 process_task 进入协调者",
+    "第9步：协调者把任务发布到 TaskChannel，并可能用任务规划者做分解",
+    "第10步：Worker 从通道领取任务，调用各自 ChatAgent 执行后回传结果",
+    "第11步：失败任务触发重试、创建新 Worker 或进一步分解等策略"
+  ],
+  "entry_points": [
+    {
+      "path": "examples/ai_society/role_playing.py",
+      "what": "最小角色扮演示例，展示两个 Agent 如何围绕任务对话"
+    },
+    {
+      "path": "examples/workforce/multiple_single_agents.py",
+      "what": "Workforce 示例，展示如何添加多个 Worker 并处理一个复合任务"
+    },
+    {
+      "path": "camel/societies/role_playing.py",
+      "what": "RolePlaying 类，init_chat 与 step 是驱动对话循环的入口"
+    },
+    {
+      "path": "camel/societies/workforce/workforce.py",
+      "what": "Workforce 类，process_task 是启动任务调度的入口"
+    },
+    {
+      "path": "camel/agents/chat_agent.py",
+      "what": "ChatAgent.step 是单个 Agent 执行一步的核心入口"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "README.md",
+      "why": "先读它理解 CAMEL 的设计原则与两大协作形态"
+    },
+    {
+      "path": "camel/agents/chat_agent.py",
+      "why": "ChatAgent 是最核心的 Agent 实现，理解 step 才能读懂上层协作"
+    },
+    {
+      "path": "camel/messages/base.py",
+      "why": "BaseMessage 是角色扮演的通信载体，先理解它再看对话循环"
+    },
+    {
+      "path": "camel/societies/role_playing.py",
+      "why": "看两个 Agent 如何用提示词自主协作，是 CAMEL 的灵魂"
+    },
+    {
+      "path": "camel/generators.py",
+      "why": "SystemMessageGenerator 揭示角色提示词是怎么拼出来的"
+    },
+    {
+      "path": "camel/societies/workforce/workforce.py",
+      "why": "理解另一种组织方式：任务分解与 Worker 调度"
+    },
+    {
+      "path": "camel/societies/workforce/task_channel.py",
+      "why": "TaskChannel 是 Worker 解耦并发的关键机制"
+    },
+    {
+      "path": "examples/workforce/multiple_single_agents.py",
+      "why": "最短的 Workforce 上手样例，配合源码阅读"
+    }
+  ],
+  "extension_points": [
+    "想新增一个 Agent 类型：继承 camel/agents/base.py 的 BaseAgent 或 camel/agents/chat_agent.py 的 ChatAgent，参考 role_assignment_agent.py",
+    "想新增一种协作模式：在 camel/societies 下新建类，角色扮演参考 role_playing.py，团队参考 workforce/workforce.py",
+    "想新增一个 Worker 类型：继承 camel/societies/workforce/worker.py 的 Worker，参考 single_agent_worker.py 与 role_playing_worker.py",
+    "想新增一个工具：在 camel/toolkits 下实现 Toolkit 子类并把函数作为 tools 传给 ChatAgent",
+    "想接入新模型：在 camel/models 下实现 BaseModelBackend，并在 model_factory.py 与 camel/configs 注册",
+    "想自定义角色提示词：修改 camel/prompts 下的模板或传入 sys_msg_generator_kwargs",
+    "想自定义终止逻辑：在 camel/terminators 下继承 BaseTerminator"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 examples/ai_society/role_playing.py，跑通一次角色扮演",
+    "第2步：读 camel/agents/chat_agent.py 的 step 与 _step_impl，理解单 Agent 循环",
+    "第3步：读 camel/messages/base.py 与 camel/generators.py，理解消息与系统提示生成",
+    "第4步：读 camel/societies/role_playing.py 的 init_chat 与 step，理解对话驱动",
+    "第5步：读 camel/tasks/task.py 与 camel/societies/workforce/workforce.py，理解任务分解调度",
+    "第6步：读 camel/societies/workforce/task_channel.py 与 worker.py，理解并发与解耦"
+  ],
+  "diagram_mermaid": "graph TD\n  T[任务提示] --> SM[SystemMessageGenerator 生成角色提示]\n  SM --> A[Assistant Agent]\n  SM --> U[User Agent]\n  A -->|消息| U\n  U -->|消息| A\n  A --> TERM[终止判定]\n  U --> TERM\n  T --> W[Workforce 协调者]\n  W --> TC[TaskChannel]\n  TC --> WK1[Worker A]\n  TC --> WK2[Worker B]\n  WK1 --> TC\n  WK2 --> TC\n  W --> R[结果汇总]",
+  "surprises": [
+    "两个 Agent 的协作完全不靠外部编排脚本，而是靠系统提示词让模型自己按角色轮流说话",
+    "RolePlaying.step 只推进一轮：User 先响应 Assistant，再由 Assistant 响应 User，调用方需自己写循环",
+    "Workforce 内部用三个特殊 ChatAgent 分别充当协调者、任务规划者与动态 Worker，复用了同一个 ChatAgent 类",
+    "Agent 之间通过 TaskChannel 而非直接调用通信，Worker 是异步监听通道领取任务，天然支持并发与失败重试",
+    "仓库里 ModelFactory 与 configs 覆盖数十家模型平台，是理解其可扩展性的关键，但也让 model 目录非常庞大"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,213 @@
+{
+  "repo": "reworkd/AgentGPT",
+  "name": "AgentGPT",
+  "one_liner": "浏览器里跑自主 Agent 的全栈应用，前端驱动任务循环",
+  "problem": "解决让普通用户零部署地在浏览器里配置并运行一个自主 Agent：输入目标后自动拆解任务、逐个执行、再汇总，前端负责循环，后端负责单步 LLM 调用。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {
+      "name": "AutonomousAgent",
+      "role": "前端自主循环的大脑，用一个工作队列顺序推进各类工作项直到任务清空",
+      "file": "next/src/services/agent/autonomous-agent.ts"
+    },
+    {
+      "name": "AgentWork",
+      "role": "工作项接口，规定 run、conclude、next、onError 四个方法，是任务树的节点协议",
+      "file": "next/src/services/agent/agent-work/agent-work.ts"
+    },
+    {
+      "name": "StartGoalWork",
+      "role": "起始工作项，向后端请求初始任务列表并创建 Agent 记录",
+      "file": "next/src/services/agent/agent-work/start-task-work.ts"
+    },
+    {
+      "name": "AnalyzeTaskWork",
+      "role": "分析工作项，调用后端为当前任务选择合适工具并产出分析结果",
+      "file": "next/src/services/agent/agent-work/analyze-task-work.ts"
+    },
+    {
+      "name": "ExecuteTaskWork",
+      "role": "执行工作项，流式调用后端执行任务并把结果写回任务状态",
+      "file": "next/src/services/agent/agent-work/execute-task-work.ts"
+    },
+    {
+      "name": "AgentRunModel",
+      "role": "对本次运行的封装，管理生命周期与任务的增改查，桥接 zustand 状态",
+      "file": "next/src/services/agent/agent-run-model.tsx"
+    },
+    {
+      "name": "AgentApi",
+      "role": "前端与后端 Agent 接口的封装，负责 start、analyze、create 等请求",
+      "file": "next/src/services/agent/agent-api.ts"
+    },
+    {
+      "name": "MessageService",
+      "role": "把任务与结果转成聊天消息写入消息存储，驱动界面展示",
+      "file": "next/src/services/agent/message-service.ts"
+    },
+    {
+      "name": "AgentService",
+      "role": "后端 Agent 服务协议，定义起始、分析、执行、生成、总结、聊天六个方法",
+      "file": "platform/reworkd_platform/web/api/agent/agent_service/agent_service.py"
+    },
+    {
+      "name": "OpenAIAgentService",
+      "role": "后端服务实现，用 LangChain 提示词与函数调用完成每个 Agent 步骤",
+      "file": "platform/reworkd_platform/web/api/agent/agent_service/open_ai_agent_service.py"
+    },
+    {
+      "name": "Tool",
+      "role": "后端工具抽象，分析阶段选中的工具在此执行具体能力如推理、搜索",
+      "file": "platform/reworkd_platform/web/api/agent/tools/tool.py"
+    },
+    {
+      "name": "TaskOutputParser",
+      "role": "解析模型输出的任务数组，把 JSON 文本转成任务列表",
+      "file": "platform/reworkd_platform/web/api/agent/task_output_parser.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "前端自主循环层",
+      "responsibility": "在浏览器里维护工作队列，顺序驱动任务的分析与执行，实现暂停恢复",
+      "modules": ["next/src/services/agent"],
+      "files": ["next/src/services/agent/autonomous-agent.ts", "next/src/services/agent/agent-api.ts", "next/src/services/agent/message-service.ts"]
+    },
+    {
+      "name": "前端工作项层",
+      "responsibility": "把任务循环拆成可组合的工作项，每项自描述下一步",
+      "modules": ["next/src/services/agent/agent-work"],
+      "files": ["next/src/services/agent/agent-work/agent-work.ts", "next/src/services/agent/agent-work/start-task-work.ts", "next/src/services/agent/agent-work/analyze-task-work.ts", "next/src/services/agent/agent-work/execute-task-work.ts"]
+    },
+    {
+      "name": "前端状态层",
+      "responsibility": "用 zustand 管理任务、消息、Agent 生命周期与配置等全局状态",
+      "modules": ["next/src/stores"],
+      "files": ["next/src/stores/taskStore.ts", "next/src/stores/agentStore.ts", "next/src/stores/messageStore.ts"]
+    },
+    {
+      "name": "前端页面层",
+      "responsibility": "提供首页与 Agent 页面，负责创建 AutonomousAgent 并展示聊天流",
+      "modules": ["next/src/pages"],
+      "files": ["next/src/pages/index.tsx", "next/src/pages/agent/index.tsx"]
+    },
+    {
+      "name": "后端 API 层",
+      "responsibility": "FastAPI 路由暴露 start、analyze、execute、create、summarize、chat 等端点",
+      "modules": ["platform/reworkd_platform/web/api"],
+      "files": ["platform/reworkd_platform/web/api/router.py", "platform/reworkd_platform/web/api/agent/views.py"]
+    },
+    {
+      "name": "后端 Agent 服务层",
+      "responsibility": "实现每个 Agent 步骤的提示词与函数调用逻辑",
+      "modules": ["platform/reworkd_platform/web/api/agent/agent_service"],
+      "files": ["platform/reworkd_platform/web/api/agent/agent_service/agent_service.py", "platform/reworkd_platform/web/api/agent/agent_service/open_ai_agent_service.py"]
+    },
+    {
+      "name": "后端工具与提示层",
+      "responsibility": "提供可被分析阶段选中的工具以及各步骤的提示词模板与输出解析",
+      "modules": ["platform/reworkd_platform/web/api/agent/tools"],
+      "files": ["platform/reworkd_platform/web/api/agent/tools/tools.py", "platform/reworkd_platform/web/api/agent/tools/reason.py", "platform/reworkd_platform/web/api/agent/prompts.py", "platform/reworkd_platform/web/api/agent/task_output_parser.py"]
+    },
+    {
+      "name": "持久化层",
+      "responsibility": "用 Prisma 与数据库保存 Agent 及其任务消息",
+      "modules": ["platform/reworkd_platform/db", "next/prisma"],
+      "files": ["platform/reworkd_platform/db", "next/prisma"]
+    }
+  ],
+  "data_flow": [
+    "第1步：用户在首页输入目标，页面创建 AutonomousAgent 并调用 run",
+    "第2步：StartGoalWork 向后端 start 端点请求初始任务列表",
+    "第3步：后端用 start_goal_prompt 让模型产出搜索查询数组，TaskOutputParser 解析成任务",
+    "第4步：前端把任务写入任务存储，作为消息展示",
+    "第5步：循环取出第一个未开始的任务，构造 AnalyzeTaskWork",
+    "第6步：分析阶段前端调用 analyze 端点，后端用函数调用为任务挑选工具并给出推理",
+    "第7步：分析成功后 next 返回 ExecuteTaskWork",
+    "第8步：执行阶段前端流式调用 execute 端点，后端用选中工具执行并流式返回结果",
+    "第9步：结果写回任务状态与消息，任务标记完成",
+    "第10步：工作队列为空时取下一个任务重复，全部完成后 stopAgent",
+    "第11步：用户可随时 summarize 触发总结，或 chat 与已有结果对话"
+  ],
+  "entry_points": [
+    {
+      "path": "next/src/pages/index.tsx",
+      "what": "首页，实例化 AutonomousAgent 并启动一次运行"
+    },
+    {
+      "path": "next/src/services/agent/autonomous-agent.ts",
+      "what": "AutonomousAgent.run 是前端自主任务循环的真正入口"
+    },
+    {
+      "path": "platform/reworkd_platform/web/api/agent/views.py",
+      "what": "后端 Agent 的全部 HTTP 端点定义"
+    },
+    {
+      "path": "platform/reworkd_platform/__main__.py",
+      "what": "启动 FastAPI 后端的入口"
+    },
+    {
+      "path": "next/src/hooks/useAgent.ts",
+      "what": "前端创建与保存 Agent 记录的封装"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "README.md",
+      "why": "先读它理解前后端分工与技术栈"
+    },
+    {
+      "path": "next/src/services/agent/autonomous-agent.ts",
+      "why": "整个自主循环的核心，理解它就看懂了 AgentGPT 怎么跑"
+    },
+    {
+      "path": "next/src/services/agent/agent-work/agent-work.ts",
+      "why": "只有四行的工作项协议，是任务树分解与执行的关键抽象"
+    },
+    {
+      "path": "next/src/services/agent/agent-work/analyze-task-work.ts",
+      "why": "看工作项如何自我衔接，next 返回下一个工作项"
+    },
+    {
+      "path": "next/src/services/agent/agent-work/execute-task-work.ts",
+      "why": "看任务如何通过流式接口执行并回写状态"
+    },
+    {
+      "path": "next/src/services/agent/agent-run-model.tsx",
+      "why": "理解生命周期与任务状态是如何被前端管理的"
+    },
+    {
+      "path": "platform/reworkd_platform/web/api/agent/views.py",
+      "why": "一屏看完后端对前端暴露的全部能力"
+    },
+    {
+      "path": "platform/reworkd_platform/web/api/agent/prompts.py",
+      "why": "提示词决定任务如何被拆解与分析，是行为的关键"
+    }
+  ],
+  "extension_points": [
+    "想新增一种前端工作步骤：实现 next/src/services/agent/agent-work/agent-work.ts 的接口并挂进 AutonomousAgent 的 workLog",
+    "想改变任务分解方式：修改 platform/reworkd_platform/web/api/agent/prompts.py 中的 start_goal_prompt 与 create_tasks_prompt",
+    "想新增一个可被分析选中的工具：在 platform/reworkd_platform/web/api/agent/tools 下继承 Tool 并在 tools.py 注册",
+    "想更换后端 LLM 服务：在 platform/reworkd_platform/web/api/agent/model_factory.py 与 agent_service_provider.py 中替换实现",
+    "想新增后端能力端点：在 platform/reworkd_platform/web/api/agent/views.py 加路由并在 AgentService 协议里加方法",
+    "想新增前端状态：在 next/src/stores 下按现有 zustand slice 模式扩展"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 next/src/pages/index.tsx，理解前后端分工与启动方式",
+    "第2步：读 next/src/services/agent/autonomous-agent.ts，理解前端自主循环",
+    "第3步：读 next/src/services/agent/agent-work 下各工作项，理解任务如何被拆解推进",
+    "第4步：读 next/src/services/agent/agent-run-model.tsx 与 next/src/stores/taskStore.ts，理解状态管理",
+    "第5步：读 platform/reworkd_platform/web/api/agent/views.py 与 agent_service，理解后端每一步做什么",
+    "第6步：读 prompts.py 与 tools 目录，理解提示词与工具如何驱动行为"
+  ],
+  "diagram_mermaid": "graph TD\n  G[用户输入目标] --> AA[AutonomousAgent 前端循环]\n  AA --> SG[StartGoalWork 请求初始任务]\n  SG --> BE[FastAPI 后端 start 端点]\n  BE --> T[任务列表]\n  T --> AT[AnalyzeTaskWork 分析任务]\n  AT --> EX[ExecuteTaskWork 执行任务]\n  EX --> ST[流式结果写回状态]\n  ST --> N{还有任务吗}\n  N -->|有| AT\n  N -->|无| STOP[停止 Agent]\n  AA --> SUM[SummarizeWork 总结]",
+  "surprises": [
+    "真正的大脑在前端：任务循环、任务树状态与暂停恢复都在浏览器里跑，后端只是无状态的一问一答 LLM 服务",
+    "CreateTaskWork 这类用于动态生成后续任务的工作项在仓库中存在，但主循环并未挂载它，属于遗留或未启用的代码",
+    "任务不是一次性规划好的树，而是每完成一步再由后端 create 端点追加一条新任务，是一种边执行边扩展的线性拆解",
+    "前端用 NEXT_PUBLIC_BACKEND_URL 直接请求 FastAPI，而不是走 Next.js 的 API 路由，因此跨域与鉴权都在 fetch-utils 里手写",
+    "工作项靠 next 方法返回下一个工作项来自我串联，而非集中式状态机，读代码时容易忽略这条隐式链路"
+  ],
+  "confidence": "高"
+}

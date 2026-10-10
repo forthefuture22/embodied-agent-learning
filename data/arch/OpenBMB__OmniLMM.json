@@ -1,0 +1,72 @@
+{
+  "repo": "OpenBMB/OmniLMM",
+  "name": "OmniLMM",
+  "one_liner": "端侧多模态大模型系列，视觉经重采样器接入 LLM",
+  "problem": "让多模态大模型能在手机等端侧高效运行：用 EVA02 视觉塔提取特征，经感知重采样器压成少量 token 后接入 Mistral 语言模型做图文理解。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "OmniLMMForCausalLM", "role": "顶层多模态因果语言模型，组装视觉模块与 LM head 并负责生成", "file": "omnilmm/model/omnilmm.py"},
+    {"name": "OmniLMMModel", "role": "继承 MistralModel，持有 vision_tower 与 resampler，在 forward 中把视觉 embedding 注入文本序列", "file": "omnilmm/model/omnilmm.py"},
+    {"name": "Resampler", "role": "感知重采样器，用可学习 query 通过交叉注意力把视觉特征压缩为固定数量 token", "file": "omnilmm/model/resampler.py"},
+    {"name": "create_vision_module", "role": "构建 EVA02 视觉塔，去掉最后一层与 attn_pool，并配套构造 Resampler", "file": "omnilmm/model/omnilmm.py"},
+    {"name": "SupervisedDataset", "role": "指令微调数据集，读取图文对话 JSON 并产出 pixel_values 与 labels", "file": "finetune/dataset.py"},
+    {"name": "CPMTrainer", "role": "自定义 Trainer，区分 use_lora 分支并实现多模态 loss 计算", "file": "finetune/trainer.py"},
+    {"name": "omni_preprocess", "role": "把对话套用 chat 模板并生成只对 assistant 回复计算 loss 的 label 掩码", "file": "omnilmm/train/train_utils.py"},
+    {"name": "build_transform", "role": "图像预处理与随机增强，统一到视觉塔输入尺寸与归一化", "file": "omnilmm/model/utils.py"}
+  ],
+  "layers": [
+    {"name": "模型层", "responsibility": "视觉编码器、重采样器、语言模型与多模态 embedding 融合", "modules": ["omnilmm/model"], "files": ["omnilmm/model/omnilmm.py", "omnilmm/model/resampler.py"]},
+    {"name": "训练层", "responsibility": "指令微调数据组织、Trainer 定制与启动脚本", "modules": ["finetune"], "files": ["finetune/finetune.py", "finetune/dataset.py", "finetune/trainer.py"]},
+    {"name": "推理层", "responsibility": "命令行与 Web 推理入口，加载不同代模型", "modules": [".", "web_demos"], "files": ["chat.py", "web_demos/web_demo.py"]},
+    {"name": "评测层", "responsibility": "多模态基准评测流水线", "modules": ["eval_mm"], "files": ["eval_mm/vlmevalkit/run.py"]},
+    {"name": "工具层", "responsibility": "对话模板、常量与通用工具", "modules": ["omnilmm"], "files": ["omnilmm/conversation.py", "omnilmm/utils.py", "omnilmm/constants.py"]}
+  ],
+  "data_flow": [
+    "输入：图像经 build_transform 预处理为 pixel_values，对话文本转成含 im_patch 占位符的 input_ids",
+    "视觉：vision_tower 前向提取 EVA02 特征，并按需去掉前缀 token",
+    "压缩：Resampler 用可学习 query 做交叉注意力，把视觉特征压成 num_query 个 token",
+    "对齐：在 input_ids 中 im_patch 占位符位置替换为对应的视觉 embedding",
+    "融合：拼接后的 inputs_embeds 送入 Mistral 解码器",
+    "输出：lm_head 生成 logits，训练时对 assistant 部分计算交叉熵",
+    "推理：generate_vllm 先算一次视觉 embedding，再自回归解码"
+  ],
+  "entry_points": [
+    {"path": "chat.py", "what": "命令行推理入口，按模型名分派 OmniLMM-12B 或 MiniCPM-V 系列"},
+    {"path": "finetune/finetune.py", "what": "指令微调训练主入口"},
+    {"path": "finetune/finetune_lora.sh", "what": "LoRA 微调启动脚本"},
+    {"path": "finetune/finetune_ds.sh", "what": "全参数微调启动脚本"},
+    {"path": "web_demos/web_demo.py", "what": "Gradio Web 演示入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立对 OmniLMM 与 MiniCPM-V 系列的定位认知"},
+    {"path": "omnilmm/model/omnilmm.py", "why": "核心多模态模型，含视觉注入与生成逻辑"},
+    {"path": "omnilmm/model/resampler.py", "why": "视觉到语言的桥梁，理解 token 压缩"},
+    {"path": "chat.py", "why": "最短推理链路，串起模型、预处理与生成"},
+    {"path": "finetune/finetune.py", "why": "微调主流程与参数体系"},
+    {"path": "finetune/dataset.py", "why": "数据组织格式与预处理细节"},
+    {"path": "omnilmm/train/train_utils.py", "why": "对话模板与 label 掩码实现"},
+    {"path": "finetune/trainer.py", "why": "训练器如何计算多模态 loss"}
+  ],
+  "extension_points": [
+    "换视觉编码器：修改 omnilmm/model/omnilmm.py 中 create_vision_module 的 timm.create_model 与 Resampler 的 kv_dim",
+    "换语言模型底座：替换 OmniLMMModel/OmniLMMConfig 继承的 Mistral 相关类",
+    "改视觉 token 数量：调整 config.num_query 与对应的 image_token_len",
+    "加新任务数据：按 finetune/readme.md 的 JSON 格式准备数据并适配 finetune/dataset.py"
+  ],
+  "learning_path": [
+    "第1步读 README.md，厘清 OmniLMM 与 MiniCPM-V 系列的关系",
+    "第2步读 omnilmm/model/resampler.py，理解视觉特征如何被压缩",
+    "第3步读 omnilmm/model/omnilmm.py，看 forward 中如何替换 im_patch embedding",
+    "第4步读 chat.py，跑通最小推理链路",
+    "第5步读 finetune/finetune.py 与 finetune/dataset.py，理解微调",
+    "第6步读 omnilmm/train/train_utils.py，理解 label 掩码"
+  ],
+  "diagram_mermaid": "graph TD\n  A[图像输入] --> B[build_transform 预处理]\n  A2[文本与占位符] --> C[Tokenizer]\n  B --> D[EVA02 视觉塔]\n  D --> E[Resampler 压缩为固定 token]\n  E --> F[替换 im_patch 位置 embedding]\n  C --> F\n  F --> G[Mistral 解码器]\n  G --> H[lm_head 生成 logits]",
+  "surprises": [
+    "仓库名为 OmniLMM 但主推 MiniCPM-V，finetune 目录通过 AutoModel trust_remote_code 从 HF 加载模型，模型代码并不在本仓库",
+    "视觉塔最后一层被替换为 Identity，实际取倒数第二层输出作为特征",
+    "为兼容 FSDP 用 self.vision_tower = [vision_tower] 列表包裹再解包",
+    "预训练阶段用 orig_embeds_params 对非图像文本 embedding 做 detach，防止被破坏"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,90 @@
+{
+  "repo": "google-deepmind/mujoco",
+  "name": "MuJoCo",
+  "one_liner": "面向机器人与机器学习的多关节接触动力学物理引擎",
+  "problem": "机器人研究需要快速且准确的铰接结构接触动力学仿真。MuJoCo 用预分配的低层数据结构与高效接触求解器，在保证物理精度的同时达到实时性能，并为控制与强化学习提供大量物理量计算工具。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "mjModel", "role": "不可变的模型数据结构，由 XML 编译器一次性预分配全部尺寸与参数数组，运行期只读", "file": "include/mujoco/mjmodel.h"},
+    {"name": "mjData", "role": "可变的仿真状态与中间结果结构，存放 qpos、qvel、qacc、ctrl、contact、efc 等全部运行期数据", "file": "include/mujoco/mjdata.h"},
+    {"name": "mjSpec", "role": "可变的模型规格对象，支持程序化增删 body、geom、actuator、sensor 后再编译成 mjModel", "file": "include/mujoco/mjspec.h"},
+    {"name": "mjsActuator", "role": "执行器规格结构，声明 gain、bias、dynamics、transmission 与钳位等参数，定义驱动力的生成方式", "file": "include/mujoco/mjspec.h"},
+    {"name": "mjsSensor", "role": "传感器规格结构，声明传感器类型、被感测对象、数据类型、计算阶段与维度", "file": "include/mujoco/mjspec.h"},
+    {"name": "mj_step", "role": "仿真主循环入口，先 mj_forward 计算动力学再按 integrator 类型推进状态", "file": "src/engine/engine_forward.c"},
+    {"name": "mj_sensorAcc", "role": "加速度阶段传感器计算入口，与 mj_sensorPos、mj_sensorVel 一起构成分阶段的传感器求值体系", "file": "src/engine/engine_sensor.c"},
+    {"name": "mj_compile", "role": "把 mjSpec 编译成 mjModel 的编译器入口，负责尺寸计算、内存分配与默认值解析", "file": "src/user/user_api.cc"},
+    {"name": "mjpPlugin", "role": "插件接口结构，允许外部注册新的 actuator、sensor、资源解码器等扩展而不改核心代码", "file": "include/mujoco/mjplugin.h"},
+    {"name": "PyMjModel 绑定层", "role": "用 pybind11 把 mjModel 与 mjData 的内存映射成 numpy 视图，实现零拷贝的 Python 访问", "file": "python/mujoco/structs_wrappers.cc"},
+    {"name": "XML 读取器", "role": "解析 MJCF 与 URDF，把 XML 元素映射为 mjSpec 中的各类规格对象", "file": "src/xml/xml_native_reader.cc"}
+  ],
+  "layers": [
+    {"name": "C 引擎核心层", "responsibility": "实现正逆动力学、碰撞检测、约束求解、积分器、传感器与导数计算等物理核心", "modules": ["src/engine"], "files": ["src/engine/engine_forward.c", "src/engine/engine_sensor.c", "src/engine/engine_solver.c", "src/engine/engine_collision_driver.c", "src/engine/engine_derivative.c"]},
+    {"name": "模型编译与用户 API 层", "responsibility": "把 mjSpec 编译为 mjModel，并提供加载模型、查询信息等用户级 C API", "modules": ["src/user", "src/xml"], "files": ["src/user/user_api.cc", "src/user/user_model.cc", "src/xml/xml_api.cc", "src/xml/xml_native_reader.cc"]},
+    {"name": "公共头文件层", "responsibility": "定义 mjModel、mjData、mjSpec 与全部枚举类型，是 C API 与各语言绑定的唯一契约", "modules": ["include/mujoco"], "files": ["include/mujoco/mujoco.h", "include/mujoco/mjmodel.h", "include/mujoco/mjdata.h", "include/mujoco/mjtype.h"]},
+    {"name": "插件扩展层", "responsibility": "以插件形式提供额外的传感器、执行器与网格解码器，作为核心的扩展机制", "modules": ["plugin"], "files": ["plugin/sensor/touch_grid.cc", "plugin/sensor/register.cc", "plugin/actuator/pid.cc", "plugin/elasticity"]},
+    {"name": "Python 绑定层", "responsibility": "用 pybind11 暴露 C API，并把结构体字段映射为可读写 numpy 视图", "modules": ["python/mujoco"], "files": ["python/mujoco/__init__.py", "python/mujoco/functions.cc", "python/mujoco/structs_wrappers.cc", "python/mujoco/specs_wrapper.cc", "python/mujoco/rollout.py", "python/mujoco/renderer.py"]},
+    {"name": "绑定代码生成层", "responsibility": "从 C 头文件与枚举定义自动生成函数与枚举的绑定代码，避免手写绑定漂移", "modules": ["python/mujoco/codegen", "python/mujoco/introspect"], "files": ["python/mujoco/codegen/generate_enum_traits.py", "python/mujoco/codegen/generate_function_traits.py", "python/mujoco/introspect/__init__.py"]},
+    {"name": "MJX 可微分物理层", "responsibility": "用 JAX 重写的可微分与可并行的 MuJoCo 分支，支持自动微分与批量仿真", "modules": ["mjx"], "files": ["mjx/mujoco/mjx/__init__.py"]},
+    {"name": "交互式查看器层", "responsibility": "基于 GLFW 与 OpenGL 的原生可视化程序，支持交互式模型调试与录制", "modules": ["simulate"], "files": ["simulate/simulate.cc", "simulate/main.cc"]}
+  ],
+  "data_flow": [
+    "第1步：调用 mj_parseXML 或 Python 的 MjSpec.from_file，XML 读取器把 MJCF 解析成可变的 mjSpec",
+    "第2步：调用 mj_compile 把 mjSpec 编译成 mjModel，此时全部尺寸与参数数组被一次性预分配",
+    "第3步：用 mj_makeData 或 MjData 构造 mjData，分配运行期缓冲、栈与 arena 内存",
+    "第4步：用户设置 mjData.ctrl，即各个 actuator 的标量控制输入",
+    "第5步：调用 mj_step，先执行 mj_forward 完成位置、速度与加速度阶段的正向计算",
+    "第6步：mj_forward 中依次计算碰撞接触、约束、被动力、执行器力与传感器读数",
+    "第7步：传感器按 mj_sensorPos、mj_sensorVel、mj_sensorAcc 三个阶段分别求值并写入 sensordata",
+    "第8步：mj_step 依据 mjOption.integrator 选择 Euler、RK4、implicit 或 discrete 积分器推进 qpos 与 qvel",
+    "第9步：Python 侧通过 numpy 视图直接读取 mjData 的 qpos、qvel、sensordata 等字段，无需拷贝",
+    "第10步：需要改模型时用 mjs_addBody、mjs_addSensor、mjs_addActuator 修改 mjSpec 后重新 mj_compile"
+  ],
+  "entry_points": [
+    {"path": "simulate/simulate.cc", "what": "原生交互式查看器主程序，加载模型并实时可视化仿真"},
+    {"path": "simulate/main.cc", "what": "simulate 可执行文件的入口，解析命令行并启动查看器"},
+    {"path": "python/tutorial.ipynb", "what": "Python 绑定入门教程，演示加载模型、步进与读取状态"},
+    {"path": "python/mjspec.ipynb", "what": "模型编辑教程，演示用 mjSpec 程序化构建与修改模型"},
+    {"path": "sample/basic.cc", "what": "最小 C API 示例，演示加载模型、步进仿真与查询状态"},
+    {"path": "sample/compile.cc", "what": "C API 编译示例，演示从 XML 解析到 mj_compile 的流程"},
+    {"path": "mjx/mujoco/mjx/__init__.py", "what": "MJX 可微分物理的 Python 入口"},
+    {"path": "src/xml/xml_api.cc", "what": "C 侧模型加载入口，mj_loadXML 与 mj_parseXML 的实现"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：引擎定位、安装方式、Python 与 Unity 绑定入口"},
+    {"path": "include/mujoco/mjmodel.h", "why": "mjModel 结构定义，理解模型参数如何被组织成紧凑数组"},
+    {"path": "include/mujoco/mjdata.h", "why": "mjData 结构定义，理解运行期状态与中间结果如何存放"},
+    {"path": "include/mujoco/mjspec.h", "why": "可变建模 API，理解 mjsBody、mjsActuator、mjsSensor 等规格对象"},
+    {"path": "src/engine/engine_forward.c", "why": "mj_step 与 mj_forward 实现，是理解仿真主循环的核心"},
+    {"path": "src/engine/engine_sensor.c", "why": "传感器分阶段计算实现，是新增传感器类型必读的文件"},
+    {"path": "src/user/user_api.cc", "why": "mj_compile 与 mjs_addActuator、mjs_addSensor 等 API 的实现"},
+    {"path": "src/xml/xml_native_reader.cc", "why": "MJCF 解析实现，理解 XML 元素如何映射为规格对象"},
+    {"path": "python/mujoco/functions.cc", "why": "Python 绑定函数注册，理解 C API 如何暴露给 Python"},
+    {"path": "doc/programming/extension.rst", "why": "官方扩展指南，理解插件系统如何用于新增功能"}
+  ],
+  "extension_points": [
+    "想加新 actuator 类型：在 include/mujoco/mjtype.h 的 mjtActuator 加枚举，在 src/engine/engine_forward.c 的执行器力计算与 src/xml/xml_native_reader.cc 的解析中补分支",
+    "想加新 sensor 类型：在 include/mujoco/mjtype.h 的 mjtSensor 加枚举，在 src/engine/engine_sensor.c 的对应阶段函数中加计算，并在 XML 读取器与 src/xml/mjcf.schema 中注册",
+    "想用插件方式扩展：实现 mjpPlugin 接口并调用 mjp_registerPlugin，参考 plugin/sensor/touch_grid.cc 与 plugin/actuator/pid.cc",
+    "想新增 Python 绑定函数：在 python/mujoco/functions.cc 用 Def 宏注册对应 traits，或改 python/mujoco/codegen 下的生成器",
+    "想程序化建模：用 mjSpec 的 mjs_addBody、mjs_addGeom、mjs_addSensor、mjs_addActuator 构建模型再 mj_compile",
+    "想做可微分或大规模并行仿真：在 mjx 目录下用 JAX 实现或扩展"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 python/tutorial.ipynb，跑通加载模型与步进仿真的最小闭环",
+    "第2步：读 include/mujoco/mjmodel.h 与 mjdata.h，理解模型只读、数据可变的读写分离设计",
+    "第3步：读 src/xml/xml_api.cc 与 src/user/user_api.cc，理解 XML 到 mjSpec 再到 mjModel 的编译流程",
+    "第4步：读 src/engine/engine_forward.c 的 mj_step 与 mj_forward，理解仿真主循环与积分器分派",
+    "第5步：读 src/engine/engine_sensor.c，理解传感器如何分位置、速度、加速度三阶段求值",
+    "第6步：读 include/mujoco/mjspec.h 与 python/mjspec.ipynb，掌握程序化建模与修改模型",
+    "第7步：读 doc/programming/extension.rst 与 plugin 下的示例，理解如何用插件扩展引擎"
+  ],
+  "diagram_mermaid": "graph TD\n  XML[MJCF 或 URDF 文件] --> PARSER[XML 读取器解析]\n  PARSER --> SPEC[mjSpec 可变模型规格]\n  SPEC --> COMPILE[mj_compile 编译器]\n  COMPILE --> MODEL[mjModel 只读模型数据]\n  MODEL --> DATA[mjData 可变状态数据]\n  CTRL[用户设置 ctrl 控制输入] --> DATA\n  DATA --> STEP[mj_step 仿真主循环]\n  STEP --> FWD[mj_forward 正向动力学]\n  FWD --> COLL[碰撞检测与约束求解]\n  FWD --> SENSOR[传感器分阶段求值]\n  SENSOR --> SENSORDATA[sensordata 传感器读数]\n  STEP --> INT[按类型选择积分器推进状态]\n  INT --> DATA\n  DATA --> PYBIND[Python 绑定 numpy 视图]\n  MODEL --> PYBIND\n  PYBIND --> USER[Python 用户代码]\n  SPEC --> PLUGIN[mjpPlugin 插件扩展]\n  PLUGIN --> COMPILE",
+  "surprises": [
+    "模型与数据严格分离：mjModel 由编译器一次性预分配且运行期只读，mjData 才存放可变状态，这种读写分离是性能的关键，也意味着改模型必须重新编译",
+    "传感器求值分位置、速度、加速度三个阶段且是懒执行，由 flg_energypos 等标记控制，调用顺序会影响结果",
+    "Python 绑定大部分由 codegen 从 C 头文件自动生成，手改 functions.cc 之外的绑定文件通常会被下次生成覆盖",
+    "mjSpec 是可变的建模对象，mj_compile 才产出不可变 mjModel，早期版本没有这层抽象，程序化建模靠字符串拼接 XML",
+    "插件系统允许在不改核心 C 代码的情况下新增 actuator 与 sensor 类型，但需要同时提供 XML 解析钩子与计算实现"
+  ],
+  "confidence": "高"
+}

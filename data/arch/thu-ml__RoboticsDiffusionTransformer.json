@@ -1,0 +1,82 @@
+{
+  "repo": "thu-ml/RoboticsDiffusionTransformer",
+  "name": "RDT-1B",
+  "one_liner": "10 亿参数双臂操作扩散 Transformer 基础模型",
+  "problem": "在 100 万以上多机器人轨迹上预训练 10 亿参数扩散 Transformer，把语言、多视角图像与机器人状态映射到统一 128 维动作向量，预测未来 64 步双臂动作。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "RDTRunner", "role": "顶层封装，持有 RDT 主干、条件适配器与噪声调度器，提供训练 loss 与采样", "file": "models/rdt_runner.py"},
+    {"name": "RDT", "role": "扩散 Transformer 主干，处理 state/action 序列并注入多模态条件", "file": "models/rdt/model.py"},
+    {"name": "RDTBlock", "role": "含自注意力、交叉注意力与前馈网络的 Transformer 块", "file": "models/rdt/blocks.py"},
+    {"name": "CrossAttention", "role": "支持 flash attention 与条件掩码的交叉注意力层", "file": "models/rdt/blocks.py"},
+    {"name": "TimestepEmbedder", "role": "把扩散时间步与控制频率编码为正弦位置嵌入", "file": "models/rdt/blocks.py"},
+    {"name": "SiglipVisionTower", "role": "冻结的 SigLIP 视觉塔，提取图像 patch 特征作为视觉条件", "file": "models/multimodal_encoder/siglip_encoder.py"},
+    {"name": "T5Embedder", "role": "T5 文本编码器，把语言指令编码为语言条件", "file": "models/multimodal_encoder/t5_encoder.py"},
+    {"name": "VLAConsumerDataset", "role": "从缓冲区或 HDF5 读取 VLA 训练样本并做条件掩码与增强", "file": "train/dataset.py"},
+    {"name": "STATE_VEC_IDX_MAPPING", "role": "统一动作空间的 128 维索引映射，定义各机器人物理量的槽位", "file": "configs/state_vec.py"}
+  ],
+  "layers": [
+    {"name": "模型层", "responsibility": "扩散 Transformer 主干与条件适配", "modules": ["models"], "files": ["models/rdt_runner.py", "models/rdt/model.py", "models/rdt/blocks.py"]},
+    {"name": "编码器层", "responsibility": "视觉与语言条件编码器", "modules": ["models/multimodal_encoder"], "files": ["models/multimodal_encoder/siglip_encoder.py", "models/multimodal_encoder/t5_encoder.py"]},
+    {"name": "训练层", "responsibility": "训练循环、数据集与采样评估", "modules": ["train"], "files": ["train/train.py", "train/dataset.py", "train/sample.py"]},
+    {"name": "数据层", "responsibility": "多机器人数据集预处理与统一动作空间填充", "modules": ["data", "configs"], "files": ["data/preprocess.py", "data/hdf5_vla_dataset.py", "configs/state_vec.py"]},
+    {"name": "配置层", "responsibility": "模型超参、数据集列表、控制频率与统计量", "modules": ["configs"], "files": ["configs/base.yaml", "configs/dataset_control_freq.json", "configs/pretrain_datasets.json"]},
+    {"name": "部署层", "responsibility": "真机与仿真推理脚本", "modules": ["scripts", "eval_sim"], "files": ["scripts/agilex_inference.py", "scripts/agilex_model.py", "scripts/maniskill_model.py"]}
+  ],
+  "data_flow": [
+    "数据准备：各机器人数据集预处理成统一 128 维 state/action 向量与多视角图像历史",
+    "采样：VLAConsumerDataset 随机取一个时间步，得到 state、未来 64 步 action、图像历史与指令",
+    "编码：SigLIP 编码图像，T5 编码指令，state/action 经 state_adaptor 投影到隐藏维度",
+    "加噪：对真实 action 加噪并采样随机扩散时间步",
+    "拼接：state 与加噪 action 拼成序列，附上 action_mask 表示有效维度",
+    "前向：RDT 主干把时间步与控制频率嵌入拼到序列前，逐层与语言、图像条件做交叉注意力",
+    "预测：final_layer 输出预测值，prediction_type 为 sample 时直接预测干净动作",
+    "损失：预测与目标做 MSE",
+    "推理：DPMSolver 从纯噪声迭代去噪得到动作序列",
+    "掩码：最后用 action_mask 屏蔽无效动作维度"
+  ],
+  "entry_points": [
+    {"path": "main.py", "what": "训练主入口，解析参数后调用 train"},
+    {"path": "finetune.sh", "what": "微调启动脚本，加载 RDT-1B 检查点"},
+    {"path": "pretrain.sh", "what": "预训练启动脚本"},
+    {"path": "inference.sh", "what": "真机推理启动脚本"},
+    {"path": "scripts/agilex_inference.py", "what": "AgileX 真机部署推理入口"},
+    {"path": "train/sample.py", "what": "训练中采样并计算与真值的误差"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先理解 RDT 与统一动作空间思想"},
+    {"path": "configs/state_vec.py", "why": "128 维统一动作空间的定义，理解跨机器人兼容性"},
+    {"path": "models/rdt_runner.py", "why": "compute_loss 与 conditional_sample 是训练推理核心"},
+    {"path": "models/rdt/model.py", "why": "条件如何注入主干与位置编码"},
+    {"path": "models/rdt/blocks.py", "why": "交叉注意力与多模态位置编码实现"},
+    {"path": "train/dataset.py", "why": "VLA 数据组织与条件掩码"},
+    {"path": "data/hdf5_vla_dataset.py", "why": "数据解析与统一向量填充的可复制示例"},
+    {"path": "configs/base.yaml", "why": "全部关键超参一览"}
+  ],
+  "extension_points": [
+    "加新机器人：在 data 下仿照 hdf5_vla_dataset.py 实现 parse_hdf5_file，并在 configs/dataset_control_freq.json 与 configs/finetune_datasets.json 注册",
+    "换视觉编码器：替换 SiglipVisionTower 并调整 img_token_dim 与 img_pos_embed_config",
+    "换语言编码器：替换 T5Embedder 并调整 lang_token_dim",
+    "改预测步数：调整 configs/base.yaml 的 action_chunk_size 与 num_inference_timesteps",
+    "扩展动作维度：修改 configs/state_vec.py 的映射与 state_dim"
+  ],
+  "learning_path": [
+    "第1步读 README.md，理解 RDT 与统一动作空间",
+    "第2步读 configs/state_vec.py，理解 128 维统一向量",
+    "第3步读 models/rdt_runner.py 的 compute_loss 与 conditional_sample",
+    "第4步读 models/rdt/model.py，看条件如何注入",
+    "第5步读 models/rdt/blocks.py，看交叉注意力",
+    "第6步读 train/dataset.py 与 data/hdf5_vla_dataset.py，理解数据流",
+    "第7步读 scripts/agilex_model.py，理解真机推理"
+  ],
+  "diagram_mermaid": "graph TD\n  A[语言指令] --> B[T5 编码器]\n  A2[多视角图像] --> C[SigLIP 视觉塔]\n  A3[机器人状态] --> D[state_adaptor 投影]\n  E[真实动作加噪] --> F[state 与 action 拼接序列]\n  D --> F\n  F --> G[RDT 主干逐层交叉注意力]\n  B --> G\n  C --> G\n  G --> H[final_layer 预测]\n  H --> I[与目标动作做 MSE 损失]",
+  "surprises": [
+    "state 与 action 共用同一 128 维空间和同一个 state_adaptor，二者可互相转换",
+    "prediction_type 设为 sample，模型直接预测干净动作而非噪声",
+    "base.yaml 中 beta_schedule 用 squaredcos_cap_v2 并被注释标注为关键选择",
+    "图像条件长度由 img_history_size 乘 num_cameras 乘 num_patches 决定，缺失相机用背景图占位",
+    "EMA 被注释为已弃用但代码里仍每步更新，训练同时保存 ema 与主干权重",
+    "数据用生产者-消费者缓冲区加 dirty_bit 文件锁，为多机大规模训练设计"
+  ],
+  "confidence": "高"
+}

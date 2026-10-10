@@ -1,0 +1,78 @@
+{
+  "repo": "haotian-liu/LLaVA",
+  "name": "LLaVA",
+  "one_liner": "视觉指令微调范式开创者，用投影层连接 CLIP 与 LLM",
+  "problem": "用轻量投影层把冻结的 CLIP 视觉编码器与开源 LLM 对齐，并用 GPT-4 生成的图文指令数据两阶段训练，得到通用视觉对话模型。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "LlavaMetaModel", "role": "持有 vision_tower 与 mm_projector，负责视觉模块的构建与加载", "file": "llava/model/llava_arch.py"},
+    {"name": "LlavaMetaForCausalLM", "role": "抽象基类，定义 encode_images 与 prepare_inputs_labels_for_multimodal 多模态融合逻辑", "file": "llava/model/llava_arch.py"},
+    {"name": "LlavaLlamaForCausalLM", "role": "具体模型，组合 LlamaForCausalLM 与多模态能力并实现 generate", "file": "llava/model/language_model/llava_llama.py"},
+    {"name": "CLIPVisionTower", "role": "封装 CLIP 视觉塔，冻结参数并按层选取 patch 特征", "file": "llava/model/multimodal_encoder/clip_encoder.py"},
+    {"name": "build_vision_tower", "role": "视觉塔工厂函数，按配置返回对应 tower", "file": "llava/model/multimodal_encoder/builder.py"},
+    {"name": "build_vision_projector", "role": "投影层工厂，支持 linear 与 mlpNx_gelu 等连接方式", "file": "llava/model/multimodal_projector/builder.py"},
+    {"name": "LazySupervisedDataset", "role": "懒加载图文指令数据集，负责图像读取与对话预处理", "file": "llava/train/train.py"},
+    {"name": "tokenizer_image_token", "role": "把 image 占位符替换成 IMAGE_TOKEN_INDEX 后再分词", "file": "llava/mm_utils.py"}
+  ],
+  "layers": [
+    {"name": "模型层", "responsibility": "多模态模型组装、视觉与文本 embedding 融合", "modules": ["llava/model"], "files": ["llava/model/llava_arch.py", "llava/model/language_model/llava_llama.py"]},
+    {"name": "视觉编码层", "responsibility": "CLIP 视觉塔的封装与构建", "modules": ["llava/model/multimodal_encoder"], "files": ["llava/model/multimodal_encoder/clip_encoder.py", "llava/model/multimodal_encoder/builder.py"]},
+    {"name": "连接层", "responsibility": "视觉到语言的投影模块", "modules": ["llava/model/multimodal_projector"], "files": ["llava/model/multimodal_projector/builder.py"]},
+    {"name": "训练层", "responsibility": "两阶段训练脚本、数据集与 Trainer", "modules": ["llava/train", "scripts"], "files": ["llava/train/train.py", "llava/train/llava_trainer.py", "scripts/v1_5/pretrain.sh"]},
+    {"name": "推理与服务层", "responsibility": "CLI、Gradio 与模型 worker", "modules": ["llava/serve"], "files": ["llava/serve/cli.py", "llava/serve/gradio_web_server.py"]},
+    {"name": "评测层", "responsibility": "各类基准评测脚本", "modules": ["llava/eval"], "files": ["llava/eval/run_llava.py", "llava/eval/model_vqa.py"]}
+  ],
+  "data_flow": [
+    "数据准备：JSON 的 conversations 中用 image 占位符标记图像插入位置",
+    "预处理：preprocess_multimodal 把 image 移到句首，图片按 pad 或 square 处理",
+    "分词：tokenizer_image_token 把 image 换成 IMAGE_TOKEN_INDEX 再分词",
+    "视觉编码：CLIPVisionTower 前向得到 patch 特征，mm_projector 投影到 LLM 隐藏维度",
+    "拼接：prepare_inputs_labels_for_multimodal 在 IMAGE_TOKEN_INDEX 处插入图像 embedding，并把图像 token 的 label 置为 IGNORE_INDEX",
+    "前向：拼接后的 inputs_embeds 送入 Llama 解码器",
+    "输出：lm_head 生成 logits，对 assistant 回复计算交叉熵",
+    "阶段一：冻结视觉塔与 LLM，只训练 mm_projector",
+    "阶段二：加载投影权重，微调投影层与 LLM"
+  ],
+  "entry_points": [
+    {"path": "llava/train/train.py", "what": "两阶段训练主入口，含参数解析与数据模块"},
+    {"path": "scripts/v1_5/pretrain.sh", "what": "阶段一预训练脚本，只训投影层"},
+    {"path": "scripts/v1_5/finetune.sh", "what": "阶段二指令微调脚本"},
+    {"path": "llava/eval/run_llava.py", "what": "单图推理评测入口"},
+    {"path": "llava/serve/cli.py", "what": "命令行交互推理"},
+    {"path": "llava/serve/gradio_web_server.py", "what": "Web 演示服务"},
+    {"path": "predict.py", "what": "命令行预测入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先理解视觉指令微调范式与两阶段训练"},
+    {"path": "llava/model/multimodal_encoder/clip_encoder.py", "why": "视觉特征如何提取与选层"},
+    {"path": "llava/model/multimodal_projector/builder.py", "why": "连接层的最小实现"},
+    {"path": "llava/model/llava_arch.py", "why": "多模态融合的核心，替换图像占位 embedding"},
+    {"path": "llava/model/language_model/llava_llama.py", "why": "模型组装与 forward 调用链"},
+    {"path": "llava/train/train.py", "why": "训练流程、数据格式与两阶段参数"},
+    {"path": "scripts/v1_5/pretrain.sh", "why": "阶段一配置对照"},
+    {"path": "scripts/v1_5/finetune.sh", "why": "阶段二配置对照"}
+  ],
+  "extension_points": [
+    "换视觉编码器：在 llava/model/multimodal_encoder/builder.py 与 clip_encoder.py 增加新 tower 类",
+    "换 LLM 底座：在 llava/model/language_model 下新增类似 llava_mistral.py 的模型类",
+    "换连接层：修改 llava/model/multimodal_projector/builder.py 的 projector_type 分支",
+    "改分辨率与切片：调整 mm_patch_merge_type 与 image_aspect_ratio 参数"
+  ],
+  "learning_path": [
+    "第1步读 README.md，理解视觉指令微调与两阶段训练",
+    "第2步读 llava/model/multimodal_encoder/clip_encoder.py，看视觉特征怎么取",
+    "第3步读 llava/model/multimodal_projector/builder.py，看投影层",
+    "第4步读 llava/model/llava_arch.py 的 prepare_inputs_labels_for_multimodal",
+    "第5步读 llava/model/language_model/llava_llama.py，看 forward 组装",
+    "第6步读 llava/train/train.py，理解数据格式与两阶段",
+    "第7步对照 scripts/v1_5 下脚本理解参数"
+  ],
+  "diagram_mermaid": "graph TD\n  A[图像与对话] --> B[preprocess_multimodal]\n  B --> C[tokenizer_image_token]\n  A --> D[CLIP 视觉塔]\n  D --> E[mm_projector 投影]\n  C --> F[IMAGE_TOKEN_INDEX 处插入图像 embedding]\n  E --> F\n  F --> G[Llama 解码器]\n  G --> H[lm_head 生成回复]",
+  "surprises": [
+    "用负数 IMAGE_TOKEN_INDEX 等于 -200 作为图像占位，绕开词表实现占位符",
+    "阶段一必须关闭 mm_use_im_start_end，否则 prepare_inputs_labels_for_multimodal 直接抛 NotImplementedError",
+    "CLIPVisionTower.forward 上有 torch.no_grad，即使解冻视觉塔梯度也不会回传到它",
+    "图像 embedding 对应位置的 label 全部置为 IGNORE_INDEX，loss 只算在文本回复上"
+  ],
+  "confidence": "高"
+}

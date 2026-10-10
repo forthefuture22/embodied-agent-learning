@@ -1,0 +1,89 @@
+{
+  "repo": "unitreerobotics/unitree_rl_gym",
+  "name": "unitree_rl_gym",
+  "one_liner": "宇树机器人 Isaac Gym 并行强化学习训练与 sim2real 部署模板",
+  "problem": "让宇树 Go2/H1/H1_2/G1 机器人通过大规模并行仿真训练出运动控制策略，并把训练好的策略零改动地迁移到 MuJoCo 仿真和真机上。它把环境、配置、训练算法与部署链路打通，是 sim2real 的标准脚手架。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "TaskRegistry", "role": "全局任务注册表，把任务名映射到环境类、环境配置与训练配置，并提供 make_env 与 make_alg_runner 两个工厂方法", "file": "legged_gym/utils/task_registry.py"},
+    {"name": "BaseTask", "role": "所有 RL 任务的基类，负责创建 Isaac Gym 仿真、分配观测/奖励/重置缓冲并驱动 viewer", "file": "legged_gym/envs/base/base_task.py"},
+    {"name": "LeggedRobot", "role": "足式机器人环境主体，实现并行步进、观测计算、奖励计算、终止判定与域随机化", "file": "legged_gym/envs/base/legged_robot.py"},
+    {"name": "LeggedRobotCfg", "role": "足式机器人环境配置基类，用嵌套类声明 env、terrain、control、asset、rewards、noise、sim 等全部参数", "file": "legged_gym/envs/base/legged_robot_config.py"},
+    {"name": "LeggedRobotCfgPPO", "role": "PPO 训练配置基类，声明 policy、algorithm、runner 三组超参与实验名", "file": "legged_gym/envs/base/legged_robot_config.py"},
+    {"name": "BaseConfig", "role": "极简配置基类，用反射把内部嵌套类自动实例化为属性，实现点号访问的层级配置", "file": "legged_gym/envs/base/base_config.py"},
+    {"name": "G1Robot", "role": "G1 人形机器人环境子类，重写观测拼接、噪声向量、足部状态与相位相关奖励", "file": "legged_gym/envs/g1/g1_env.py"},
+    {"name": "G1RoughCfg", "role": "G1 的环境与 PPO 配置子类，指定 URDF、关节默认角、PD 增益、奖励权重与网络结构", "file": "legged_gym/envs/g1/g1_config.py"},
+    {"name": "export_policy_as_jit", "role": "把训练好的 actor 网络导出为 TorchScript，供 MuJoCo 与真机部署直接加载", "file": "legged_gym/utils/helpers.py"},
+    {"name": "Terrain", "role": "程序化生成地形高度场与地形课程，支持坡道、楼梯、离散障碍等类型", "file": "legged_gym/utils/terrain.py"}
+  ],
+  "layers": [
+    {"name": "任务注册层", "responsibility": "把机器人任务注册进全局表，并按名字构建环境与算法 runner", "modules": ["legged_gym/utils", "legged_gym/envs"], "files": ["legged_gym/utils/task_registry.py", "legged_gym/envs/__init__.py"]},
+    {"name": "环境基类层", "responsibility": "封装 Isaac Gym 仿真创建、并行缓冲、步进与 viewer 的通用逻辑", "modules": ["legged_gym/envs/base"], "files": ["legged_gym/envs/base/base_task.py", "legged_gym/envs/base/legged_robot.py", "legged_gym/envs/base/base_config.py"]},
+    {"name": "机器人任务层", "responsibility": "为每种机器人定义环境子类与配置子类，定制观测、奖励与 URDF 资源", "modules": ["legged_gym/envs/g1", "legged_gym/envs/go2", "legged_gym/envs/h1", "legged_gym/envs/h1_2"], "files": ["legged_gym/envs/g1/g1_env.py", "legged_gym/envs/g1/g1_config.py", "legged_gym/envs/h1_2/h1_2_env.py"]},
+    {"name": "配置体系层", "responsibility": "用嵌套类声明全部仿真、控制、奖励、域随机化与 PPO 超参，支持命令行覆盖", "modules": ["legged_gym/envs/base"], "files": ["legged_gym/envs/base/legged_robot_config.py", "legged_gym/envs/base/base_config.py"]},
+    {"name": "工具层", "responsibility": "提供参数解析、仿真参数构建、seed、checkpoint 定位、策略导出、日志与数学工具", "modules": ["legged_gym/utils"], "files": ["legged_gym/utils/helpers.py", "legged_gym/utils/logger.py", "legged_gym/utils/terrain.py", "legged_gym/utils/math.py"]},
+    {"name": "训练与播放入口层", "responsibility": "提供训练与可视化播放命令行入口，播放时导出 TorchScript 策略", "modules": ["legged_gym/scripts"], "files": ["legged_gym/scripts/train.py", "legged_gym/scripts/play.py"]},
+    {"name": "部署层", "responsibility": "把训练策略部署到 MuJoCo 仿真与真机，包含 Python 与 C++ 两条真机链路", "modules": ["deploy/deploy_mujoco", "deploy/deploy_real"], "files": ["deploy/deploy_mujoco/deploy_mujoco.py", "deploy/deploy_real/deploy_real.py", "deploy/deploy_real/cpp_g1/main.cpp"]},
+    {"name": "机器人资源层", "responsibility": "存放各机器人的 URDF 与 MuJoCo XML 描述及网格文件", "modules": ["resources/robots"], "files": ["resources/robots/g1_description/g1_12dof.urdf"]}
+  ],
+  "data_flow": [
+    "第1步：运行 legged_gym/scripts/train.py --task=g1，get_args 解析命令行并导入 envs 触发任务注册",
+    "第2步：task_registry.make_env 按任务名取出环境类与配置，用 parse_sim_params 构建 Isaac Gym 仿真参数并实例化环境",
+    "第3步：环境在 BaseTask 中创建并行仿真与缓冲，LeggedRobot._create_envs 按 URDF 加载机器人并建立 actor 与 DOF 张量",
+    "第4步：task_registry.make_alg_runner 用训练配置构建 rsl_rl 的 OnPolicyRunner，负责 PPO 训练循环",
+    "第5步：训练循环中 env.step 接收动作，按 decimation 做多次 PD 力矩计算与仿真步进",
+    "第6步：post_physics_step 刷新张量状态，计算观测、奖励、终止并对需要重置的环境 reset_idx",
+    "第7步：域随机化在每步或每次重置时扰动摩擦、质量与外力，提升策略鲁棒性",
+    "第8步：PPO 用并行环境采样出的 batch 更新策略，checkpoint 存入 logs/<experiment>/<date>_<run>/model_<iter>.pt",
+    "第9步：运行 play.py 加载 checkpoint，关闭噪声与域随机化并导出 actor 为 TorchScript 到 logs/<experiment>/exported/policies",
+    "第10步：Sim2Sim 用 deploy_mujoco.py 读取 yaml 配置，在 MuJoCo 中加载同一策略与 XML 做 PD 控制验证",
+    "第11步：Sim2Real 用 deploy_real.py 通过 unitree_sdk2py 与真机 DDS 通信，按同一观测构造与 PD 增益下发力矩指令"
+  ],
+  "entry_points": [
+    {"path": "legged_gym/scripts/train.py", "what": "训练主入口，构建环境与 PPO runner 并启动学习循环"},
+    {"path": "legged_gym/scripts/play.py", "what": "加载 checkpoint 可视化策略，并导出 TorchScript 供部署使用"},
+    {"path": "deploy/deploy_mujoco/deploy_mujoco.py", "what": "Sim2Sim 部署入口，在 MuJoCo 中运行导出的策略"},
+    {"path": "deploy/deploy_real/deploy_real.py", "what": "Sim2Real 部署入口，通过 unitree_sdk2py 控制真机"},
+    {"path": "deploy/deploy_real/cpp_g1/main.cpp", "what": "G1 的 C++ 真机部署示例入口，依赖 LibTorch 推理"},
+    {"path": "deploy/deploy_mujoco/configs/g1.yaml", "what": "Sim2Sim 的机器人配置，声明策略路径、PD 增益、观测缩放与初始指令"},
+    {"path": "deploy/deploy_real/configs/g1.yaml", "what": "真机部署的机器人配置，声明网络接口、消息类型与电机参数"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：Train 到 Sim2Real 的四阶段流程与各命令用法"},
+    {"path": "legged_gym/scripts/train.py", "why": "主入口极短，看清任务注册表如何把环境与算法装配起来"},
+    {"path": "legged_gym/utils/task_registry.py", "why": "任务注册与 make_env、make_alg_runner 是理解整个装配流程的钥匙"},
+    {"path": "legged_gym/envs/base/legged_robot.py", "why": "环境主体，step、观测、奖励、终止与域随机化全在这里"},
+    {"path": "legged_gym/envs/base/legged_robot_config.py", "why": "最完整的参数体系，理解仿真、控制、奖励与噪声如何声明"},
+    {"path": "legged_gym/envs/g1/g1_config.py", "why": "一个具体机器人的配置，看 URDF、关节默认角与 PD 增益如何被指定"},
+    {"path": "legged_gym/envs/g1/g1_env.py", "why": "具体机器人环境子类，理解观测与奖励如何被定制"},
+    {"path": "deploy/deploy_mujoco/deploy_mujoco.py", "why": "Sim2Sim 闭环，理解部署侧如何重建观测并驱动策略"},
+    {"path": "deploy/deploy_real/deploy_real.py", "why": "Sim2Real 链路，理解策略如何接上真机 SDK 与状态反馈"},
+    {"path": "legged_gym/utils/helpers.py", "why": "get_args、export_policy_as_jit 等工具是训练与部署的粘合剂"}
+  ],
+  "extension_points": [
+    "想加新机器人：在 legged_gym/envs/ 下新建目录写 Env 子类与 Cfg 子类，在 resources/robots 放入 URDF，并在 legged_gym/envs/__init__.py 里 task_registry.register 注册",
+    "想改奖励函数：在具体机器人 Env 中新增 _reward_xxx 方法，并在对应 Cfg 的 rewards.scales 中加同名权重，_prepare_reward_function 会自动收集",
+    "想改观测：改具体机器人 Env 的 compute_observations 与 _get_noise_scale_vec，并同步更新 Cfg 的 num_observations",
+    "想改仿真参数：改 Cfg 的 sim 与 sim.physx 段，或 terrain、domain_rand 段",
+    "想换训练算法：替换 task_registry.make_alg_runner 中构建的 runner，或在 CfgPPO 中换 policy_class_name",
+    "想部署到新硬件：仿照 deploy_real 写新的部署脚本，保持观测构造与 PD 增益和训练配置一致"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解 Train 到 Play 到 Sim2Sim 到 Sim2Real 的四阶段流程",
+    "第2步：读 legged_gym/scripts/train.py 与 task_registry.py，理解环境与算法如何被注册和装配",
+    "第3步：读 legged_gym/envs/base/legged_robot_config.py，把仿真、控制、奖励、噪声参数体系过一遍",
+    "第4步：读 legged_gym/envs/base/legged_robot.py 的 step 与 post_physics_step，理解并行步进与观测奖励计算",
+    "第5步：读 legged_gym/envs/g1/g1_env.py 与 g1_config.py，看一个具体机器人如何定制环境与配置",
+    "第6步：读 legged_gym/scripts/play.py 与 helpers.py 的 export_policy_as_jit，理解策略如何导出",
+    "第7步：读 deploy/deploy_mujoco/deploy_mujoco.py 与 deploy/deploy_real/deploy_real.py，理解部署侧观测重建与控制闭环"
+  ],
+  "diagram_mermaid": "graph TD\n  CLI[train.py 命令行入口] --> ARGS[get_args 解析参数]\n  ARGS --> REG[TaskRegistry 任务注册表]\n  REG --> ENVCFG[环境配置与 PPO 配置]\n  ENVCFG --> ENV[LeggedRobot 并行环境]\n  ENV --> SIM[Isaac Gym 并行仿真]\n  REG --> RUNNER[rsl_rl OnPolicyRunner 训练器]\n  RUNNER --> ENV\n  ENV --> STEP[step 按 decimation 做 PD 控制与步进]\n  STEP --> POST[post_physics_step 计算观测奖励终止]\n  POST --> DR[域随机化扰动摩擦质量与外力]\n  POST --> RUNNER\n  RUNNER --> CKPT[保存 model pt 检查点]\n  CKPT --> PLAY[play.py 加载并导出策略]\n  PLAY --> JIT[TorchScript 策略文件]\n  JIT --> S2S[deploy_mujoco 仿真验证]\n  JIT --> S2R[deploy_real 真机部署]\n  S2R --> SDK[unitree_sdk2py 与真机通信]",
+  "surprises": [
+    "核心 PPO 算法不在本仓库，而是外部依赖 rsl_rl，仓库只提供环境与配置，理解训练细节需要另外读 rsl_rl",
+    "观测维度必须与部署 yaml 严格对齐：G1 训练时 num_observations 为 47、num_actions 为 12，部署配置里同样的数字必须一致，错一位策略就会输出乱动作",
+    "相位信号不是来自传感器，而是用 episode_length_buf 乘 dt 对周期取模算出来的，训练与部署两侧都靠这个隐式时钟同步步态",
+    "play.py 会强制关闭噪声与域随机化并把地形缩小，所以播放时看到的表现与训练时并不等价",
+    "部署侧的 PD 增益与 action_scale 必须和训练配置完全一致，否则 TorchScript 策略的输出语义会漂移"
+  ],
+  "confidence": "高"
+}

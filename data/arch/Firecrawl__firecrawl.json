@@ -1,0 +1,92 @@
+{
+  "repo": "Firecrawl/firecrawl",
+  "name": "Firecrawl",
+  "one_liner": "把网页抓取并转成 LLM 友好格式的抓取与抽取 API",
+  "problem": "大模型需要干净的网页数据，但真实网页充满脚本、广告与噪声。Firecrawl 提供抓取、爬站、结构化抽取的 API，把 HTML 变成 Markdown 或 JSON 交给 Agent 使用。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "scrapeController", "role": "单页抓取入口：校验请求、鉴权计费、构造 job 并投递或同步执行", "file": "apps/api/src/controllers/v2/scrape.ts"},
+    {"name": "crawlController", "role": "爬站入口：保存 crawl 状态到 Redis，生成初始抓取任务并驱动整站爬取", "file": "apps/api/src/controllers/v2/crawl.ts"},
+    {"name": "scrapeURL", "role": "抓取核心：按优先级构建引擎回退链，逐个尝试直到成功，再跑 transformers", "file": "apps/api/src/scraper/scrapeURL/index.ts"},
+    {"name": "Engine 与 engineHandlers", "role": "引擎注册表：定义 fire-engine、playwright、fetch、pdf 等引擎的能力与质量排序", "file": "apps/api/src/scraper/scrapeURL/engines/index.ts"},
+    {"name": "WebCrawler", "role": "爬站调度：从页面抽取链接、按深度与正则过滤、遵守 robots.txt 并去重", "file": "apps/api/src/scraper/WebScraper/crawler.ts"},
+    {"name": "parseMarkdown", "role": "HTML 转 Markdown：优先 HTTP 服务，其次 Go 动态库，最后回退 Turndown", "file": "apps/api/src/lib/html-to-markdown.ts"},
+    {"name": "performExtraction_F0", "role": "结构化抽取服务：抓取多 URL、按 schema 用 LLM 抽取并合并去重", "file": "apps/api/src/lib/extract/fire-0/extraction-service-f0.ts"},
+    {"name": "scrapeQueue 与 NuQJob", "role": "自研队列抽象：基于 Redis/FoundationDB 的 job 锁、分组与并发控制", "file": "apps/api/src/services/worker/nuq.ts"},
+    {"name": "processJobInternal", "role": "抓取 worker：消费队列 job，调用 WebScraper 流水线并写回结果与 webhook", "file": "apps/api/src/services/worker/scrape-worker.ts"},
+    {"name": "FirecrawlClient", "role": "JS/TS SDK 的 v2 客户端，把各 endpoint 封装成方法并内置 Watcher 轮询", "file": "apps/js-sdk/firecrawl/src/v2/client.ts"},
+    {"name": "Watcher", "role": "SDK 侧任务监视器：轮询 crawl/batch/extract 状态直到完成", "file": "apps/js-sdk/firecrawl/src/v2/watcher.ts"},
+    {"name": "transformers", "role": "抓取后处理链：抽取链接、元数据、LLM 抽取、PII 脱敏等格式转换", "file": "apps/api/src/scraper/scrapeURL/transformers/index.ts"}
+  ],
+  "layers": [
+    {"name": "HTTP API 层", "responsibility": "Express 路由、鉴权计费中间件、请求校验与错误处理", "modules": ["apps/api/src/routes", "apps/api/src/controllers"], "files": ["apps/api/src/index.ts", "apps/api/src/routes/v2.ts", "apps/api/src/controllers/v2/scrape.ts"]},
+    {"name": "抓取引擎层", "responsibility": "引擎回退链、特性标志、最大合理时间与各抓取引擎适配", "modules": ["apps/api/src/scraper/scrapeURL"], "files": ["apps/api/src/scraper/scrapeURL/index.ts", "apps/api/src/scraper/scrapeURL/engines/index.ts"]},
+    {"name": "站点爬取层", "responsibility": "链接发现与过滤、sitemap 解析、robots.txt 遵守与爬取范围控制", "modules": ["apps/api/src/scraper/WebScraper"], "files": ["apps/api/src/scraper/WebScraper/crawler.ts", "apps/api/src/scraper/WebScraper/sitemap.ts"]},
+    {"name": "HTML 转 Markdown 层", "responsibility": "把原始 HTML 清洗并转换成 Markdown，多后端与后处理", "modules": ["apps/api/src/lib", "apps/go-html-to-md-service"], "files": ["apps/api/src/lib/html-to-markdown.ts", "apps/api/src/lib/html-to-markdown-client.ts", "apps/go-html-to-md-service/converter.go"]},
+    {"name": "结构化抽取层", "responsibility": "按 schema 用 LLM 从多个页面抽取结构化数据并合并去重", "modules": ["apps/api/src/lib/extract"], "files": ["apps/api/src/lib/extract/fire-0/extraction-service-f0.ts", "apps/api/src/lib/extract/build-prompts.ts"]},
+    {"name": "队列与 Worker 层", "responsibility": "job 入队、worker 消费、并发限流、crawl 收尾与 webhook 通知", "modules": ["apps/api/src/services"], "files": ["apps/api/src/services/queue-worker.ts", "apps/api/src/services/worker/scrape-worker.ts", "apps/api/src/services/worker/crawl-logic.ts"]},
+    {"name": "SDK 层", "responsibility": "为 JS/Python/Go/Java 等语言封装 REST API，提供同步等待与类型定义", "modules": ["apps/js-sdk", "apps/python-sdk"], "files": ["apps/js-sdk/firecrawl/src/index.ts", "apps/js-sdk/firecrawl/src/v2/client.ts", "apps/python-sdk/firecrawl/client.py"]},
+    {"name": "部署层", "responsibility": "用 docker-compose 编排 API、worker、playwright、Redis、Postgres 等服务", "modules": ["docker-compose.yaml"], "files": ["docker-compose.yaml", "SELF_HOST.md"]}
+  ],
+  "data_flow": [
+    "第1步：客户端 SDK 或直接调用 POST /v2/scrape，带上 url 与 formats 等选项",
+    "第2步：scrapeController 用 zod schema 校验请求，做鉴权、安全模式与威胁防护检查",
+    "第3步：构造 scrape job，写入队列 Redis，并由 worker 或同步路径取出执行",
+    "第4步：processJobInternal 启动 WebScraper 流水线，进入 scrapeURL 核心",
+    "第5步：buildFallbackList 依据请求格式、团队标志与可用引擎算出引擎回退顺序",
+    "第6步：按顺序调用 scrapeURLWithEngine，失败则抛出信号切到下一个引擎，直到得到 HTML",
+    "第7步：transformers 后处理，抽取链接、元数据、图片，并按需执行 LLM 抽取",
+    "第8步：parseMarkdown 把 HTML 转成 Markdown，优先 HTTP 服务，其次 Go 动态库，最后 Turndown",
+    "第9步：结果组装成 Document，写回 job 返回值并更新 Redis 中的 scrape 状态",
+    "第10步：若是 crawl，crawler 从页面抽取新链接，过滤去重后继续投递子 job，直至达到 limit 或深度",
+    "第11步：crawl 全部完成后 finishCrawl 汇总结果，触发 webhook 通知并结算计费",
+    "第12步：若是 extract，则抓取多页后按 schema 调 LLM 抽取、合并去重并返回结构化 JSON"
+  ],
+  "entry_points": [
+    {"path": "apps/api/src/index.ts", "what": "API 服务主入口，注册 v0/v1/v2 路由、BullBoard 与优雅退出"},
+    {"path": "apps/api/src/routes/v2.ts", "what": "v2 路由表，把 scrape/crawl/extract 等 endpoint 映射到控制器"},
+    {"path": "apps/api/src/services/queue-worker.ts", "what": "队列 worker 进程入口，消费 deep research、billing 等队列"},
+    {"path": "apps/api/src/services/extract-worker.ts", "what": "抽取 worker 进程入口，消费 extract 队列并执行抽取服务"},
+    {"path": "apps/js-sdk/firecrawl/src/index.ts", "what": "JS/TS SDK 统一入口，导出 v2 客户端与 v1 兼容层"},
+    {"path": "docker-compose.yaml", "what": "本地/自托管一键启动全部服务，理解组件拓扑"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先了解产品能力、API 示例与自托管方式"},
+    {"path": "CLAUDE.md", "why": "官方给贡献者的 monorepo 结构与测试约定，快速定位模块"},
+    {"path": "apps/api/src/scraper/scrapeURL/engines/index.ts", "why": "引擎注册表与回退链，是抓取策略的核心"},
+    {"path": "apps/api/src/scraper/scrapeURL/index.ts", "why": "scrapeURL 主流程，串起引擎选择与后处理"},
+    {"path": "apps/api/src/controllers/v2/scrape.ts", "why": "从 HTTP 请求到 job 的完整入口，理解请求生命周期"},
+    {"path": "apps/api/src/lib/html-to-markdown.ts", "why": "HTML 转 Markdown 的多后端策略，理解产物来源"},
+    {"path": "apps/api/src/scraper/WebScraper/crawler.ts", "why": "爬站链接发现与过滤逻辑，理解 crawl 行为"},
+    {"path": "apps/api/src/services/worker/scrape-worker.ts", "why": "worker 如何消费 job 并驱动整条流水线"},
+    {"path": "apps/js-sdk/firecrawl/src/v2/client.ts", "why": "SDK 与 API 的映射关系，理解对外接口形态"}
+  ],
+  "extension_points": [
+    "新增抓取引擎：在 apps/api/src/scraper/scrapeURL/engines/ 下加引擎实现，并在 engines/index.ts 的 Engine 联合、engineHandlers、engineOptions 中注册",
+    "调整引擎优先级或特性：改 engines/index.ts 里各引擎的 quality 与 features，或 featureFlagOptions 的 priority",
+    "新增抓取后处理格式：在 apps/api/src/scraper/scrapeURL/transformers/ 增加 transformer 并在 index.ts 注册",
+    "新增输出格式或字段：改 apps/api/src/controllers/v2/types.ts 的 Document 与 scrapeOptions",
+    "换 HTML 转 Markdown 后端：在 lib/html-to-markdown.ts 增加分支，或改 config 中的 HTML_TO_MARKDOWN_SERVICE_URL 与 USE_GO_MARKDOWN_PARSER",
+    "新增抽取策略：在 apps/api/src/lib/extract/ 下新增版本目录，参照 fire-0 实现抽取服务并在 worker 中接线",
+    "新增 API endpoint：在 routes/v2.ts 注册路由，controllers/v2 下加控制器，并在各 SDK 的 v2/methods 中封装方法"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 CLAUDE.md，建立 monorepo 结构与能力认知",
+    "第2步：读 apps/api/src/index.ts 与 routes/v2.ts，理清服务组成与路由",
+    "第3步：读 controllers/v2/scrape.ts，跟一遍请求校验到投递 job 的过程",
+    "第4步：读 services/worker/scrape-worker.ts 与 queue-worker.ts，理解 worker 如何消费队列",
+    "第5步：读 scraper/scrapeURL/index.ts 与 engines/index.ts，掌握引擎回退策略",
+    "第6步：读 lib/html-to-markdown.ts 与 lib/extract/fire-0/extraction-service-f0.ts，理解产物生成与抽取",
+    "第7步：读 apps/js-sdk/firecrawl/src/v2/client.ts 与 watcher.ts，理解 SDK 如何封装异步任务"
+  ],
+  "diagram_mermaid": "graph TD\n  SDK[客户端 SDK 发起请求] --> API[API 服务 index.ts]\n  API --> CTRL[scrapeController 校验与鉴权]\n  CTRL --> QUEUE[写入队列 Redis]\n  QUEUE --> WORKER[scrape-worker 消费 job]\n  WORKER --> SCRAPE[scrapeURL 核心]\n  SCRAPE --> FALLBACK[buildFallbackList 引擎回退链]\n  FALLBACK --> ENGINES[fire-engine playwright fetch pdf 等引擎]\n  ENGINES --> TRANS[transformers 后处理]\n  TRANS --> MD[parseMarkdown 转 Markdown]\n  MD --> DOC[组装 Document 结果]\n  DOC --> STATE[写回状态并触发 webhook]\n  CTRL --> CRAWL{是否 crawl}\n  CRAWL -->|是| CRAWLER[WebCrawler 链接发现与过滤]\n  CRAWLER --> QUEUE\n  CTRL --> EXTRACT{是否 extract}\n  EXTRACT -->|是| EXTR[performExtraction 按 schema 抽取]\n  EXTR --> LLM[调用大模型抽取]\n  LLM --> JSON[合并去重输出结构化 JSON]",
+  "surprises": [
+    "抓取引擎不是单一实现而是回退链：按 quality 与请求格式排序，一个引擎失败自动降级到下一个，直到 fetch 兜底",
+    "HTML 转 Markdown 有三条路径：优先外部 HTTP 服务，其次通过 koffi 调 Go 动态库，最后回退 JS 的 Turndown，失败还会返回空串",
+    "队列是自研 NuQ 而非直接用 BullMQ：基于 Redis 或 FoundationDB 实现 job 锁与分组，还支持 crawl 成员归属",
+    "crawl 本质是大量子 scrape job：controller 只投递初始任务，后续链接发现与投递发生在 worker 的 crawl-logic 中",
+    "抽取服务带版本后缀 F0：lib/extract/fire-0 表示 fire-0 版本，说明抽取策略是版本化迭代的",
+    "SDK 与 API 严格分层：apps/api 只管服务端，apps/*-sdk 各自独立实现 HTTP 客户端，二者通过 REST 契约耦合"
+  ],
+  "confidence": "高"
+}
