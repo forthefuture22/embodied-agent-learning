@@ -95,11 +95,19 @@ check(pj.includes('功能全景') && pj.includes('模块架构') && pj.includes(
 noLeak(pj, '项目详情');
 
 console.log('\n=== 无架构分析的项目 ===');
-M.viewProject('agent', 0, 'langchain-ai/langchain');
-const pj2 = captured['view'] || '';
-check(pj2.includes('尚未分析'), '正确显示「尚未分析」占位');
-check(pj2.includes('架构优先级'), '显示优先级评分');
-noLeak(pj2, '未分析项目');
+// 随批次推进，已分析的项目会变化，故动态挑一个尚未分析的
+const noArch = PROJECTS.find(p => !ARCH[p.repo]);
+if (noArch) {
+  const dk = noArch.domains[0];
+  const bi = DOMAINS[dk].branches.findIndex(b => noArch.branches.includes(b));
+  M.viewProject(dk, bi, noArch.repo);
+  const pj2 = captured['view'] || '';
+  check(pj2.includes('尚未分析'), `「${noArch.name}」正确显示「尚未分析」占位`);
+  check(pj2.includes('架构优先级'), '显示优先级评分');
+  noLeak(pj2, '未分析项目');
+} else {
+  console.log('  v 全部项目均已分析，跳过该检查');
+}
 
 console.log('\n=== 侧栏树 ===');
 M.renderTree();
