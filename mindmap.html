@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>具身智能 × AI Agent 学习思维导图</title>
+<style>
+  :root{
+    --bg:#F7F7F5; --panel:#FFFFFF; --line:#E4E2DC;
+    --ink:#2C2C2A; --ink2:#5F5E5A; --ink3:#8B8A85;
+    --emb-fill:#E1F5EE; --emb-soft:#F2FBF8; --emb-stroke:#0F6E56; --emb-text:#04342C; --emb-chip:#9FE1CB;
+    --agt-fill:#E6F1FB; --agt-soft:#F3F9FE; --agt-stroke:#185FA5; --agt-text:#042C53; --agt-chip:#B5D4F4;
+    --crs-fill:#FAEEDA; --crs-soft:#FDF8EE; --crs-stroke:#854F0B; --crs-text:#412402; --crs-chip:#FAC775;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;display:flex;flex-direction:column;
+  }
+  header{
+    background:var(--panel);border-bottom:1px solid var(--line);
+    padding:14px 22px 0;flex:0 0 auto;
+  }
+  .top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  h1{font-size:17px;font-weight:500;margin:0;letter-spacing:.2px}
+  .sub{font-size:12px;color:var(--ink3)}
+  .tabs{display:flex;gap:4px;margin-top:12px;flex-wrap:wrap}
+  .tab{
+    border:1px solid transparent;background:transparent;color:var(--ink2);
+    font:inherit;font-size:13px;padding:7px 14px;border-radius:9px 9px 0 0;cursor:pointer;
+    border-bottom:none;position:relative;top:1px;display:flex;align-items:center;gap:7px;
+  }
+  .tab .cnt{font-size:11px;color:var(--ink3);background:#F1EFE8;border-radius:20px;padding:1px 7px}
+  .tab:hover{background:#FAFAF8}
+  .tab.on{background:var(--bg);border-color:var(--line);color:var(--ink);font-weight:500}
+  .tab.on .cnt{background:#E7E5DE;color:var(--ink2)}
+  .bar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:var(--panel);border-bottom:1px solid var(--line);padding:9px 22px;flex:0 0 auto;
+  }
+  button.ctl{
+    font:inherit;font-size:12.5px;color:var(--ink2);background:var(--panel);
+    border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer;
+  }
+  button.ctl:hover{border-color:#C9C7C0;color:var(--ink)}
+  .zoom{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .zoom button{font:inherit;font-size:13px;background:var(--panel);border:none;border-right:1px solid var(--line);
+    padding:5px 10px;cursor:pointer;color:var(--ink2);line-height:1}
+  .zoom button:last-child{border-right:none}
+  .zoom button:hover{background:#FAFAF8;color:var(--ink)}
+  .zoom .lv{font-size:12px;color:var(--ink3);padding:5px 8px;min-width:48px;text-align:center;border-right:1px solid var(--line)}
+  .search{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--panel)}
+  .search input{border:none;outline:none;font:inherit;font-size:12.5px;width:170px;color:var(--ink);background:transparent}
+  .search input::placeholder{color:var(--ink3)}
+  .legend{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:11.5px;color:var(--ink3);flex-wrap:wrap}
+  .lg{display:flex;align-items:center;gap:5px}
+  .sw{width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.18)}
+  .dash{width:14px;height:0;border-top:1.5px dashed #B4B2A9}
+  #stage{flex:1 1 auto;overflow:auto;position:relative;padding:0}
+  #wrap{position:relative}
+  #map{position:absolute;top:0;left:0;transform-origin:0 0}
+  .node{cursor:pointer}
+  .node rect{transition:stroke-width .12s, opacity .12s}
+  .node:hover > rect{stroke-width:1.8}
+  .node text{user-select:none;pointer-events:none}
+  .dim{opacity:.16}
+  .hit > rect{stroke-width:2.4}
+  .hint{position:absolute;left:22px;bottom:14px;font-size:11.5px;color:var(--ink3);
+    background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:8px;padding:5px 10px;pointer-events:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="top">
+    <h1>具身智能 × AI Agent · 学习思维导图</h1>
+    <span class="sub">star 数于 2026-10-10 实时抓取自 GitHub · 点击分支节点折叠展开 · 点击项目跳转仓库 · 滚轮或拖动滚动条浏览</span>
+  </div>
+  <div class="tabs" id="tabs"></div>
+</header>
+
+<div class="bar">
+  <button class="ctl" id="btnExpand">全部展开</button>
+  <button class="ctl" id="btnCollapse">只留主干</button>
+  <button class="ctl" id="btnReset">重置视图</button>
+  <div class="zoom">
+    <button id="zOut">−</button>
+    <span class="lv" id="zLv">100%</span>
+    <button id="zIn">+</button>
+    <button id="zFit">适应宽度</button>
+  </div>
+  <div class="search"><input id="q" type="search" placeholder="搜索分支 / 项目名…"></div>
+  <div class="legend">
+    <span class="lg"><i class="sw" style="background:var(--emb-fill);border-color:var(--emb-stroke)"></i>具身智能</span>
+    <span class="lg"><i class="sw" style="background:var(--agt-fill);border-color:var(--agt-stroke)"></i>AI Agent</span>
+    <span class="lg"><i class="sw" style="background:var(--crs-fill);border-color:var(--crs-stroke)"></i>交叉地带</span>
+    <span class="lg"><i class="dash"></i>概念 / 论文线（无开源仓库）</span>
+  </div>
+</div>
+
+<div id="stage"><div id="wrap"><svg id="map" xmlns="http://www.w3.org/2000/svg"></svg></div></div>
+
+<script>
+const FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif';
+const meas = document.createElement('canvas').getContext('2d');
+function tw(s, size, weight){ meas.font = weight+' '+size+'px '+FONT; return meas.measureText(s).width; }
+
+const SPEC = {
+  root:   {size:16,   weight:500, h:46, padX:20, rx:12},
+  domain: {size:14.5, weight:500, h:36, padX:16, rx:10},
+  branch: {size:13,   weight:500, h:28, padX:13, rx:8},
+  leaf:   {size:12.5, weight:400, h:26, padX:12, rx:7},
+  concept:{size:12.5, weight:400, h:26, padX:12, rx:7}
+};
+const PAL = {
+  embodied:{fill:'#E1F5EE',soft:'#F2FBF8',stroke:'#0F6E56',text:'#04342C',chip:'#9FE1CB'},
+  agent:   {fill:'#E6F1FB',soft:'#F3F9FE',stroke:'#185FA5',text:'#042C53',chip:'#B5D4F4'},
+  cross:   {fill:'#FAEEDA',soft:'#FDF8EE',stroke:'#854F0B',text:'#412402',chip:'#FAC775'}
+};
+
+const L = (label, star, repo) => ({label, star, repo, kind:'leaf'});
+const C = (label) => ({label, kind:'concept'});
+const B = (label, children) => ({label, kind:'branch', children});
+const D = (label, pal, children) => ({label, kind:'domain', pal, children});
+
+const MAPS = {
+  embodied: {root: D('具身智能 · Embodied AI','embodied',[
+
+    B('① 深度学习与强化学习地基',[
+      L('Ray RLlib','44k','ray-project/ray'),
+      L('Stable-Baselines3','14k','DLR-RM/stable-baselines3'),
+      L('Gymnasium','13k','Farama-Foundation/Gymnasium')
+    ]),
+    B('② 仿真引擎与平台',[
+      L('Genesis','30k','Genesis-Embodied-AI/Genesis'),
+      L('AirSim','19k','microsoft/AirSim'),
+      L('MuJoCo','16k','google-deepmind/mujoco'),
+      L('Bullet3','15k','bulletphysics/bullet3'),
+      L('Isaac Lab','8.3k','isaac-sim/IsaacLab'),
+      L('Isaac Sim','4.2k','isaac-sim/IsaacSim')
+    ]),
+    B('③ 操作 / 导航基准环境',[
+      L('ManiSkill','3.4k','haosulab/ManiSkill'),
+      L('Habitat-Lab','3.2k','facebookresearch/habitat-lab'),
+      L('RoboTwin','3k','RoboTwin-Platform/RoboTwin'),
+      L('robosuite','2.6k','ARISE-Initiative/robosuite'),
+      L('RoboVerse','1.9k','RoboVerseOrg/RoboVerse'),
+      L('RLBench','1.8k','stepjam/RLBench'),
+      L('BEHAVIOR-1K','1.7k','StanfordVL/BEHAVIOR-1K')
+    ]),
+    B('④ 示教 · 模仿学习 · 数据',[
+      L('LeRobot','28k','huggingface/lerobot'),
+      L('Diffusion Policy','4.6k','real-stanford/diffusion_policy'),
+      L('Open X-Embodiment','2.1k','google-deepmind/open_x_embodiment'),
+      L('RDT-1B','1.8k','thu-ml/RoboticsDiffusionTransformer'),
+      L('robomimic','1.6k','ARISE-Initiative/robomimic'),
+      L('DROID','448','droid-dataset/droid')
+    ]),
+    B('⑤ VLA 视觉-语言-动作主线',[
+      L('openpi (π0)','14k','Physical-Intelligence/openpi'),
+      L('GR00T N1','8.2k','NVIDIA/Isaac-GR00T'),
+      L('OpenVLA','7.1k','openvla/openvla'),
+      L('Octo','1.8k','octo-models/octo')
+    ]),
+    B('⑥ 多模态底座 VLM',[
+      L('CLIP','34k','openai/CLIP'),
+      L('MiniCPM-V','27k','OpenBMB/MiniCPM-V'),
+      L('OmniLMM','27k','OpenBMB/OmniLMM'),
+      L('LLaVA','25k','haotian-liu/LLaVA'),
+      L('Qwen2.5-VL','20k','QwenLM/Qwen2.5-VL'),
+      L('InternVL','10k','OpenGVLab/InternVL')
+    ]),
+    B('⑦ 世界模型 WAM',[
+      L('Vista（驾驶世界模型）','907','OpenDriveLab/Vista'),
+      C('Genie 2（Google，闭源）'),
+      C('WALL-E（字节，闭源）'),
+      C('UniSim（闭源）'),
+      C('开源缺口：可复现 WAM 仍稀缺，建议从 Genesis 上手')
+    ]),
+    B('⑧ 运控 · 真机 · 部署',[
+      L('ROS 2','6.1k','ros2/ros2'),
+      L('Pinocchio','3.8k','stack-of-tasks/pinocchio'),
+      L('unitree_rl_gym','3.6k','unitreerobotics/unitree_rl_gym'),
+      L('legged_gym','3.1k','leggedrobotics/legged_gym'),
+      L('unitree_ros2','858','unitreerobotics/unitree_ros2')
+    ]),
+    B('⑨ 入门清单与资源聚合',[
+      L('Embodied-AI-Guide（中文）','16k','TianxingChen/Embodied-AI-Guide'),
+      L('Awesome-LLM-Robotics','4.5k','GT-RIPL/Awesome-LLM-Robotics'),
+      L('Awesome-Robotics-Foundation-Models','1.4k','robotics-survey/Awesome-Robotics-Foundation-Models'),
+      L('embodied-ai-learning-handbook','56','zc-xzc/embodied-ai-learning-handbook')
+    ])
+  ])},
+
+  agent: {root: D('AI Agent · 智能体','agent',[
+
+    B('① 核心范式与原理',[
+      L('DSPy（Prompt 可编程优化）','39k','stanfordnlp/dspy'),
+      C('ReAct / CoT 推理循环'),
+      C('Tool Use 工具调用'),
+      C('Planning 任务分解'),
+      C('Reflection 自我反思'),
+      C('Memory 长期记忆')
+    ]),
+    B('② 通用编排框架',[
+      L('LangChain','148k','langchain-ai/langchain'),
+      L('LlamaIndex','52k','run-llama/llama_index'),
+      L('LangGraph','43k','langchain-ai/langgraph'),
+      L('Agno','43k','agno-agi/agno'),
+      L('AgentScope','33k','modelscope/agentscope')
+    ]),
+    B('③ 官方与轻量 SDK',[
+      L('OpenAI Agents SDK','30k','openai/openai-agents-python'),
+      L('smolagents','30k','huggingface/smolagents'),
+      L('Semantic Kernel','29k','microsoft/semantic-kernel'),
+      L('Google ADK','22k','google/adk-python'),
+      L('Pydantic-AI','21k','pydantic/pydantic-ai'),
+      L('Qwen-Agent','17k','QwenLM/Qwen-Agent'),
+      L('TaskWeaver','6.2k','microsoft/TaskWeaver')
+    ]),
+    B('④ 多智能体协作',[
+      L('MetaGPT','71k','geekan/MetaGPT'),
+      L('AutoGen','61k','microsoft/autogen'),
+      L('CrewAI','60k','crewAIInc/crewAI'),
+      L('ChatDev','34k','OpenBMB/ChatDev'),
+      L('CAMEL','18k','camel-ai/camel'),
+      L('AgentVerse','5.2k','OpenBMB/AgentVerse')
+    ]),
+    B('⑤ 自主探索型 Agent',[
+      L('AutoGPT','188k','Significant-Gravitas/AutoGPT'),
+      L('AgentGPT','36k','reworkd/AgentGPT'),
+      L('XAgent','8.6k','OpenBMB/XAgent')
+    ]),
+    B('⑥ 工具 · 协议 · 沙箱',[
+      L('MCP servers','91k','modelcontextprotocol/servers'),
+      L('A2A 协议','26k','a2aproject/A2A'),
+      L('MCP python-sdk','25k','modelcontextprotocol/python-sdk'),
+      L('E2B（安全沙箱）','14k','e2b-dev/E2B'),
+      L('MCP Inspector','11k','modelcontextprotocol/inspector')
+    ]),
+    B('⑦ 记忆层',[
+      L('mem0','67k','mem0ai/mem0'),
+      L('Graphiti（Zep）','32k','getzep/graphiti'),
+      L('cognee','32k','topoteretes/cognee'),
+      L('Letta（原 MemGPT）','25k','letta-ai/letta')
+    ]),
+    B('⑧ RAG 与向量库',[
+      L('RAGFlow','92k','infiniflow/ragflow'),
+      L('Milvus','46k','milvus-io/milvus'),
+      L('FAISS','41k','facebookresearch/faiss'),
+      L('Qdrant','35k','qdrant/qdrant'),
+      L('Chroma','29k','chroma-core/chroma'),
+      L('kotaemon','26k','Cinnamon/kotaemon')
+    ]),
+    B('⑨ 浏览器与电脑操作',[
+      L('browser-use','117k','browser-use/browser-use'),
+      L('Playwright','97k','microsoft/playwright'),
+      L('OmniParser','26k','microsoft/OmniParser'),
+      L('Stagehand','26k','browserbase/stagehand'),
+      L('suna','20k','kortix-ai/suna'),
+      L('UI-TARS','12k','bytedance/UI-TARS')
+    ]),
+    B('⑩ 编码智能体',[
+      L('Claude Code','150k','anthropics/claude-code'),
+      L('Gemini CLI','107k','google-gemini/gemini-cli'),
+      L('OpenHands','90k','All-Hands-AI/OpenHands'),
+      L('gpt-engineer','55k','gpt-engineer-org/gpt-engineer'),
+      L('Aider','49k','Aider-AI/aider'),
+      L('SWE-agent','21k','SWE-agent/SWE-agent'),
+      L('SWE-bench（评测基准）','6k','princeton-nlp/SWE-bench')
+    ]),
+    B('⑪ 平台与工作流',[
+      L('n8n','207k','n8n-io/n8n'),
+      L('Dify','158k','langgenius/dify'),
+      L('Flowise','55k','FlowiseAI/Flowise'),
+      L('DB-GPT','20k','eosphoros-ai/DB-GPT'),
+      L('agent-lightning','19k','microsoft/agent-lightning'),
+      L('AgentOps（可观测）','5.9k','AgentOps-AI/agentops')
+    ]),
+    B('⑫ 数据获取与文档解析',[
+      L('Firecrawl','190k','Firecrawl/firecrawl'),
+      L('markitdown','189k','microsoft/markitdown'),
+      L('crawl4ai','85k','unclecode/crawl4ai'),
+      L('Docling','69k','docling-project/docling'),
+      L('gpt-researcher','30k','assafelovic/gpt-researcher'),
+      L('deep-research','20k','dzhng/deep-research')
+    ]),
+    B('⑬ 模型服务与微调',[
+      L('vLLM','93k','vllm-project/vllm'),
+      L('Unsloth','78k','unslothai/unsloth'),
+      L('LLaMA-Factory','75k','hiyouga/LLaMA-Factory'),
+      L('LiteLLM（模型网关）','61k','BerriAI/litellm'),
+      L('SGLang','37k','sgl-project/sglang')
+    ])
+  ])},
+
+  cross: {root: D('交叉地带 · 具身 Agent','cross',[
+
+    B('① 语言驱动机器人（论文线）',[
+      C('SayCan：LLM 规划 + 技能可行性打分'),
+      C('PaLM-E：多模态具身大模型'),
+      C('Code as Policies：用代码表达策略'),
+      C('VoxPoser：LLM 生成 3D 价值图'),
+      C('Inner Monologue：闭环语言反馈')
+    ]),
+    B('② Agent 能力 × 机器人',[
+      L('技能即工具：MCP servers','91k','modelcontextprotocol/servers'),
+      L('长期记忆：mem0','67k','mem0ai/mem0'),
+      L('感知底座：InternVL','10k','OpenGVLab/InternVL'),
+      C('任务规划：LLM Planner + 技能库'),
+      C('反思闭环：Reflexion 模式')
+    ]),
+    B('③ 融合学习路线（建议顺序）',[
+      C('第 1 步：RL + 仿真地基（Gymnasium / MuJoCo / Isaac Lab）'),
+      C('第 2 步：跑通一个模仿学习 Demo（LeRobot / Diffusion Policy）'),
+      C('第 3 步：微调或部署一个开源 VLA（OpenVLA / openpi）'),
+      C('第 4 步：学 Agent 范式与 MCP 协议'),
+      C('第 5 步：把机器人技能封装成 MCP 工具'),
+      C('第 6 步：做「语言 → 规划 → 执行 → 反馈」闭环')
+    ])
+  ])}
+};
+
+const TABS = [
+  {key:'embodied', name:'具身智能', pal:'embodied'},
+  {key:'agent',    name:'AI Agent', pal:'agent'},
+  {key:'cross',    name:'交叉地带', pal:'cross'}
+];
+
+const svg = document.getElementById('map');
+const wrap = document.getElementById('wrap');
+const stage = document.getElementById('stage');
+const NS = 'http://www.w3.org/2000/svg';
+let current = (new URLSearchParams(location.search).get('tab') || 'embodied');
+if(!MAPS[current]) current = 'embodied';
+let scale = 1, W = 0, H = 0, rendered = [];
+
+function el(tag, attrs){
+  const n = document.createElementNS(NS, tag);
+  for(const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+
+function prep(node, pal){
+  node.pal = node.pal || pal;
+  node.collapsed = false;
+  node._kids = node.children || [];
+  node._kids.forEach(k => prep(k, node.pal));
+  return node;
+}
+const maps = {};
+for(const t of TABS){
+  maps[t.key] = prep(JSON.parse(JSON.stringify(MAPS[t.key].root)), t.pal);
+  maps[t.key].kind = 'root';
+  maps[t.key].label = MAPS[t.key].root.label;
+}
+
+function measure(n){
+  const s = SPEC[n.kind];
+  const lw = tw(n.label, s.size, s.weight);
+  n.h = s.h; n.padX = s.padX; n.rx = s.rx;
+  n.labelW = lw;
+  n.chipW = n.star ? (tw('★ '+n.star, 11, 500) + 14) : 0;
+  n.w = s.padX*2 + lw + (n.chipW ? 8 + n.chipW : 0);
+  (n._kids||[]).forEach(measure);
+}
+
+function collect(n, arr){ arr.push(n); (n._kids||[]).forEach(k=>collect(k,arr)); return arr; }
+
+function layout(root){
+  measure(root);
+  const SLOT = 32, PAD_Y = 22, H_GAP = 46;
+  rendered = [];
+  let y = PAD_Y;
+  (function walk(n, depth){
+    n.depth = depth;
+    rendered.push(n);
+    const kids = n.collapsed ? [] : (n._kids||[]);
+    if(!kids.length){
+      n.y = y + SLOT/2; y += SLOT;
+    }else{
+      kids.forEach(k => walk(k, depth+1));
+      n.y = (kids[0].y + kids[kids.length-1].y)/2;
+    }
+  })(root, 0);
+
+  const maxW = {};
+  rendered.forEach(n => { maxW[n.depth] = Math.max(maxW[n.depth]||0, n.w); });
+  const depthX = {};
+  const maxDepth = Math.max(...rendered.map(n=>n.depth));
+  for(let d=0; d<=maxDepth; d++){
+    depthX[d] = (d===0) ? 30 : depthX[d-1] + maxW[d-1] + H_GAP;
+  }
+  rendered.forEach(n => { n.x = depthX[n.depth]; });
+
+  root._h = y + PAD_Y;
+  root._w = depthX[maxDepth] + maxW[maxDepth] + 30;
+  return root;
+}
+
+function render(){
+  const root = layout(maps[current]);
+  W = root._w; H = root._h;
+  svg.innerHTML = '';
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', '0 0 '+W+' '+H);
+
+  const gBands = el('g', {}), gLinks = el('g', {}), gNodes = el('g', {});
+  svg.appendChild(gBands); svg.appendChild(gLinks); svg.appendChild(gNodes);
+
+  const kidMap = new Map();
+  rendered.forEach(n => kidMap.set(n, n.collapsed ? [] : (n._kids||[])));
+
+  rendered.filter(n => n.kind === 'branch').forEach(br => {
+    const sub = collect(br, []).filter(n => n !== br && rendered.includes(n));
+    if(!sub.length) return;
+    const ys = sub.map(n => n.y), top = Math.min(...ys) - 15, bot = Math.max(...ys) + 15;
+    const right = Math.max(...sub.map(n => n.x + n.w)) + 14;
+    gBands.appendChild(el('rect', {
+      x: br.x - 12, y: top, width: right - br.x + 26, height: bot - top,
+      rx: 12, fill: PAL[br.pal].soft, stroke: PAL[br.pal].stroke,
+      'stroke-opacity': .16, 'stroke-width': .8
+    }));
+  });
+
+  rendered.forEach(n => {
+    const kids = kidMap.get(n);
+    kids.forEach(c => {
+      const x1 = n.x + n.w, y1 = n.y, x2 = c.x, y2 = c.y, dx = (x2-x1)/2;
+      gLinks.appendChild(el('path', {
+        d: 'M'+x1+','+y1+' C'+(x1+dx)+','+y1+' '+(x2-dx)+','+y2+' '+x2+','+y2,
+        fill:'none', stroke: PAL[n.pal].stroke, 'stroke-opacity': n.kind==='root'?.45:.3, 'stroke-width': 1
+      }));
+    });
+  });
+
+  rendered.forEach(n => {
+    const p = PAL[n.pal];
+    const g = el('g', {class:'node', 'data-label': n.label});
+    const isRoot = n.kind === 'root';
+    const isConcept = n.kind === 'concept';
+    let fill, stroke, textFill, sw = .5, dash = null;
+    if(isRoot){ fill = '#2C2C2A'; stroke = '#2C2C2A'; textFill = '#FFFFFF'; }
+    else if(n.kind === 'domain'){ fill = p.fill; stroke = p.stroke; textFill = p.text; sw = 1; }
+    else if(n.kind === 'branch'){ fill = '#FFFFFF'; stroke = p.stroke; textFill = p.text; sw = .8; }
+    else if(isConcept){ fill = '#FFFFFF'; stroke = '#B4B2A9'; textFill = '#5F5E5A'; dash = '3 3'; }
+    else { fill = '#FFFFFF'; stroke = p.stroke; textFill = '#2C2C2A'; sw = .6; }
+
+    const rect = el('rect', {
+      x: n.x, y: n.y - n.h/2, width: n.w, height: n.h, rx: n.rx,
+      fill: fill, stroke: stroke, 'stroke-width': sw
+    });
+    if(n.kind === 'leaf') rect.setAttribute('stroke-opacity', .45);
+    if(dash) rect.setAttribute('stroke-dasharray', dash);
+    g.appendChild(rect);
+
+    const total = n.labelW + (n.chipW ? 8 + n.chipW : 0);
+    let tx = n.x + (n.w - total)/2;
+    const ty = n.y;
+    const t = el('text', {
+      x: tx, y: ty, 'dominant-baseline':'central', 'text-anchor':'start',
+      'font-family': FONT, 'font-size': SPEC[n.kind].size, 'font-weight': SPEC[n.kind].weight,
+      fill: textFill
+    });
+    t.textContent = n.label;
+    g.appendChild(t);
+
+    if(n.chipW){
+      const cx = tx + n.labelW + 8;
+      g.appendChild(el('rect', {
+        x: cx, y: n.y - 8.5, width: n.chipW, height: 17, rx: 8.5,
+        fill: isRoot ? '#4A4A47' : p.chip, stroke: 'none'
+      }));
+      const ct = el('text', {
+        x: cx + n.chipW/2, y: n.y, 'dominant-baseline':'central', 'text-anchor':'middle',
+        'font-family': FONT, 'font-size': 11, 'font-weight': 500,
+        fill: isRoot ? '#FFFFFF' : p.text
+      });
+      ct.textContent = '★ ' + n.star;
+      g.appendChild(ct);
+    }
+
+    if(n.repo){
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', () => window.open('https://github.com/'+n.repo, '_blank'));
+      const ti = el('title', {}); ti.textContent = n.label + '  ·  ★ ' + n.star + '\nhttps://github.com/' + n.repo;
+      g.appendChild(ti);
+    }else if(n.kind === 'leaf' || n.kind === 'concept'){
+      const ti = el('title', {}); ti.textContent = n.label;
+      g.appendChild(ti);
+    }else{
+      g.addEventListener('click', () => { n.collapsed = !n.collapsed; render(); applySearch(); });
+      const ti = el('title', {}); ti.textContent = n.label + '（点击折叠 / 展开）';
+      g.appendChild(ti);
+    }
+    gNodes.appendChild(g);
+  });
+
+  wrap.style.width = (W*scale)+'px';
+  wrap.style.height = (H*scale)+'px';
+  svg.style.transform = 'scale('+scale+')';
+  document.getElementById('zLv').textContent = Math.round(scale*100)+'%';
+}
+
+function applySearch(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const nodes = svg.querySelectorAll('.node');
+  if(!q){ nodes.forEach(n => n.classList.remove('dim','hit')); return; }
+  nodes.forEach(n => {
+    const hit = (n.dataset.label||'').toLowerCase().includes(q);
+    n.classList.toggle('hit', hit);
+    n.classList.toggle('dim', !hit);
+  });
+}
+
+function setScale(s){
+  scale = Math.max(.35, Math.min(1.6, s));
+  wrap.style.width = (W*scale)+'px';
+  wrap.style.height = (H*scale)+'px';
+  svg.style.transform = 'scale('+scale+')';
+  document.getElementById('zLv').textContent = Math.round(scale*100)+'%';
+}
+
+const tabsEl = document.getElementById('tabs');
+TABS.forEach(t => {
+  const n = maps[t.key];
+  const cnt = collect(n, []).filter(x => x.kind === 'leaf' || x.kind === 'concept').length;
+  const b = document.createElement('button');
+  b.className = 'tab' + (t.key === current ? ' on' : '');
+  b.dataset.key = t.key;
+  b.innerHTML = t.name + '<span class="cnt">' + cnt + '</span>';
+  b.onclick = () => {
+    current = t.key;
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.key === current));
+    scale = 1; render(); applySearch(); stage.scrollTop = 0; stage.scrollLeft = 0;
+  };
+  tabsEl.appendChild(b);
+});
+
+document.getElementById('btnExpand').onclick = () => { collect(maps[current], []).forEach(n => n.collapsed = false); render(); applySearch(); };
+document.getElementById('btnCollapse').onclick = () => { collect(maps[current], []).forEach(n => n.collapsed = n.kind === 'branch'); render(); applySearch(); };
+document.getElementById('btnReset').onclick = () => { scale = 1; render(); applySearch(); stage.scrollTop = 0; stage.scrollLeft = 0; };
+document.getElementById('zIn').onclick = () => setScale(scale + .1);
+document.getElementById('zOut').onclick = () => setScale(scale - .1);
+document.getElementById('zFit').onclick = () => setScale((stage.clientWidth - 24) / W);
+document.getElementById('q').addEventListener('input', applySearch);
+
+render();
+setScale(1);
+</script>
+</body>
+</html>
