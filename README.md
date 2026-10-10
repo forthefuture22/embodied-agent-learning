@@ -4,6 +4,12 @@
 
 不是项目清单堆砌——每个分支都标注了「学什么、为什么学、从哪个项目切入」。
 
+## 在线访问
+
+- **交互式思维导图**：https://forthefuture22.github.io/embodied-agent-learning/mindmap.html
+- **文字版学习地图**：[learning-map.md](./learning-map.md)
+- **直达某个板块**：`?tab=embodied` · `?tab=agent` · `?tab=cross`
+
 ---
 
 ## 内容概览
