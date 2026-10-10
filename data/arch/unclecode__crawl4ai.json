@@ -1,0 +1,89 @@
+{
+  "repo": "unclecode/crawl4ai",
+  "name": "Crawl4AI",
+  "one_liner": "把网页抓取并清洗成 LLM 友好的 Markdown 与结构化数据",
+  "problem": "解决给 LLM 喂网页时原始 HTML 噪声大、体积大的问题：用浏览器抓取渲染后的页面，经清洗与内容过滤产出干净的 Markdown，并支持 BM25 与剪枝过滤、结构化抽取与深度爬取。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "AsyncWebCrawler", "role": "主入口，编排 arun/arun_many/aseed_urls/amap_domain，串起抓取、清洗、过滤与抽取", "file": "crawl4ai/async_webcrawler.py"},
+    {"name": "CrawlerRunConfig", "role": "单次抓取的总配置，聚合 scraping、markdown、extraction、filter、cache、proxy 等策略与开关", "file": "crawl4ai/async_configs.py"},
+    {"name": "BrowserConfig", "role": "浏览器级配置，控制 headless、user_agent、代理与浏览器类型等", "file": "crawl4ai/async_configs.py"},
+    {"name": "AsyncCrawlerStrategy", "role": "抓取策略抽象基类，Playwright 与纯 HTTP 两套实现，是换抓取方式的扩展点", "file": "crawl4ai/async_crawler_strategy.py"},
+    {"name": "ContentScrapingStrategy", "role": "内容清洗抽象，把原始 HTML 抽成 cleaned_html、links、media、metadata 与表格", "file": "crawl4ai/content_scraping_strategy.py"},
+    {"name": "RelevantContentFilter", "role": "内容过滤抽象基类，定义 filter_content 契约，是 BM25 与剪枝过滤的共同父类", "file": "crawl4ai/content_filter_strategy.py"},
+    {"name": "BM25ContentFilter", "role": "基于 BM25 加标签权重的过滤，按查询相关度筛选文本块产出 fit_markdown", "file": "crawl4ai/content_filter_strategy.py"},
+    {"name": "PruningContentFilter", "role": "基于文本长度、链接密度等统计指标的树剪枝过滤，无需查询即可去噪", "file": "crawl4ai/content_filter_strategy.py"},
+    {"name": "MarkdownGenerationStrategy", "role": "Markdown 生成抽象，默认实现用 html2text 产出 raw 与带引用 markdown，并调用内容过滤产出 fit_markdown", "file": "crawl4ai/markdown_generation_strategy.py"},
+    {"name": "ExtractionStrategy", "role": "结构化抽取抽象，含 LLM、CSS、XPath、LXML、Regex 等具体策略", "file": "crawl4ai/extraction_strategy.py"},
+    {"name": "DeepCrawlStrategy", "role": "深度爬取抽象，定义 can_process_url 与 link_discovery，派生 BFS 与 BestFirst 等策略", "file": "crawl4ai/deep_crawling/base_strategy.py"},
+    {"name": "CrawlResult", "role": "抓取结果数据模型，聚合 html、cleaned_html、markdown、links、media、extracted_content 等字段", "file": "crawl4ai/models.py"}
+  ],
+  "layers": [
+    {"name": "抓取入口层", "responsibility": "对外暴露抓取 API 与命令行入口，编排整体流程", "modules": ["crawl4ai"], "files": ["crawl4ai/async_webcrawler.py", "crawl4ai/cli.py", "crawl4ai/__init__.py"]},
+    {"name": "配置层", "responsibility": "定义 BrowserConfig 与 CrawlerRunConfig 等参数体系", "modules": ["crawl4ai"], "files": ["crawl4ai/async_configs.py", "crawl4ai/config.py"]},
+    {"name": "抓取策略层", "responsibility": "浏览器与 HTTP 抓取、反爬与代理轮换、浏览器适配", "modules": ["crawl4ai"], "files": ["crawl4ai/async_crawler_strategy.py", "crawl4ai/browser_adapter.py", "crawl4ai/proxy_strategy.py"]},
+    {"name": "内容清洗与过滤层", "responsibility": "HTML 清洗抽取与 BM25、剪枝、LLM 内容过滤", "modules": ["crawl4ai"], "files": ["crawl4ai/content_scraping_strategy.py", "crawl4ai/content_filter_strategy.py", "crawl4ai/content_filter_strategy_lxml.py"]},
+    {"name": "Markdown 与抽取层", "responsibility": "HTML 转 Markdown、分块与结构化抽取", "modules": ["crawl4ai"], "files": ["crawl4ai/markdown_generation_strategy.py", "crawl4ai/extraction_strategy.py", "crawl4ai/chunking_strategy.py"]},
+    {"name": "深度爬取层", "responsibility": "BFS 与 BestFirst 等深度爬取策略及 URL 过滤器与打分器", "modules": ["crawl4ai/deep_crawling"], "files": ["crawl4ai/deep_crawling/base_strategy.py", "crawl4ai/deep_crawling/bfs_strategy.py", "crawl4ai/deep_crawling/bff_strategy.py"]},
+    {"name": "调度与工具层", "responsibility": "并发调度、URL 播种与站点地图映射等辅助能力", "modules": ["crawl4ai"], "files": ["crawl4ai/async_dispatcher.py", "crawl4ai/async_url_seeder.py", "crawl4ai/domain_mapper.py"]},
+    {"name": "部署层", "responsibility": "Docker 镜像与部署脚本，供自托管服务使用", "modules": ["deploy"], "files": ["deploy/docker", "Dockerfile", "docker-compose.yml"]}
+  ],
+  "data_flow": [
+    "第1步：调用 AsyncWebCrawler.arun 传入 url 与 CrawlerRunConfig，未启动则先 start 浏览器",
+    "第2步：CacheContext 与 CacheValidator 判断是否命中缓存及缓存是否新鲜",
+    "第3步：未命中则用 AsyncCrawlerStrategy 经 Playwright 抓取页面，得到 html、截图与网络请求记录",
+    "第4步：抓取后 is_blocked 判定反爬，必要时轮换代理重试或调用 fallback_fetch_function",
+    "第5步：aprocess_html 调用 ContentScrapingStrategy.scrap 清洗出 cleaned_html、links、media、metadata",
+    "第6步：preprocess_html_for_schema 生成 fit_html 供结构化抽取使用",
+    "第7步：DefaultMarkdownGenerator.generate_markdown 用 html2text 产出 raw_markdown 并把链接转为引用",
+    "第8步：若配置了 RelevantContentFilter，则过滤后生成 fit_markdown 与 fit_html",
+    "第9步：若配置了 ExtractionStrategy，则按 chunking_strategy 分块后抽取结构化内容",
+    "第10步：组装 CrawlResult 返回，并按缓存策略写入本地缓存"
+  ],
+  "entry_points": [
+    {"path": "crawl4ai/async_webcrawler.py:AsyncWebCrawler.arun", "what": "单页抓取主入口，驱动抓取到结果组装的全流程"},
+    {"path": "crawl4ai/async_webcrawler.py:AsyncWebCrawler.arun_many", "what": "批量抓取入口，配合 dispatcher 做并发与限速"},
+    {"path": "crawl4ai/cli.py", "what": "命令行入口，安装后命令名为 crwl"},
+    {"path": "crawl4ai/adaptive_crawler.py:AdaptiveCrawler", "what": "自适应爬取入口，按信息充足度动态决定是否继续"},
+    {"path": "crawl4ai/__init__.py", "what": "包导出入口，暴露 AsyncWebCrawler 与各类策略"},
+    {"path": "crawl4ai/async_webcrawler.py:AsyncWebCrawler.aseed_urls", "what": "URL 播种入口，从站点地图与 Common Crawl 批量发现链接"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立认知：LLM 友好抓取、自托管与云服务两种用法"},
+    {"path": "crawl4ai/async_webcrawler.py", "why": "核心编排，arun 与 aprocess_html 是理解全流程的必经之路"},
+    {"path": "crawl4ai/async_configs.py", "why": "参数体系中枢，看清抓取、过滤、抽取、缓存如何被组合"},
+    {"path": "crawl4ai/content_scraping_strategy.py", "why": "HTML 清洗抽取实现，理解 cleaned_html 与链接媒体的来源"},
+    {"path": "crawl4ai/content_filter_strategy.py", "why": "BM25 与剪枝过滤实现，理解 fit_markdown 如何变干净"},
+    {"path": "crawl4ai/markdown_generation_strategy.py", "why": "Markdown 生成与引用转换，理解 raw 与 fit 两类产物"},
+    {"path": "crawl4ai/extraction_strategy.py", "why": "结构化抽取策略族，理解如何把页面抽成 JSON"},
+    {"path": "crawl4ai/deep_crawling/base_strategy.py", "why": "深度爬取抽象，理解多页爬取的扩展方式"},
+    {"path": "crawl4ai/models.py", "why": "CrawlResult 与 MarkdownGenerationResult 字段全貌"}
+  ],
+  "extension_points": [
+    "新增抓取方式：继承 crawl4ai/async_crawler_strategy.py 的 AsyncCrawlerStrategy，参考 AsyncHTTPCrawlerStrategy",
+    "新增内容过滤：继承 crawl4ai/content_filter_strategy.py 的 RelevantContentFilter 并实现 filter_content",
+    "新增 Markdown 生成：继承 crawl4ai/markdown_generation_strategy.py 的 MarkdownGenerationStrategy，通过 config.markdown_generator 注入",
+    "新增抽取策略：继承 crawl4ai/extraction_strategy.py 的 ExtractionStrategy，通过 config.extraction_strategy 注入",
+    "新增深度爬取策略：继承 crawl4ai/deep_crawling/base_strategy.py 的 DeepCrawlStrategy，参考 bfs_strategy.py",
+    "新增分块策略：继承 crawl4ai/chunking_strategy.py 的 ChunkingStrategy，配合抽取策略使用",
+    "新增浏览器适配器：继承 crawl4ai/browser_adapter.py 的 BrowserAdapter，例如接入反检测浏览器"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解自托管与云服务两条路径与 LLM 友好的定位",
+    "第2步：读 crawl4ai/async_webcrawler.py 的 arun 与 aprocess_html，掌握抓取到产出的全流程",
+    "第3步：读 crawl4ai/async_configs.py，掌握 CrawlerRunConfig 如何组合各阶段策略",
+    "第4步：读 crawl4ai/content_scraping_strategy.py，理解 HTML 如何被清洗成 cleaned_html",
+    "第5步：读 crawl4ai/markdown_generation_strategy.py，理解 raw 与 fit markdown 的差别",
+    "第6步：读 crawl4ai/content_filter_strategy.py，理解 BM25 与剪枝过滤的算法与参数",
+    "第7步：读 crawl4ai/extraction_strategy.py 与 deep_crawling/base_strategy.py，理解抽取与多页爬取的扩展点"
+  ],
+  "diagram_mermaid": "graph TD\n  A[arun 传入 url 与 CrawlerRunConfig] --> B[CacheContext 检查缓存]\n  B --> C[AsyncCrawlerStrategy 抓取 HTML]\n  C --> D[ContentScrapingStrategy 清洗出 cleaned_html]\n  D --> E[preprocess_html_for_schema 生成 fit_html]\n  E --> F[DefaultMarkdownGenerator 生成 raw_markdown]\n  F --> G[RelevantContentFilter 过滤生成 fit_markdown]\n  G --> H[ExtractionStrategy 抽取结构化内容]\n  H --> I[组装 CrawlResult 并写缓存]",
+  "surprises": [
+    "Markdown 有两份产物：raw_markdown 不做任何过滤，fit_markdown 才经过内容过滤，默认情况下过滤并未启用，需要显式挂 content_filter",
+    "arun 返回的是 CrawlResultContainer 而非 CrawlResult，靠属性代理把 result.markdown 这类访问转发到底层结果以保持向后兼容",
+    "抓取层同时存在 Playwright 浏览器与纯 HTTP 两套 AsyncCrawlerStrategy，HTTP 更快但不执行 JS，选择错误会导致动态页面抓到空内容",
+    "反爬处理内嵌在主流程而非旁路：抓取后用 is_blocked 判定，失败则换代理重试，最后还有 fallback_fetch_function 兜底",
+    "新式调用要求把参数收进 CrawlerRunConfig 传入 config，旧的散装 kwargs 仍兼容但已标记为迁移路径，混用容易触发意外默认值"
+  ],
+  "confidence": "高"
+}

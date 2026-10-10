@@ -1,0 +1,81 @@
+{
+  "repo": "OpenBMB/MiniCPM-V",
+  "name": "MiniCPM-V",
+  "one_liner": "端侧可部署的多模态大模型系列，图像视频文本理解",
+  "problem": "把视觉编码器与语言模型拼成可跑在手机上的多模态大模型，用切图与视觉重采样在有限算力下保留高分辨率细节，并支持量化与端侧部署。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "OmniLMMConfig", "role": "模型配置类，继承 MistralConfig 并注册 model_type=omnilmm，声明 num_query、image_size、mm_vision_tower 等视觉参数", "file": "omnilmm/model/omnilmm.py"},
+    {"name": "OmniLMMModel", "role": "核心模型：组装视觉塔与 Resampler，把视觉特征替换进文本嵌入的占位符位置，再交给语言模型", "file": "omnilmm/model/omnilmm.py"},
+    {"name": "OmniLMMForCausalLM", "role": "对外因果语言模型：封装 model 与 lm_head，提供 generate_vllm 推理入口，并注册到 AutoModelForCausalLM", "file": "omnilmm/model/omnilmm.py"},
+    {"name": "create_vision_module", "role": "工厂函数：构建 EVA02 视觉塔并包一层 Resampler，返回二者组成的视觉前端", "file": "omnilmm/model/omnilmm.py"},
+    {"name": "Resampler", "role": "Perceiver 风格交叉注意力重采样器，用固定数量可学习 query 把视觉特征压成固定长度视觉 token", "file": "omnilmm/model/resampler.py"},
+    {"name": "slice_image", "role": "高分辨率切图：按长宽比与 max_slice_nums 选出最优网格，把大图切成多个子图分别编码", "file": "finetune/dataset.py"},
+    {"name": "get_grid_placeholder", "role": "把切图网格展开成图像占位符文本，用 im_start/im_end 包裹每片子图的 token 序列", "file": "finetune/dataset.py"},
+    {"name": "omni_preprocess", "role": "对话预处理：套用 chat 模板生成 input_ids，并把非 assistant 回答部分 label 置为 ignore_index", "file": "omnilmm/train/train_utils.py"},
+    {"name": "MiniCPMVChat", "role": "推理分发入口：按 model_path 字符串匹配把请求路由到 12B / Llama3-V / 2_6 / 默认各版本封装", "file": "chat.py"},
+    {"name": "Conversation", "role": "对话历史与分隔符模板抽象，负责拼接 system 与多轮 role 文本", "file": "omnilmm/conversation.py"}
+  ],
+  "layers": [
+    {"name": "模型核心层", "responsibility": "定义多模态模型结构：视觉塔、Resampler、嵌入替换与生成", "modules": ["omnilmm/model"], "files": ["omnilmm/model/omnilmm.py", "omnilmm/model/resampler.py", "omnilmm/model/utils.py"]},
+    {"name": "对话与预处理层", "responsibility": "对话模板、图像变换与训练样本的 tokenize/label 掩码", "modules": ["omnilmm"], "files": ["omnilmm/conversation.py", "omnilmm/train/train_utils.py", "omnilmm/utils.py"]},
+    {"name": "数据切图与微调层", "responsibility": "高分辨率切图、数据集与 LoRA/全参微调脚本", "modules": ["finetune"], "files": ["finetune/dataset.py", "finetune/finetune.py", "finetune/trainer.py"]},
+    {"name": "推理与入口层", "responsibility": "命令行推理入口与各版本模型封装", "modules": ["."], "files": ["chat.py"]},
+    {"name": "演示与服务层", "responsibility": "Gradio/Streamlit Web Demo 与 Omni 实时多模态服务", "modules": ["web_demos"], "files": ["web_demos/web_demo_2.6.py", "web_demos/minicpm-o_2.6/model_server.py"]},
+    {"name": "评测层", "responsibility": "多模态基准评测接入与 VQA 评分", "modules": ["eval_mm"], "files": ["eval_mm/README.md", "eval_mm/vlmevalkit/vlmeval/vlm/minicpm_v.py"]},
+    {"name": "文档层", "responsibility": "各版本模型说明、API 与最佳实践文档", "modules": ["docs"], "files": ["docs/api.md", "docs/minicpm_v4dot5_en.md"]}
+  ],
+  "data_flow": [
+    "第1步：用户输入图像与问题，chat.py 的 MiniCPMVChat 按模型路径分发到对应版本封装",
+    "第2步：高分辨率图像经 slice_image 按长宽比和 max_slice_nums 决定切图网格，得到主图与多片子图",
+    "第3步：build_transform 对图像做 resize 与归一化，得到像素张量",
+    "第4步：视觉塔 EVA02 前向提取 patch 特征，取倒数第二层输出",
+    "第5步：Resampler 用固定数量 query 做交叉注意力，把视觉特征压成固定长度视觉 token",
+    "第6步：wrap_question_for_omni_lmm 把问题中的 image 占位符展开为 im_start + N 个 im_patch + im_end",
+    "第7步：OmniLMMModel.forward 用视觉 token 替换文本嵌入中占位符位置的嵌入",
+    "第8步：语言模型对拼接后的 inputs_embeds 做自回归生成",
+    "第9步：tokenizer 解码生成序列，返回文本回答"
+  ],
+  "entry_points": [
+    {"path": "chat.py", "what": "命令行推理入口，含 MiniCPMVChat 分发与 OmniLMM12B 封装"},
+    {"path": "finetune/finetune.py", "what": "微调入口，解析 ModelArguments/TrainingArguments 并启动训练"},
+    {"path": "web_demos/web_demo_2.6.py", "what": "Gradio Web 演示，加载 MiniCPM-V-2_6 并支持视频帧抽取"},
+    {"path": "web_demos/minicpm-o_2.6/model_server.py", "what": "MiniCPM-o 实时多模态服务端，含 VAD 与流式推理"},
+    {"path": "omnilmm/model/omnilmm.py:OmniLMMForCausalLM.generate_vllm", "what": "把图像编码为嵌入后调用 generate 的推理函数"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立认知：系列模型谱系、端侧部署方式与 max_slice_nums 等关键参数说明"},
+    {"path": "omnilmm/model/omnilmm.py", "why": "核心实现：视觉塔与语言模型的拼接、嵌入替换与 generate_vllm"},
+    {"path": "omnilmm/model/resampler.py", "why": "视觉到语言的关键连接件，理解固定长度视觉 token 的来源"},
+    {"path": "finetune/dataset.py", "why": "切图与占位符生成逻辑所在，理解高分辨率如何被拆成多片"},
+    {"path": "omnilmm/train/train_utils.py", "why": "对话如何转成 input_ids 与 labels，理解训练目标掩码"},
+    {"path": "chat.py", "why": "推理入口与多版本分发，看清各代模型加载方式差异"},
+    {"path": "finetune/finetune.py", "why": "微调参数体系与 tune_vision/tune_llm/use_lora 开关"},
+    {"path": "docs/api.md", "why": "最新模型的实际使用方式已转为 OpenAI 兼容 API"}
+  ],
+  "extension_points": [
+    "替换视觉编码器：改 omnilmm/model/omnilmm.py 的 create_vision_module，替换 timm.create_model 的视觉塔并调整 Resampler 的 kv_dim",
+    "更换语言模型底座：改 OmniLMMConfig 与 OmniLMMModel 继承的基类，从 MistralConfig/MistralModel 换成目标 LLM",
+    "调整视觉 token 数量：改 config.num_query，Resampler 会用 grid_size=sqrt(num_query) 重设 query 数",
+    "新增切图策略：在 finetune/dataset.py 的 slice_image 中改写网格选择逻辑",
+    "新增对话模板：在 omnilmm/train/train_utils.py 的 omni_preprocess 里修改 response_template 与 system_content",
+    "接入新版本模型：本仓库对 2.6/4.x 走 AutoModel.from_pretrained(trust_remote_code=True)，扩展需在对应 HuggingFace 仓库远程代码中进行"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，分清 MiniCPM-V 与 MiniCPM-o 两个系列及各代模型关系",
+    "第2步：读 omnilmm/model/omnilmm.py，掌握视觉塔加 Resampler 加 LLM 的三段式结构与嵌入替换",
+    "第3步：读 omnilmm/model/resampler.py，理解视觉特征如何被压成固定长度 token",
+    "第4步：读 finetune/dataset.py 的 slice_image 与 get_grid_placeholder，理解高分辨率切图机制",
+    "第5步：读 omnilmm/train/train_utils.py 的 omni_preprocess，理解训练样本构造与 label 掩码",
+    "第6步：读 chat.py，看多版本模型如何被分发与加载，再对照 docs/api.md 了解当前推荐用法"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户输入图像与问题] --> B[slice_image 高分辨率切图]\n  B --> C[build_transform 图像预处理]\n  C --> D[EVA02 视觉塔提取特征]\n  D --> E[Resampler 压缩为固定视觉 token]\n  E --> F[替换文本嵌入中的图像占位符]\n  F --> G[Mistral 语言模型自回归生成]\n  G --> H[Tokenizer 解码输出回答]",
+  "surprises": [
+    "README 已更新到 MiniCPM-V 4.6 与 MiniCPM-o 4.5，但仓库内真正可运行的实现仍是更早的 OmniLMM 架构 EVA02 加 Resampler 加 Mistral，新版本架构并不在本仓库",
+    "2.6 及之后的模型通过 AutoModel.from_pretrained(trust_remote_code=True) 从 HuggingFace 拉取远程代码执行，本地只保留加载与演示代码，容易误以为仓库内就是完整模型实现",
+    "切图逻辑藏在 finetune/dataset.py 而非模型包内，推理侧的高分辨率细节保留依赖 max_slice_nums 参数而非模型结构",
+    "create_vision_module 用 Identity 替换视觉塔最后一层与 attn_pool，实际取倒数第二层特征，且 initialize_vision_modules 写死了训练机绝对权重路径，直接运行会失败",
+    "chat.py 的 MiniCPMVChat 靠模型路径字符串匹配来分发版本，路径命名稍有出入就会落到默认分支用错封装"
+  ],
+  "confidence": "高"
+}

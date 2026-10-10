@@ -1,0 +1,93 @@
+{
+  "repo": "openvla/openvla",
+  "name": "OpenVLA",
+  "one_liner": "首个开源 7B 视觉-语言-动作模型，把机器人动作当 token 生成",
+  "problem": "通用机器人操作缺少开源的大规模 VLA 模型与可复现训练栈。OpenVLA 用 Prismatic VLM 骨干、把连续动作离散成词表 token 做自回归生成，支持从 Open-X 数据预训练并用 LoRA 低成本微调到新任务与新本体。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "ActionTokenizer", "role": "把连续动作按 256 个均匀分箱离散化并映射到词表末尾的 token，同时提供 token 反解为连续动作的接口", "file": "prismatic/vla/action_tokenizer.py"},
+    {"name": "OpenVLA", "role": "训练/加载态的 VLA 模型，继承 PrismaticVLM，封装 predict_action 推理与动作反归一化统计", "file": "prismatic/models/vlas/openvla.py"},
+    {"name": "OpenVLAForActionPrediction", "role": "HuggingFace 风格的独立 VLA 类，predict_action 直接 generate 动作 token 再反归一化，供推理与 LoRA 微调使用", "file": "prismatic/extern/hf/modeling_prismatic.py"},
+    {"name": "PrismaticForConditionalGeneration", "role": "HF 版多模态主干，forward 里拼接视觉 patch embedding 与文本 embedding，是 OpenVLAForActionPrediction 的父类", "file": "prismatic/extern/hf/modeling_prismatic.py"},
+    {"name": "PrismaticVLM", "role": "训练栈里的 VLM 主干抽象，持有 vision_backbone、projector、llm_backbone，提供 freeze_backbones 与 prompt builder", "file": "prismatic/models/vlms/prismatic.py"},
+    {"name": "RLDSDataset", "role": "把 RLDS/TFDS 数据集包装成 PyTorch IterableDataset，按 data_mix 混合多数据集并计算动作归一化统计", "file": "prismatic/vla/datasets/datasets.py"},
+    {"name": "RLDSBatchTransform", "role": "把单条 RLDS 样本转成对话式 prompt，用 ActionTokenizer 把动作写成标签 token，并只在动作位置保留 loss", "file": "prismatic/vla/datasets/datasets.py"},
+    {"name": "VLAConfig", "role": "draccus ChoiceRegistry 配置基类，声明 base_vlm、数据混合、冻结策略与优化超参，各实验为其子类", "file": "prismatic/conf/vla.py"},
+    {"name": "PaddedCollatorForActionPrediction", "role": "把变长输入右侧 padding 成 batch，并构造只对动作 token 计损的 labels", "file": "prismatic/util/data_utils.py"},
+    {"name": "BaseTrainStrategy", "role": "训练策略抽象基类，规定 run_setup 与 run_vla_training 接口，FSDP 与 DDP 实现据此落地分布式训练", "file": "prismatic/training/strategies/base_strategy.py"},
+    {"name": "MODEL_REGISTRY", "role": "预训练 VLM 的全局注册表，把模型 ID 映射到骨干、视觉表征与 LLM 描述，是 load 的依据", "file": "prismatic/models/registry.py"}
+  ],
+  "layers": [
+    {"name": "配置层", "responsibility": "用 draccus dataclass 声明式定义 VLM 与 VLA 的模型、数据混合与优化超参，并注册可选实验", "modules": ["prismatic/conf"], "files": ["prismatic/conf/vla.py", "prismatic/conf/models.py", "prismatic/conf/datasets.py"]},
+    {"name": "模型层", "responsibility": "实现视觉/LLM 骨干、融合视觉主干、Prismatic VLM 与 OpenVLA 包装，以及模型注册与加载", "modules": ["prismatic/models", "prismatic/models/backbones", "prismatic/models/vlms", "prismatic/models/vlas"], "files": ["prismatic/models/registry.py", "prismatic/models/load.py", "prismatic/models/materialize.py", "prismatic/models/vlms/prismatic.py", "prismatic/models/vlas/openvla.py"]},
+    {"name": "HF 适配层", "responsibility": "提供与 transformers AutoClasses 兼容的 Config/Model/Processor，是推理与 LoRA 微调的实际运行模型", "modules": ["prismatic/extern/hf"], "files": ["prismatic/extern/hf/configuration_prismatic.py", "prismatic/extern/hf/modeling_prismatic.py", "prismatic/extern/hf/processing_prismatic.py"]},
+    {"name": "动作离散层", "responsibility": "把连续机器人动作离散成词表 token 并支持反解，是 VLA 的核心桥接逻辑", "modules": ["prismatic/vla"], "files": ["prismatic/vla/action_tokenizer.py", "prismatic/vla/materialize.py"]},
+    {"name": "数据层", "responsibility": "把 Open-X 的 RLDS 数据混合、变换、归一化并包装成可迭代数据集与 collator", "modules": ["prismatic/vla/datasets", "prismatic/vla/datasets/rlds"], "files": ["prismatic/vla/datasets/datasets.py", "prismatic/vla/datasets/rlds/dataset.py", "prismatic/vla/datasets/rlds/oxe/mixtures.py", "prismatic/vla/datasets/rlds/oxe/transforms.py", "prismatic/vla/datasets/rlds/oxe/configs.py"]},
+    {"name": "训练策略层", "responsibility": "封装 FSDP/DDP 分布式训练、混合精度、优化器与学习率调度，执行 VLA 训练循环", "modules": ["prismatic/training", "prismatic/training/strategies"], "files": ["prismatic/training/strategies/base_strategy.py", "prismatic/training/strategies/fsdp.py", "prismatic/training/metrics.py"]},
+    {"name": "工具层", "responsibility": "提供批处理、数据整理、张量与分布式小工具，供训练与推理共用", "modules": ["prismatic/util"], "files": ["prismatic/util/data_utils.py", "prismatic/util/batching_utils.py", "prismatic/util/torch_utils.py"]},
+    {"name": "入口脚本层", "responsibility": "提供从零训练、LoRA 微调、REST 部署与权重格式转换的命令行入口", "modules": ["vla-scripts"], "files": ["vla-scripts/train.py", "vla-scripts/finetune.py", "vla-scripts/deploy.py", "vla-scripts/extern/convert_openvla_weights_to_hf.py"]},
+    {"name": "评测层", "responsibility": "在 LIBERO 仿真与 BridgeData V2 真机上 rollout OpenVLA 策略并统计成功率", "modules": ["experiments/robot"], "files": ["experiments/robot/libero/run_libero_eval.py", "experiments/robot/bridge/run_bridgev2_eval.py", "experiments/robot/openvla_utils.py"]}
+  ],
+  "data_flow": [
+    "第1步：运行 vla-scripts/train.py，draccus 解析 TrainConfig，--vla.type 从 VLARegistry 选出对应 VLAConfig",
+    "第2步：按 cfg.vla.base_vlm 用 load 从 MODEL_REGISTRY 构造 Prismatic VLM，含视觉骨干、projector 与 LLM",
+    "第3步：按 freeze_vision_backbone/freeze_llm_backbone 组合判定训练阶段，调用 vlm.freeze_backbones 冻结参数",
+    "第4步：get_vla_dataset_and_collator 构建 RLDSDataset，按 data_mix 从 OXE_NAMED_MIXTURES 取数据集混合与权重",
+    "第5步：RLDSBatchTransform 把图像、语言指令、动作转成对话 prompt，并用 ActionTokenizer 把动作写成标签 token",
+    "第6步：PaddedCollatorForActionPrediction 把样本 padding 成 batch，并把非动作位置 label 置为 IGNORE_INDEX",
+    "第7步：get_train_strategy 创建 FSDP 策略，run_vla_training 进入训练循环，autocast bf16 前向",
+    "第8步：forward 中 vision_backbone 提特征、projector 投影后拼接到文本 embedding，LLM 只在动作 token 上计算交叉熵",
+    "第9步：反向传播更新权重，按 save_interval 保存 checkpoint，并保存 dataset_statistics.json 供推理反归一化",
+    "第10步：推理时 processor 处理图像与 prompt，OpenVLAForActionPrediction.predict_action 调 generate 得到动作 token",
+    "第11步：把生成的 token 反离散化成连续动作，再用 q01/q99 统计反归一化，得到末端执行器增量动作",
+    "第12步：LoRA 路径下 finetune.py 用 PEFT 包裹模型，保存时 merge_and_unload 合并权重；deploy.py 用 FastAPI 暴露 /act"
+  ],
+  "entry_points": [
+    {"path": "vla-scripts/train.py", "what": "从零训练或全量微调 VLA 的主入口，用 FSDP 分布式训练并记录指标"},
+    {"path": "vla-scripts/finetune.py", "what": "LoRA 微调入口，用 HuggingFace PEFT 在单卡或多卡上微调并合并权重"},
+    {"path": "vla-scripts/deploy.py", "what": "用 FastAPI 把 OpenVLA 部署成 REST 服务，暴露 /act 接口返回动作"},
+    {"path": "vla-scripts/extern/convert_openvla_weights_to_hf.py", "what": "把 Prismatic 格式 checkpoint 转换成 HuggingFace AutoClasses 可加载的格式"},
+    {"path": "vla-scripts/extern/verify_openvla.py", "what": "验证模型在示例输入上的推理是否正常"},
+    {"path": "experiments/robot/libero/run_libero_eval.py", "what": "在 LIBERO 仿真基准上跑 OpenVLA 评测并统计成功率"},
+    {"path": "experiments/robot/bridge/run_bridgev2_eval.py", "what": "在 BridgeData V2 WidowX 真机环境上跑策略评测"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：模型、数据混合、LoRA 与全量微调、评测流程"},
+    {"path": "prismatic/vla/action_tokenizer.py", "why": "理解 VLA 精髓：连续动作如何离散成词表 token 又如何反解"},
+    {"path": "prismatic/models/vlas/openvla.py", "why": "训练态 predict_action 全流程：构造 prompt、generate、反离散化、反归一化"},
+    {"path": "prismatic/extern/hf/modeling_prismatic.py", "why": "推理与微调实际使用的模型，forward 的视觉-文本拼接与 OpenVLAForActionPrediction"},
+    {"path": "vla-scripts/finetune.py", "why": "LoRA 微调完整流程，含 PEFT 配置、数据集构建、训练循环与权重合并"},
+    {"path": "prismatic/conf/vla.py", "why": "理解参数体系：VLAConfig 字段含义与 VLARegistry 如何注册实验"},
+    {"path": "vla-scripts/train.py", "why": "从零训练入口，看清加载模型、构建数据、创建训练策略的编排"},
+    {"path": "prismatic/vla/datasets/datasets.py", "why": "数据如何从 RLDS 变成 (image, prompt, action token labels) 的训练样本"},
+    {"path": "prismatic/vla/datasets/rlds/oxe/mixtures.py", "why": "数据集混合与采样权重的定义处，是接入自定义数据的关键"}
+  ],
+  "extension_points": [
+    "想加新数据集：在 prismatic/vla/datasets/rlds/oxe/configs.py 加 OXE_DATASET_CONFIGS，在 transforms.py 加 OXE_STANDARDIZATION_TRANSFORMS，在 mixtures.py 加混合权重",
+    "想加新训练配置：在 prismatic/conf/vla.py 继承 VLAConfig 定义新 dataclass，并在文件底部 VLARegistry 枚举中登记",
+    "想换视觉或语言骨干：在 prismatic/models/backbones/vision 或 llm 下新增实现，并在 conf/models.py 与 materialize.py 注册",
+    "想改动作离散粒度：直接调 prismatic/vla/action_tokenizer.py 中 ActionTokenizer 的 bins/min_action/max_action",
+    "想加新机器人评测：在 experiments/robot 下仿 run_libero_eval.py 或 run_bridgev2_eval.py 新增评测脚本",
+    "想换训练策略：在 prismatic/training/strategies 下继承 BaseTrainStrategy 实现新策略，并在 training/materialize.py 注册",
+    "想换动作生成范式：参考官方 OFT 与 FAST tokenizer 思路，替换 predict_action 中的 token 生成与解码部分"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，跑通 HF AutoClasses 的最小推理示例，建立 VLA 直觉",
+    "第2步：读 prismatic/vla/action_tokenizer.py，搞清动作离散与反解的数学细节",
+    "第3步：读 prismatic/models/vlas/openvla.py 的 predict_action，理解推理时 prompt 构造与反归一化",
+    "第4步：读 prismatic/extern/hf/modeling_prismatic.py 的 forward 与 OpenVLAForActionPrediction，理解视觉-文本如何拼接",
+    "第5步：读 vla-scripts/finetune.py，理解 LoRA 微调与训练循环，再对照 prismatic/conf/vla.py 的参数体系",
+    "第6步：读 vla-scripts/train.py 与 prismatic/training/strategies/fsdp.py，理解全量训练的分布式编排",
+    "第7步：读 prismatic/vla/datasets/datasets.py 与 rlds/oxe/mixtures.py，理解数据混合与自定义数据接入"
+  ],
+  "diagram_mermaid": "graph TD\n  CFG[VLAConfig 配置] --> LOAD[load 加载 Prismatic VLM]\n  LOAD --> FREEZE[freeze_backbones 冻结策略]\n  MIX[OXE 数据集混合] --> RLDS[RLDSDataset 数据管道]\n  RLDS --> BT[RLDSBatchTransform 转 prompt 与动作 token]\n  AT[ActionTokenizer 动作离散化] --> BT\n  BT --> COLL[PaddedCollator 组 batch]\n  COLL --> STRAT[FSDP 训练策略]\n  FREEZE --> STRAT\n  STRAT --> FWD[forward 视觉文本拼接]\n  FWD --> LOSS[动作 token 交叉熵损失]\n  LOSS --> CKPT[保存 checkpoint 与归一化统计]\n  IMG[推理图像与指令] --> PRED[predict_action 生成动作 token]\n  CKPT --> PRED\n  PRED --> DEC[反离散化与反归一化]\n  DEC --> ACT[输出连续动作]",
+  "surprises": [
+    "动作不是用回归头输出，而是占用词表最后 256 个 token 当作文本生成，训练时只在动作 token 位置计算损失",
+    "仓库里存在两套几乎平行的模型实现：prismatic/models/vlas/openvla.py 的 OpenVLA 与 prismatic/extern/hf/modeling_prismatic.py 的 OpenVLAForActionPrediction，逻辑重复需对照读",
+    "推理时必须手动在 prompt 末尾补一个空 token 29871，否则与训练时的输入不一致导致性能下降",
+    "反归一化依赖训练时保存的 dataset_statistics.json 里的 q01/q99 分位数，且多数据集模型必须显式传 unnorm_key",
+    "生成只支持 batch size 为 1，代码里对 batch 大于 1 的 generate 直接抛错，无法简单批量推理",
+    "checkpoint 保存时 LoRA 权重会先存 adapter 再 merge 回完整模型，中间产物容易让人误以为模型没变"
+  ],
+  "confidence": "高"
+}

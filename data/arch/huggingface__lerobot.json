@@ -22,7 +22,7 @@
     {"name": "处理层", "responsibility": "观测/动作的归一化、重命名、相对动作、图像增强、设备搬运等可组合处理步骤", "modules": ["src/lerobot/processor"], "files": ["src/lerobot/processor/pipeline.py", "src/lerobot/processor/normalize_processor.py", "src/lerobot/processor/factory.py"]},
     {"name": "仿真环境层", "responsibility": "封装 LIBERO、MetaWorld、RoboCasa 等基准为统一向量化环境", "modules": ["src/lerobot/envs"], "files": ["src/lerobot/envs/factory.py", "src/lerobot/envs/libero.py", "src/lerobot/envs/metaworld.py"]},
     {"name": "训练与评估编排层", "responsibility": "入口脚本组装数据集、策略、优化器与分布式引擎，跑训练循环和 rollout 评估", "modules": ["src/lerobot/scripts"], "files": ["src/lerobot/scripts/lerobot_train.py", "src/lerobot/scripts/lerobot_eval.py", "src/lerobot/scripts/lerobot_record.py"]},
-    {"name": "分布式与加速层", "responsibility": "基于 accelerate 提供 DDP/FSDP2/混合精度/梯度累积等并行能力", "modules": ["src/lerobot/distributed", "src/lerobot/optim"], "files": ["src/lerobot/distributed/parallelism.py", "src/lerobot/optim/factory.py"]}
+    {"name": "分布式与加速层", "responsibility": "基于 accelerate 提供 DDP/FSDP2/混合精度/梯度累积等并行能力", "modules": ["src/lerobot/distributed", "src/lerobot/optim"], "files": ["src/lerobot/configs/parallelism.py", "src/lerobot/optim/factory.py"]}
   ],
   "data_flow": [
     "第1步：用户运行 lerobot-train，draccus 解析 CLI 得到 TrainPipelineConfig",

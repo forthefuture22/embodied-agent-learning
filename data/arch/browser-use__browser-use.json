@@ -1,0 +1,90 @@
+{
+  "repo": "browser-use/browser-use",
+  "name": "browser-use",
+  "one_liner": "让 LLM 像人一样操作真实浏览器的开源 Agent 框架",
+  "problem": "解决「把网页变成 LLM 可理解、可操作的接口」这一核心难题：把动态 DOM 压缩成带整数索引的可交互元素列表喂给 LLM，再把 LLM 输出的结构化动作翻译成 CDP 浏览器操作，形成感知-决策-执行的闭环。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Agent", "role": "智能体主循环与编排中心：组装 LLM、工具、浏览器会话，按 step 驱动 感知-决策-执行-后处理 循环", "file": "browser_use/agent/service.py"},
+    {"name": "Tools", "role": "动作空间容器：内置 click/type/navigate/search 等浏览器动作，支持 @action 装饰器注册自定义工具", "file": "browser_use/tools/service.py"},
+    {"name": "Registry", "role": "动作注册表与执行器：把函数签名转成 Pydantic 参数模型，动态生成 LLM tool schema，负责参数校验与特殊参数注入", "file": "browser_use/tools/registry/service.py"},
+    {"name": "BrowserSession", "role": "浏览器会话控制层：封装 CDP 客户端、标签页、watchdog 生命周期，对外提供 get_browser_state_summary 与事件总线", "file": "browser_use/browser/session.py"},
+    {"name": "DomService", "role": "DOM 感知服务：通过 CDP 拉取 DOMSnapshot、DOM 树与可访问性树，构建带可见性/坐标信息的 EnhancedDOMTreeNode", "file": "browser_use/dom/service.py"},
+    {"name": "DOMTreeSerializer", "role": "DOM 到 LLM 表示的翻译器：精简树、按 paint order 与包围盒过滤，为可交互元素分配整数索引并序列化成紧凑文本", "file": "browser_use/dom/serializer/serializer.py"},
+    {"name": "BaseWatchdog", "role": "事件驱动浏览器行为的基类：子类监听特定事件并执行 CDP 操作，实现动作与浏览器控制的解耦", "file": "browser_use/browser/watchdog_base.py"},
+    {"name": "BaseEvent / EventBus", "role": "类型化事件与事件总线：NavigateToUrlEvent、ClickElementEvent 等把动作意图异步派发给对应 watchdog", "file": "browser_use/browser/events.py"},
+    {"name": "BaseChatModel", "role": "LLM 抽象协议：统一 ainvoke 接口，支持按 output_format 返回结构化 Pydantic 结果，屏蔽各家模型差异", "file": "browser_use/llm/base.py"},
+    {"name": "MessageManager", "role": "上下文管理器：把浏览器状态、历史动作、可用动作描述与敏感信息拼装成 LLM 消息序列，含消息压缩", "file": "browser_use/agent/message_manager/service.py"},
+    {"name": "AgentOutput / ActionResult", "role": "核心数据模型：AgentOutput 是 LLM 单步输出（思考+动作列表），ActionResult 是动作执行结果（内容/错误/是否完成）", "file": "browser_use/agent/views.py"}
+  ],
+  "layers": [
+    {"name": "Agent 编排层", "responsibility": "主循环、上下文准备、LLM 调用、动作执行、错误处理与循环检测", "modules": ["browser_use/agent"], "files": ["browser_use/agent/service.py", "browser_use/agent/views.py", "browser_use/agent/prompts.py"]},
+    {"name": "工具与动作层", "responsibility": "定义并注册浏览器动作空间，动态生成 LLM 工具 schema，执行并返回 ActionResult", "modules": ["browser_use/tools"], "files": ["browser_use/tools/service.py", "browser_use/tools/registry/service.py", "browser_use/tools/registry/views.py", "browser_use/tools/views.py"]},
+    {"name": "DOM 表示层", "responsibility": "从浏览器抽取 DOM/AX 树并构建增强节点，再序列化成 LLM 可读的带索引文本表示", "modules": ["browser_use/dom"], "files": ["browser_use/dom/service.py", "browser_use/dom/serializer/serializer.py", "browser_use/dom/views.py"]},
+    {"name": "浏览器控制层", "responsibility": "CDP 会话管理、标签页与事件总线、各类 watchdog 实现具体浏览器行为", "modules": ["browser_use/browser"], "files": ["browser_use/browser/session.py", "browser_use/browser/events.py", "browser_use/browser/watchdog_base.py", "browser_use/browser/watchdogs/dom_watchdog.py", "browser_use/browser/watchdogs/default_action_watchdog.py"]},
+    {"name": "LLM 抽象层", "responsibility": "统一各家大模型调用接口与消息格式，支持结构化输出", "modules": ["browser_use/llm"], "files": ["browser_use/llm/base.py", "browser_use/llm/messages.py", "browser_use/llm/openai/chat.py"]},
+    {"name": "消息与上下文层", "responsibility": "历史描述、状态消息拼装、敏感数据过滤与消息压缩", "modules": ["browser_use/agent/message_manager"], "files": ["browser_use/agent/message_manager/service.py", "browser_use/agent/message_manager/views.py"]},
+    {"name": "集成与协议层", "responsibility": "把 Agent 能力以 MCP 服务、Claude 工具集、技能包等形式对外暴露", "modules": ["browser_use/mcp", "browser_use/integrations", "browser_use/skills"], "files": ["browser_use/mcp/server.py", "browser_use/mcp/client.py", "browser_use/skills/service.py"]},
+    {"name": "辅助能力层", "responsibility": "文件系统、截图服务、沙箱执行等横切支撑能力", "modules": ["browser_use/filesystem", "browser_use/screenshots", "browser_use/sandbox"], "files": ["browser_use/filesystem/file_system.py", "browser_use/screenshots/service.py", "browser_use/sandbox/sandbox.py"]}
+  ],
+  "data_flow": [
+    "第1步：调用 Agent.run()，注册信号处理器并调用 browser_session.start() 启动浏览器、挂载所有 watchdog 到事件总线",
+    "第2步：进入 step()，Phase1 调用 _prepare_context()，进而调用 browser_session.get_browser_state_summary() 请求最新 DOM 与截图",
+    "第3步：BrowserSession 通过 event_bus 派发 BrowserStateRequestEvent，由 DOM watchdog 订阅并处理",
+    "第4步：DomService.get_dom_tree() 通过 CDP 拉取 DOMSnapshot、DOM 树与可访问性树，构建 EnhancedDOMTreeNode 并计算可见性",
+    "第5步：DOMTreeSerializer.serialize_accessible_elements() 精简树、过滤不可见与越界元素，为可交互元素分配整数索引，产出 SerializedDOMState",
+    "第6步：MessageManager.create_state_messages() 把浏览器状态文本、历史、可用动作描述与截图拼装为 LLM 消息序列",
+    "第7步：_get_next_action() 调用 llm.ainvoke(messages, output_format=AgentOutput)，得到带思考与动作列表的结构化输出",
+    "第8步：_execute_actions() 调用 multi_act()，逐个把动作交给 tools.act() 执行，并做页面变更守卫",
+    "第9步：Registry.execute_action() 校验参数、替换敏感数据占位符、注入 browser_session 等特殊参数后调用动作函数",
+    "第10步：动作函数通过 event_bus 派发如 NavigateToUrlEvent / ClickElementEvent，由对应 watchdog 执行真实 CDP 操作并返回 ActionResult",
+    "第11步：_post_process() 记录结果、更新循环检测器、判断是否 done，并把本步写入 history",
+    "第12步：循环直至 done 或达到 max_steps，run() 返回 AgentHistoryList，final_result() 给出最终答案"
+  ],
+  "entry_points": [
+    {"path": "browser_use/agent/service.py:run", "what": "Agent 主入口，驱动多步循环直到任务完成，返回 AgentHistoryList"},
+    {"path": "browser_use/agent/service.py:step", "what": "单步执行入口，串联上下文准备、LLM 调用、动作执行与后处理"},
+    {"path": "browser_use/cli.py", "what": "browser-use / bu 命令行入口，交互式运行 Agent"},
+    {"path": "browser_use/mcp/server.py", "what": "把浏览器操作封装为 MCP 服务端，供外部 Agent 调用"},
+    {"path": "browser_use/tools/service.py:Tools", "what": "构造动作空间与内置浏览器动作的入口"},
+    {"path": "examples/simple.py", "what": "最小可运行示例，展示 Agent(task=..., llm=...) 用法"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：三种使用形态 云托管/CLI/Python 库 与核心卖点"},
+    {"path": "browser_use/agent/service.py", "why": "Agent 主循环与 step/run/multi_act 全在这里，是理解系统骨架的第一站"},
+    {"path": "browser_use/agent/views.py", "why": "AgentOutput 与 ActionResult 数据模型，定义了 LLM 输入输出的契约"},
+    {"path": "browser_use/tools/service.py", "why": "内置动作与 @action 注册方式，理解动作空间如何定义"},
+    {"path": "browser_use/tools/registry/service.py", "why": "动作注册与执行核心：签名转 Pydantic、动态生成 tool schema、特殊参数注入"},
+    {"path": "browser_use/dom/service.py", "why": "DOM 感知入口，理解 CDP 如何拉取并增强 DOM/AX 树"},
+    {"path": "browser_use/dom/serializer/serializer.py", "why": "DOM 如何变成 LLM 可读的带索引文本，是最具巧思的一环"},
+    {"path": "browser_use/browser/session.py", "why": "浏览器会话与事件总线入口，理解控制层与状态获取"},
+    {"path": "browser_use/browser/watchdog_base.py", "why": "事件驱动行为的基类，理解动作如何解耦为异步 watchdog"},
+    {"path": "browser_use/agent/message_manager/service.py", "why": "上下文如何拼装与压缩，决定 LLM 看到什么"}
+  ],
+  "extension_points": [
+    "加一个新工具/动作：用 @tools.action(description=...) 装饰函数，参数类型自动转成 LLM schema，参考 browser_use/tools/service.py 内置动作",
+    "自定义动作参数模型：给 @action 传 param_model=某个 BaseModel，参考 browser_use/tools/registry/views.py 的 ActionModel",
+    "新增浏览器行为：继承 BaseWatchdog 并实现 attach 的监听逻辑，参考 browser_use/browser/watchdogs/dom_watchdog.py",
+    "接入新的大模型：实现 BaseChatModel 协议 的 ainvoke 与 provider/name 属性，参考 browser_use/llm/base.py",
+    "自定义系统提示：继承或替换 SystemPrompt，用 Agent(override_system_message=...) 或 extend_system_message",
+    "结构化输出：给 Agent 传 output_model，done 动作会按该 schema 返回结构化结果"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，分清 云托管/CLI/Python 库 三种形态与 Agent 基本用法",
+    "第2步：读 agent/service.py 的 run() 与 step()，抓住 感知-决策-执行-后处理 四阶段主循环",
+    "第3步：读 agent/views.py 的 AgentOutput 与 ActionResult，理解单步输入输出契约",
+    "第4步：读 tools/service.py 与 tools/registry/service.py，搞清动作如何注册、schema 如何生成、如何执行",
+    "第5步：读 dom/service.py 与 dom/serializer/serializer.py，理解 DOM 如何变成带索引的 LLM 表示",
+    "第6步：读 browser/session.py、events.py 与 watchdog_base.py，理解事件总线与 watchdog 解耦的控制层",
+    "第7步：读 agent/message_manager/service.py，理解上下文如何拼装与压缩"
+  ],
+  "diagram_mermaid": "graph TD\n  T[任务 task] --> A[Agent.run 主循环]\n  A --> P[准备上下文 get_browser_state_summary]\n  P --> E[event_bus 派发 BrowserStateRequestEvent]\n  E --> W[DOM watchdog 处理]\n  W --> D[DomService 拉取 CDP DOM 与 AX 树]\n  D --> S[DOMTreeSerializer 分配整数索引并序列化]\n  S --> M[MessageManager 拼装消息]\n  M --> L[LLM.ainvoke 返回 AgentOutput]\n  L --> X[multi_act 执行动作]\n  X --> R[Registry 校验参数并调用动作函数]\n  R --> B[event_bus 派发 Click 或 Navigate 事件]\n  B --> C[watchdog 执行 CDP 操作]\n  C --> O[ActionResult 回填]\n  O --> A\n  A --> H[AgentHistoryList 最终结果]",
+  "surprises": [
+    "浏览器控制不是动作函数直接调 CDP，而是通过事件总线 + watchdog 异步解耦：动作只负责派发事件，真正操作浏览器的是一群订阅事件的 watchdog",
+    "动作空间用 Pydantic 的 create_model 在运行时动态生成，LLM 走 tool-calling 结构化输出强约束，而不是自由文本解析",
+    "LLM 用整数索引如 [12] 引用页面元素而非 CSS 选择器，索引每步重新分配，跨步引用旧索引会失效或点错元素",
+    "DOM 序列化会按 paint order 与包围盒裁剪隐藏/越界元素，因此 LLM 看到的元素集合与真实 DOM 并不一致",
+    "包内大量使用 __getattr__ 懒加载，因为 agent.views 等模块导入耗时超过 1 秒，直接导入会拖慢启动"
+  ],
+  "confidence": "高"
+}

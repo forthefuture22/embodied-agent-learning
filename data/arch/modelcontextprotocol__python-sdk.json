@@ -1,0 +1,93 @@
+{
+  "repo": "modelcontextprotocol/python-sdk",
+  "name": "MCP Python SDK",
+  "one_liner": "Model Context Protocol 的官方 Python 实现，构建 MCP 客户端与服务器",
+  "problem": "解决「LLM 应用如何以标准协议接入外部工具、数据与提示」的问题：把函数、资源和提示词用统一 JSON-RPC 协议暴露，屏蔽传输差异，让任意 MCP 主机都能即插即用地调用。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "MCPServer", "role": "高层服务端门面：用 @tool/@resource/@prompt 装饰器注册能力，管理工具/资源/提示管理器，提供 run 与各类 ASGI app", "file": "src/mcp/server/mcpserver/server.py"},
+    {"name": "Server", "role": "低层协议服务端：维护请求/通知处理器表，驱动双协议时代的会话循环，处理 initialize 与各 method 分发", "file": "src/mcp/server/lowlevel/server.py"},
+    {"name": "ServerSession", "role": "服务端会话：封装一次连接的协议交互，提供 send_request/send_notification 及 create_message、elicit、list_roots 等反向请求能力", "file": "src/mcp/server/session.py"},
+    {"name": "Client", "role": "高层客户端：以 URL 或传输为参构造，管理会话与缓存，暴露 call_tool、list_tools、read_resource 等便捷 API", "file": "src/mcp/client/client.py"},
+    {"name": "ClientSession", "role": "客户端会话：实现 initialize/discover 握手、send_request 与各能力方法，校验服务端结果是否匹配协商版本", "file": "src/mcp/client/session.py"},
+    {"name": "Dispatcher", "role": "双工请求/通知通道协议：负责出站请求与入站结果的关联、接收循环、并发与取消，是会话层的传输无关内核", "file": "src/mcp/shared/dispatcher.py"},
+    {"name": "Transport", "role": "传输抽象协议：以异步上下文管理器产出读写流，stdio/SSE/Streamable HTTP 三种实现统一接口", "file": "src/mcp/client/_transport.py"},
+    {"name": "ToolManager / Tool", "role": "工具注册与执行：把 Python 函数用类型注解转成带 JSON Schema 的 Tool，调用时用 Pydantic 校验参数并执行", "file": "src/mcp/server/mcpserver/tools/tool_manager.py"},
+    {"name": "Tool", "role": "工具模型：保存名称、描述、输入/输出 schema 与调用逻辑，from_function 负责从函数签名推断 schema", "file": "src/mcp/server/mcpserver/tools/base.py"},
+    {"name": "SessionMessage", "role": "传输层消息封装：把 JSON-RPC 消息与传输相关元数据打包，在读写流中流转", "file": "src/mcp/shared/message.py"},
+    {"name": "StreamableHTTPSessionManager", "role": "Streamable HTTP 会话管理器：为每个客户端会话维护传输实例、处理重连与事件存储", "file": "src/mcp/server/streamable_http_manager.py"},
+    {"name": "types 协议模型", "role": "协议数据模型集合：Tool、CallToolRequest/Result、InitializeRequest 等所有 JSON-RPC 请求响应类型与常量", "file": "src/mcp/types/__init__.py"}
+  ],
+  "layers": [
+    {"name": "协议类型层", "responsibility": "定义 MCP 全部请求/响应/通知的 Pydantic 模型、方法与协议版本常量", "modules": ["src/mcp/types"], "files": ["src/mcp/types/__init__.py", "src/mcp/types/methods.py", "src/mcp/types/jsonrpc.py"]},
+    {"name": "共享会话与分发层", "responsibility": "传输无关的会话内核：请求分发、消息封装、进度与取消、URI 模板与异常", "modules": ["src/mcp/shared"], "files": ["src/mcp/shared/dispatcher.py", "src/mcp/shared/message.py", "src/mcp/shared/context.py", "src/mcp/shared/exceptions.py", "src/mcp/shared/uri_template.py"]},
+    {"name": "客户端层", "responsibility": "高层 Client 与低层 ClientSession、会话组、缓存与各传输客户端", "modules": ["src/mcp/client"], "files": ["src/mcp/client/client.py", "src/mcp/client/session.py", "src/mcp/client/session_group.py", "src/mcp/client/_transport.py"]},
+    {"name": "服务端低层", "responsibility": "协议处理器注册与双协议时代会话循环，是与传输对接的核心", "modules": ["src/mcp/server/lowlevel"], "files": ["src/mcp/server/lowlevel/server.py", "src/mcp/server/session.py"]},
+    {"name": "服务端高层 MCPServer", "responsibility": "装饰器友好的门面：工具/资源/提示管理器、中间件、ASGI app 与 run 入口", "modules": ["src/mcp/server/mcpserver"], "files": ["src/mcp/server/mcpserver/server.py", "src/mcp/server/mcpserver/tools/tool_manager.py", "src/mcp/server/mcpserver/tools/base.py", "src/mcp/server/mcpserver/context.py"]},
+    {"name": "传输层", "responsibility": "stdio、SSE、Streamable HTTP 三套传输的客户端与服务端实现", "modules": ["src/mcp/client", "src/mcp/server"], "files": ["src/mcp/client/stdio.py", "src/mcp/client/sse.py", "src/mcp/client/streamable_http.py", "src/mcp/server/stdio.py", "src/mcp/server/sse.py", "src/mcp/server/streamable_http.py"]},
+    {"name": "认证与安全层", "responsibility": "OAuth 授权、令牌校验、DNS 重绑定防护与传输安全设置", "modules": ["src/mcp/server/auth", "src/mcp/client/auth"], "files": ["src/mcp/server/auth", "src/mcp/client/auth", "src/mcp/server/transport_security.py"]},
+    {"name": "CLI 工具层", "responsibility": "mcp dev/run/install 命令行，开发调试与安装到 Claude 等主机", "modules": ["src/mcp/cli"], "files": ["src/mcp/cli/cli.py", "src/mcp/cli/claude.py"]}
+  ],
+  "data_flow": [
+    "第1步：客户端构造 Client，传入 URL 或传输；URL 会被解析为 Streamable HTTP，本地命令则走 stdio 子进程",
+    "第2步：ClientSession 进入上下文，调用 initialize 与 server/discover 完成协议版本与能力协商，确定 negotiated_version",
+    "第3步：业务代码调用 client.call_tool(name, arguments)",
+    "第4步：ClientSession.send_request 把请求序列化为 JSON-RPC，打上协议版本等 _meta 与 Mcp-Name 头，交给 Dispatcher.send_raw_request",
+    "第5步：Dispatcher 分配请求 id、登记等待项，Transport 把消息写入底层通道，如 HTTP POST 到 /mcp",
+    "第6步：服务端 StreamableHTTPSessionManager 与 StreamableHTTPServerTransport 接收请求并解析为 SessionMessage",
+    "第7步：低层 Server 的接收循环按 method 查找请求处理器，把 tools/call 交给 MCPServer 的处理器",
+    "第8步：MCPServer._handle_call_tool 调用 ToolManager.call_tool，用 Pydantic 校验参数后执行用户注册的函数",
+    "第9步：返回值封装为 CallToolResult，经 ServerSession 的响应通道写回，再由 Transport 编码为 JSON-RPC 响应",
+    "第10步：HTTP 响应返回客户端，Dispatcher 接收循环按请求 id 匹配并唤醒等待中的 send_request",
+    "第11步：ClientSession 按协商版本校验结果字段，必要时丢弃新版本字段，返回类型化结果",
+    "第12步：Client.call_tool 做输出 schema 校验，返回含 structured_content 的结果给业务代码"
+  ],
+  "entry_points": [
+    {"path": "src/mcp/server/mcpserver/server.py:run", "what": "MCPServer.run 启动服务，按 transport 选择 stdio 或 streamable-http"},
+    {"path": "src/mcp/client/client.py:Client", "what": "高层客户端入口，异步上下文管理器，暴露 call_tool 等 API"},
+    {"path": "src/mcp/client/stdio.py:stdio_client", "what": "stdio 客户端传输，以子进程方式启动本地 MCP 服务"},
+    {"path": "src/mcp/server/stdio.py:stdio_server", "what": "stdio 服务端传输，通过标准输入输出收发 JSON-RPC"},
+    {"path": "src/mcp/cli/cli.py", "what": "mcp 命令行入口，提供 dev/run/install 子命令"},
+    {"path": "docs_src/index/tutorial001.py", "what": "官方最小示例，一个 tool 加一个模板资源"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立认知：server、client、三种传输三件事，以及 v2 的极简写法"},
+    {"path": "src/mcp/server/mcpserver/server.py", "why": "高层 MCPServer 与 @tool/@resource/@prompt 装饰器，最贴近使用者的入口"},
+    {"path": "src/mcp/server/mcpserver/tools/base.py", "why": "Tool.from_function 如何把函数签名变成 JSON Schema，理解工具契约的关键"},
+    {"path": "src/mcp/server/mcpserver/tools/tool_manager.py", "why": "工具注册、查找与调用流程，连接装饰器与执行"},
+    {"path": "src/mcp/server/lowlevel/server.py", "why": "低层协议服务端与双协议时代会话循环，看请求如何被分发"},
+    {"path": "src/mcp/server/session.py", "why": "服务端会话接口，理解服务端如何回写响应与发起反向请求"},
+    {"path": "src/mcp/client/client.py", "why": "高层客户端如何按 URL 选择传输并驱动会话"},
+    {"path": "src/mcp/client/session.py", "why": "客户端 send_request 与握手、结果校验逻辑集中地"},
+    {"path": "src/mcp/shared/dispatcher.py", "why": "Dispatcher 协议，理解请求-响应如何关联与并发"},
+    {"path": "src/mcp/client/stdio.py", "why": "最易调试的传输实现，理解 Transport 如何产出读写流"}
+  ],
+  "extension_points": [
+    "加一个新工具：用 @server.tool() 装饰函数或调用 server.add_tool(fn)，见 src/mcp/server/mcpserver/server.py",
+    "加一个新资源或资源模板：用 @server.resource(uri_template)，实现见 src/mcp/server/mcpserver/resources/",
+    "加一个新提示词：用 @server.prompt() 注册，见 src/mcp/server/mcpserver/prompts/",
+    "加一个新传输层：实现 Transport 协议 的异步上下文管理器产出读写流，参考 src/mcp/client/_transport.py 与 src/mcp/client/stdio.py",
+    "自定义会话/分发行为：实现 Dispatcher 协议，参考 src/mcp/shared/dispatcher.py",
+    "加服务端中间件：在 MCPServer 上挂 ServerMiddleware，见 src/mcp/server/mcpserver/server.py",
+    "自定义请求处理器：低层 Server.add_request_handler，见 src/mcp/server/lowlevel/server.py"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解 server、client、stdio/SSE/streamable-http 三件事",
+    "第2步：读 server/mcpserver/server.py 的 MCPServer 与 @tool/@resource 装饰器，跑通最小服务",
+    "第3步：读 server/mcpserver/tools/base.py 与 tool_manager.py，搞清函数如何变成 Tool 与 JSON Schema",
+    "第4步：读 server/session.py 与 lowlevel/server.py，理解请求如何被路由与响应如何回写",
+    "第5步：读 client/client.py 与 client/session.py，理解客户端握手与 send_request 流程",
+    "第6步：读 shared/dispatcher.py 与 shared/message.py，掌握请求-响应关联与消息封装",
+    "第7步：对比 client/stdio.py、client/sse.py、client/streamable_http.py 三种传输的差异"
+  ],
+  "diagram_mermaid": "graph TD\n  U[业务代码] --> C[Client 高层客户端]\n  C --> CS[ClientSession 会话]\n  CS --> D[Dispatcher 分发器]\n  D --> TC[Transport 传输层]\n  TC --> W[stdio 或 SSE 或 Streamable HTTP]\n  W --> SM[StreamableHTTPSessionManager 服务端]\n  SM --> LS[低层 Server 协议处理]\n  LS --> MS[MCPServer 高层门面]\n  MS --> TM[ToolManager 工具管理器]\n  TM --> F[用户注册的函数]\n  F --> RS[CallToolResult 结果]\n  RS --> LS\n  LS --> D\n  D --> C\n  C --> O[结构化结果返回业务]",
+  "surprises": [
+    "v2 把会话内核抽成 Dispatcher 协议：ClientSession 与 ServerSession 不再自己维护请求 id 与等待表，而是委托给 Dispatcher 实现",
+    "服务端是两层结构：装饰器友好的 MCPServer 只是门面，真正的协议解析与 method 分发在 lowlevel Server",
+    "工具 schema 完全由函数类型注解和 docstring 自动生成，使用者不需要写任何 JSON Schema 或参数校验代码",
+    "同一套会话同时服务 legacy handshake 与 modern per-request-envelope 两个协议时代，由 serve_dual_era_loop 按首个请求决定走哪条路",
+    "三种传输里 SSE 属于旧方案，Streamable HTTP 才是主推，且默认在 localhost 自动开启 DNS 重绑定防护",
+    "协议类型模型被拆到独立的 mcp-types 包，src/mcp/types 只是再导出垫片"
+  ],
+  "confidence": "高"
+}

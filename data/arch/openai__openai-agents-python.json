@@ -1,0 +1,87 @@
+{
+  "repo": "openai/openai-agents-python",
+  "name": "openai-agents-python",
+  "one_liner": "官方多智能体工作流 SDK，Agent 加 Runner 与 handoff",
+  "problem": "多 Agent 协作工作流需要统一的模型接入、工具调用、Agent 委派、会话记忆、输入输出护栏与运行追踪。本 SDK 用 Agent、Runner、Tool、handoff、Session 等抽象把这些做成开箱即用且模型无关的框架。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Agent", "role": "配置了 instructions、tools、handoffs、guardrails 的智能体定义，泛型于上下文类型", "file": "src/agents/agent.py"},
+    {"name": "AgentBase", "role": "Agent 与 RealtimeAgent 共享的基类，持有 tools/mcp_servers 与工具聚合逻辑", "file": "src/agents/agent.py"},
+    {"name": "Runner", "role": "运行门面，提供 run/run_sync/run_streamed 驱动 Agent 循环", "file": "src/agents/run.py"},
+    {"name": "FunctionTool", "role": "包装普通函数的工具类型，含 JSON schema、超时、审批与工具级护栏", "file": "src/agents/tool.py"},
+    {"name": "function_tool", "role": "把 Python 函数一键转成 FunctionTool 的装饰器", "file": "src/agents/tool.py"},
+    {"name": "Handoff", "role": "把任务委派给另一个 Agent 的描述对象，对模型暴露为 transfer_to_X 工具", "file": "src/agents/handoffs/__init__.py"},
+    {"name": "handoff", "role": "从目标 Agent 构造 Handoff 的辅助函数，支持输入过滤与条件启用", "file": "src/agents/handoffs/__init__.py"},
+    {"name": "Session", "role": "会话历史存储协议，定义 get_items/add_items/pop_item/clear_session", "file": "src/agents/memory/session.py"},
+    {"name": "RunResult", "role": "运行结果对象，含 final_output、new_items、护栏结果与用量", "file": "src/agents/result.py"},
+    {"name": "RunContextWrapper", "role": "贯穿一次运行的上下文包装，携带用户 context、用量与审批记录", "file": "src/agents/run_context.py"},
+    {"name": "Model", "role": "模型抽象基类，定义 get_response/get_streamed_response", "file": "src/agents/models/interface.py"},
+    {"name": "InputGuardrail", "role": "输入护栏抽象，运行前校验并可用 tripwire 中断运行", "file": "src/agents/guardrail.py"}
+  ],
+  "layers": [
+    {"name": "Agent 定义层", "responsibility": "定义 Agent 的字段、动态 instructions 与结构化输出模式", "modules": ["src/agents"], "files": ["src/agents/agent.py", "src/agents/agent_output.py"]},
+    {"name": "运行编排层", "responsibility": "驱动 turn 循环、handoff 切换、工具执行与运行状态恢复", "modules": ["src/agents/run_internal"], "files": ["src/agents/run.py", "src/agents/run_internal/run_loop.py", "src/agents/run_config.py", "src/agents/run_state.py"]},
+    {"name": "工具层", "responsibility": "函数工具、宿主工具、MCP 工具与工具级护栏/审批", "modules": ["src/agents"], "files": ["src/agents/tool.py", "src/agents/tool_context.py", "src/agents/tool_guardrails.py"]},
+    {"name": "委派层", "responsibility": "Agent 间 handoff 构造、历史过滤与嵌套历史", "modules": ["src/agents/handoffs"], "files": ["src/agents/handoffs/__init__.py", "src/agents/handoffs/history.py"]},
+    {"name": "模型接入层", "responsibility": "统一 Model 接口，适配 Responses/ChatCompletions 与多提供商", "modules": ["src/agents/models"], "files": ["src/agents/models/interface.py", "src/agents/models/openai_responses.py", "src/agents/models/openai_chatcompletions.py", "src/agents/models/multi_provider.py"]},
+    {"name": "记忆会话层", "responsibility": "会话历史持久化，含 SQLite 与 OpenAI Conversations 实现", "modules": ["src/agents/memory"], "files": ["src/agents/memory/session.py", "src/agents/memory/sqlite_session.py", "src/agents/memory/openai_conversations_session.py"]},
+    {"name": "护栏与生命周期层", "responsibility": "输入输出护栏、运行钩子与异常体系", "modules": ["src/agents"], "files": ["src/agents/guardrail.py", "src/agents/lifecycle.py", "src/agents/exceptions.py"]},
+    {"name": "可观测与结果层", "responsibility": "Tracing 追踪、结果对象、用量统计与流式事件", "modules": ["src/agents/tracing"], "files": ["src/agents/result.py", "src/agents/usage.py", "src/agents/stream_events.py", "src/agents/tracing/__init__.py"]},
+    {"name": "多模态与沙箱扩展层", "responsibility": "语音、实时与容器沙箱 Agent 的独立入口", "modules": ["src/agents/voice", "src/agents/realtime", "src/agents/sandbox"], "files": ["src/agents/voice/__init__.py", "src/agents/realtime/__init__.py", "src/agents/sandbox/__init__.py"]}
+  ],
+  "data_flow": [
+    "第1步：调用 Runner.run 传入 starting_agent 与 input 字符串或输入项列表",
+    "第2步：组装 RunContextWrapper 与 RunConfig，若有 Session 则读取历史 items",
+    "第3步：对首个 Agent 运行 input guardrail，触发 tripwire 则抛异常终止",
+    "第4步：把 instructions 与当前 Agent 的工具列表发给 model 请求响应",
+    "第5步：模型返回文本、tool calls 或 handoff 三类意图之一",
+    "第6步：若是 handoff，切换 current_agent 为被委派 Agent 并回到第4步",
+    "第7步：若是 tool calls，逐个执行工具并把结果作为 items 追加后回到第4步",
+    "第8步：若模型产出符合 output_type 的最终输出，则循环结束",
+    "第9步：运行 output guardrail 校验最终输出",
+    "第10步：把本轮 items 写回 Session，组装 RunResult 返回 final_output"
+  ],
+  "entry_points": [
+    {"path": "src/agents/run.py", "what": "Runner.run / run_sync / run_streamed，整个 SDK 的运行主入口"},
+    {"path": "src/agents/agent.py", "what": "Agent 与 AgentBase 定义，用户构建智能体的入口"},
+    {"path": "examples/basic/hello_world.py", "what": "最小可运行示例，演示 Agent 加 Runner"},
+    {"path": "examples/handoffs/message_filter.py", "what": "handoff 委派与历史过滤示例"},
+    {"path": "docs/index.md", "what": "文档总入口，串联核心概念"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读它了解核心概念清单与四种运行方式"},
+    {"path": "src/agents/agent.py", "why": "Agent/AgentBase 定义，理解智能体由哪些部件组成"},
+    {"path": "src/agents/run.py", "why": "Runner 与 AgentRunner，理解 turn 循环与 handoff 切换"},
+    {"path": "src/agents/tool.py", "why": "FunctionTool 与 function_tool，理解工具扩展点"},
+    {"path": "src/agents/handoffs/__init__.py", "why": "Handoff 对象与 handoff 工厂，理解委派即工具"},
+    {"path": "src/agents/memory/session.py", "why": "Session 协议，理解会话记忆如何自动注入"},
+    {"path": "src/agents/result.py", "why": "RunResult 结构，理解运行产物与流式结果"},
+    {"path": "src/agents/models/interface.py", "why": "Model 抽象，理解如何接入非 OpenAI 模型"}
+  ],
+  "extension_points": [
+    "加新工具：用 src/agents/tool.py 的 @function_tool 装饰函数，或直接构造 FunctionTool",
+    "接入新模型：继承 src/agents/models/interface.py 的 Model，或实现 ModelProvider",
+    "加护栏：用 src/agents/guardrail.py 的 @input_guardrail / @output_guardrail",
+    "自定义记忆：实现 src/agents/memory/session.py 的 Session 协议，参考 SQLiteSession",
+    "生命周期钩子：继承 src/agents/lifecycle.py 的 RunHooksBase / AgentHooksBase",
+    "自定义委派：使用 src/agents/handoffs/__init__.py 的 handoff() 或自定义 Handoff"
+  ],
+  "learning_path": [
+    "第1步读 README.md，记住 Agent/Runner/Tool/handoff/Session 五个概念",
+    "第2步跑 examples/basic/hello_world.py 建立最小闭环认知",
+    "第3步读 src/agents/agent.py 的 Agent 字段，理解智能体配置面",
+    "第4步读 src/agents/run.py 的 Runner.run 与文档字符串里的循环说明",
+    "第5步读 src/agents/tool.py 的 function_tool，掌握加工具方式",
+    "第6步读 src/agents/handoffs/__init__.py，理解委派如何变成工具调用",
+    "第7步读 src/agents/memory/session.py，理解会话记忆接入"
+  ],
+  "diagram_mermaid": "graph TD\n  A[Runner.run 启动] --> B[组装 RunContext 与 RunConfig]\n  B --> C[读取 Session 历史]\n  C --> D[输入护栏校验]\n  D --> E[请求模型生成响应]\n  E --> F{响应类型}\n  F -->|handoff| G[切换当前 Agent]\n  G --> E\n  F -->|tool calls| H[执行工具]\n  H --> I[结果追加到 items]\n  I --> E\n  F -->|最终输出| J[输出护栏校验]\n  J --> K[写回 Session]\n  K --> L[返回 RunResult]",
+  "surprises": [
+    "handoff 本质是一个对模型暴露的 transfer_to_X 工具，模型通过调用这个工具来完成 Agent 切换",
+    "Runner 只是 classmethod 门面，真正的循环逻辑下沉在 src/agents/run_internal/run_loop.py 中",
+    "Session 在公开层面是 Protocol 而非基类，第三方只要实现四个异步方法即可替换记忆后端",
+    "代码规模远超轻量框架的直觉：run.py、run_state.py、tool.py 都是十万字符级文件，抽象背后有大量边界处理",
+    "一轮 turn 等于一次 AI 调用加上其触发的所有工具调用，max_turns 限制的是 turn 而不是单次工具调用"
+  ],
+  "confidence": "高"
+}

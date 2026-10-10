@@ -1,0 +1,87 @@
+{
+  "repo": "stanfordnlp/dspy",
+  "name": "dspy",
+  "one_liner": "把 Prompt 变成可编译优化程序的声明式 Python 框架",
+  "problem": "手写 Prompt 脆弱、难迁移、难以系统改进。DSPy 让人用 Signature 声明输入输出、用 Module 组合程序、用 Optimizer 依据指标自动搜索提示词与示例，把 Prompt 从字符串变成可训练、可优化的程序参数。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Signature", "role": "声明式输入输出契约，可用类字段或字符串 question -> answer 定义", "file": "dspy/signatures/signature.py"},
+    {"name": "SignatureMeta", "role": "Signature 元类，解析注解并暴露 input_fields/output_fields/instructions", "file": "dspy/signatures/signature.py"},
+    {"name": "Module", "role": "所有 DSPy 程序的基类，实现 forward 组合子模块与 Predict", "file": "dspy/primitives/module.py"},
+    {"name": "Predict", "role": "最基础模块，把 Signature 交给 Adapter 完成一次 LM 调用", "file": "dspy/predict/predict.py"},
+    {"name": "Adapter", "role": "在 Signature 与具体 LM 消息格式之间做格式化与解析", "file": "dspy/adapters/base.py"},
+    {"name": "ChatAdapter", "role": "默认适配器，把字段与示例渲染成聊天消息并解析输出", "file": "dspy/adapters/chat_adapter.py"},
+    {"name": "Prediction", "role": "模块输出对象，支持属性式访问预测字段", "file": "dspy/primitives/prediction.py"},
+    {"name": "Example", "role": "训练与评估样本对象，承载输入字段与标签", "file": "dspy/primitives/example.py"},
+    {"name": "Teleprompter", "role": "优化器基类，compile 接收 student 与 trainset 返回优化后程序", "file": "dspy/teleprompt/teleprompt.py"},
+    {"name": "BootstrapFewShot", "role": "经典优化器，自动采样并筛选高质量 few-shot 示例", "file": "dspy/teleprompt/bootstrap.py"},
+    {"name": "BaseLM", "role": "语言模型接口基类，统一 chat/async 调用", "file": "dspy/clients/base_lm.py"},
+    {"name": "Settings", "role": "全局配置单例，管理 lm/adapter/trace 并提供 context 隔离", "file": "dspy/dsp/utils/settings.py"}
+  ],
+  "layers": [
+    {"name": "声明层", "responsibility": "用 Signature 与 Field 声明任务的输入输出与说明", "modules": ["dspy/signatures"], "files": ["dspy/signatures/signature.py", "dspy/signatures/field.py"]},
+    {"name": "程序组合层", "responsibility": "Module 基类与 Example/Prediction 等数据结构", "modules": ["dspy/primitives"], "files": ["dspy/primitives/module.py", "dspy/primitives/prediction.py", "dspy/primitives/example.py"]},
+    {"name": "预测模块层", "responsibility": "Predict 及 ChainOfThought、ReAct、CodeAct 等现成推理模块", "modules": ["dspy/predict"], "files": ["dspy/predict/predict.py", "dspy/predict/chain_of_thought.py", "dspy/predict/react.py"]},
+    {"name": "适配层", "responsibility": "把 Signature 渲染成消息并解析模型输出为字段", "modules": ["dspy/adapters"], "files": ["dspy/adapters/base.py", "dspy/adapters/chat_adapter.py", "dspy/adapters/json_adapter.py"]},
+    {"name": "模型客户端层", "responsibility": "统一 LM 接口与各提供商调用、缓存与成本统计", "modules": ["dspy/clients"], "files": ["dspy/clients/base_lm.py", "dspy/clients/lm.py"]},
+    {"name": "优化器层", "responsibility": "编译式优化程序，搜索提示词与示例，含 GEPA/MIPROv2 等", "modules": ["dspy/teleprompt"], "files": ["dspy/teleprompt/teleprompt.py", "dspy/teleprompt/bootstrap.py", "dspy/teleprompt/mipro_optimizer_v2.py"]},
+    {"name": "评估与数据集层", "responsibility": "指标评估程序质量与提供数据集加载", "modules": ["dspy/evaluate", "dspy/datasets"], "files": ["dspy/evaluate/evaluate.py", "dspy/datasets/__init__.py"]},
+    {"name": "配置与工具层", "responsibility": "全局设置、保存加载与异步/流式工具", "modules": ["dspy/dsp", "dspy/utils"], "files": ["dspy/dsp/utils/settings.py", "dspy/utils/saving.py"]},
+    {"name": "提议与检索层", "responsibility": "为优化器生成候选提示与接入检索器", "modules": ["dspy/propose", "dspy/retrievers"], "files": ["dspy/propose/propose_base.py", "dspy/retrievers/__init__.py"]}
+  ],
+  "data_flow": [
+    "第1步：定义 Signature 声明任务输入输出字段，如 question -> answer",
+    "第2步：用 Module 子类组合 Predict 等子模块并实现 forward 逻辑",
+    "第3步：通过 dspy.configure 设置全局 LM 与 Adapter",
+    "第4步：调用程序时 Module.__call__ 进入 forward",
+    "第5步：Predict.forward 取出 demos 与输入字段，选定 Adapter 与 LM",
+    "第6步：Adapter.format 把 Signature、示例与输入渲染成 LM 消息",
+    "第7步：LM 发起推理返回文本补全",
+    "第8步：Adapter.parse 把补全解析回签名字段并构造 Prediction",
+    "第9步：编译阶段调用 Teleprompter.compile 传入 student 与 trainset",
+    "第10步：优化器反复运行程序并按 metric 打分，搜索更优示例与指令",
+    "第11步：把选出的 demos 与 instructions 写回程序，返回优化后 Module"
+  ],
+  "entry_points": [
+    {"path": "dspy/__init__.py", "what": "包入口，聚合 configure、Module、Predict、优化器等公共 API"},
+    {"path": "dspy/predict/predict.py", "what": "Predict 模块，理解一次 LM 调用如何被装配"},
+    {"path": "dspy/teleprompt/teleprompt.py", "what": "Teleprompter.compile，优化器统一入口"},
+    {"path": "docs/docs/getting-started/first-program.md", "what": "官方入门教程，从 Signature 到优化完整示例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读它理解 programming not prompting 的定位"},
+    {"path": "dspy/signatures/signature.py", "why": "Signature 与元类，理解声明式契约如何解析"},
+    {"path": "dspy/primitives/module.py", "why": "Module 基类，理解程序如何组合与遍历子预测器"},
+    {"path": "dspy/predict/predict.py", "why": "Predict.forward，连接 Signature、Adapter 与 LM 的核心"},
+    {"path": "dspy/adapters/base.py", "why": "Adapter 抽象，理解格式与解析的双向职责"},
+    {"path": "dspy/teleprompt/bootstrap.py", "why": "BootstrapFewShot.compile，最直观的优化流程"},
+    {"path": "dspy/clients/base_lm.py", "why": "BaseLM 接口，理解模型接入契约"},
+    {"path": "dspy/dsp/utils/settings.py", "why": "Settings 单例与 context，理解全局配置如何生效"}
+  ],
+  "extension_points": [
+    "定义新任务：写 Signature 子类，或用字符串签名如 question -> answer",
+    "加新模块：继承 dspy/primitives/module.py 的 Module 并实现 forward",
+    "加新优化器：继承 dspy/teleprompt/teleprompt.py 的 Teleprompter 实现 compile",
+    "加新格式：继承 dspy/adapters/base.py 的 Adapter 实现 format 与 parse",
+    "接入新模型：继承 dspy/clients/base_lm.py 的 BaseLM",
+    "自定义指标：写普通 Python 函数接收 example 与 pred 返回分数，交给 Evaluate"
+  ],
+  "learning_path": [
+    "第1步读 README.md，建立 programming not prompting 的心智模型",
+    "第2步读 docs/docs/getting-started/first-program.md 跑通入门示例",
+    "第3步读 dspy/signatures/signature.py 理解输入输出契约",
+    "第4步读 dspy/primitives/module.py 理解程序组合方式",
+    "第5步读 dspy/predict/predict.py 理解一次 LM 调用的装配",
+    "第6步读 dspy/adapters/base.py 理解格式与解析",
+    "第7步读 dspy/teleprompt/bootstrap.py 理解编译式优化"
+  ],
+  "diagram_mermaid": "graph TD\n  A[定义 Signature] --> B[组合 Module]\n  B --> C[configure 设置 LM]\n  C --> D[调用程序 forward]\n  D --> E[Predict 取 demos 与输入]\n  E --> F[Adapter 渲染成消息]\n  F --> G[LM 推理]\n  G --> H[Adapter 解析为字段]\n  H --> I[返回 Prediction]\n  I --> J[Teleprompter 编译]\n  J --> K[按 metric 搜索更优 demos]\n  K --> L[写回并返回优化后程序]",
+  "surprises": [
+    "所谓编译优化通常不改模型权重，而是往 Predict 实例的 demos 与 instructions 字段写值，本质是参数注入",
+    "Predict 同时继承 Module 与 Parameter，因此它既是可组合的程序又是可被优化器寻址的参数",
+    "Signature 支持类继承与 question -> answer 字符串两种等价写法，由 SignatureMeta 统一解析",
+    "全局配置靠 Settings 单例加 context 上下文管理器实现，可按线程或作用域临时覆盖 lm/adapter",
+    "模块调用禁止位置参数，强制关键字调用，以便按签名字段名精确绑定输入"
+  ],
+  "confidence": "高"
+}

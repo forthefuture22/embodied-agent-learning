@@ -1,0 +1,96 @@
+{
+  "repo": "haosulab/ManiSkill",
+  "name": "ManiSkill",
+  "one_liner": "基于 SAPIEN 的 GPU 并行机器人操作仿真与训练框架",
+  "problem": "机器人操作研究需要大量高吞吐仿真数据与统一任务基准。ManiSkill 用 SAPIEN 做 GPU 并行物理仿真与渲染，单卡可并行数千个环境，并用面向对象 API 屏蔽 GPU 内存管理，让研究者专注任务逻辑与策略训练。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "BaseEnv", "role": "所有 ManiSkill 任务的基类，继承 gymnasium.Env，管理观测/奖励/控制模式、并行环境数、仿真后端与 step/reset 生命周期", "file": "mani_skill/envs/sapien_env.py"},
+    {"name": "ManiSkillScene", "role": "把多个 sapien.Scene 子场景包装成一个逻辑场景，统一转发位姿/速度/驱动等调用并管理 GPU 状态", "file": "mani_skill/envs/scene.py"},
+    {"name": "BaseAgent", "role": "机器人/智能体抽象基类，加载 URDF/MJCF 为 Articulation、管理控制器、提供动作空间与本体感知", "file": "mani_skill/agents/base_agent.py"},
+    {"name": "BaseController", "role": "控制器基类，定义动作空间与 set_action 接口，把策略输出转成关节目标位姿或速度", "file": "mani_skill/agents/controllers/base_controller.py"},
+    {"name": "register_env", "role": "装饰器，把任务类注册进 REGISTERED_ENVS 并同时注册到 gymnasium registry，是任务可被 gym.make 找到的关键", "file": "mani_skill/utils/registration.py"},
+    {"name": "ManiSkillVectorEnv", "role": "gymnasium VectorEnv 实现，为 GPU 并行环境提供自动重置、终止处理与成功率等指标记录", "file": "mani_skill/vector/wrappers/gymnasium.py"},
+    {"name": "Camera", "role": "相机传感器实现，按 obs_mode 渲染 rgb/depth/segmentation 等纹理供观测使用", "file": "mani_skill/sensors/camera.py"},
+    {"name": "Actor", "role": "刚体对象抽象，封装单个或多个 sapien actor 的位姿、速度与几何属性并支持批量操作", "file": "mani_skill/utils/structs/actor.py"},
+    {"name": "Articulation", "role": "关节机器人抽象，封装多环境 articulation 的 qpos/qvel、链接与驱动控制", "file": "mani_skill/utils/structs/articulation.py"},
+    {"name": "Pose", "role": "批量位姿类型，统一表示与运算位置和四元数，是场景随机化与观测的核心数据结构", "file": "mani_skill/utils/structs/pose.py"},
+    {"name": "SimConfig", "role": "仿真与 GPU 内存配置的数据类，含场景参数、GPU 显存池与频率设置", "file": "mani_skill/utils/structs/types.py"},
+    {"name": "TableSceneBuilder", "role": "可复用场景构建器，搭建桌面与机器人初始状态，供抓取类任务共享", "file": "mani_skill/utils/scene_builder/table/scene_builder.py"}
+  ],
+  "layers": [
+    {"name": "环境核心层", "responsibility": "定义 BaseEnv 生命周期、仿真后端选择、并行场景管理与 step/reset 语义", "modules": ["mani_skill/envs"], "files": ["mani_skill/envs/sapien_env.py", "mani_skill/envs/scene.py", "mani_skill/envs/sim2real_env.py"]},
+    {"name": "任务层", "responsibility": "按类别实现具体任务，定义资产加载、随机化、观测、奖励与成功判定", "modules": ["mani_skill/envs/tasks"], "files": ["mani_skill/envs/tasks/tabletop/pick_cube.py", "mani_skill/envs/tasks/tabletop/push_cube.py", "mani_skill/envs/tasks/tabletop/stack_cube.py", "mani_skill/envs/tasks/control/cartpole.py"]},
+    {"name": "智能体与控制器层", "responsibility": "定义机器人抽象、URDF/MJCF 加载、控制器族与多智能体支持", "modules": ["mani_skill/agents", "mani_skill/agents/controllers", "mani_skill/agents/robots"], "files": ["mani_skill/agents/base_agent.py", "mani_skill/agents/registration.py", "mani_skill/agents/controllers/base_controller.py", "mani_skill/agents/controllers/pd_joint_pos.py", "mani_skill/agents/multi_agent.py"]},
+    {"name": "传感器与渲染层", "responsibility": "提供相机等传感器与渲染后端，生成视觉观测与人类可视渲染", "modules": ["mani_skill/sensors", "mani_skill/render"], "files": ["mani_skill/sensors/base_sensor.py", "mani_skill/sensors/camera.py", "mani_skill/sensors/depth_camera.py"]},
+    {"name": "向量并行层", "responsibility": "把并行环境包装成 gymnasium VectorEnv 并适配 SB3 等训练库", "modules": ["mani_skill/vector/wrappers"], "files": ["mani_skill/vector/wrappers/gymnasium.py", "mani_skill/vector/wrappers/sb3.py"]},
+    {"name": "资产与场景构建层", "responsibility": "从 URDF/MJCF 与网格资产构建 actor、articulation 与可复用场景", "modules": ["mani_skill/utils/building", "mani_skill/utils/scene_builder"], "files": ["mani_skill/utils/building/actors", "mani_skill/utils/building/urdf_loader.py", "mani_skill/utils/scene_builder/scene_builder.py", "mani_skill/utils/scene_builder/table/scene_builder.py"]},
+    {"name": "数据抽象层", "responsibility": "提供批量位姿、刚体、关节等统一数据结构，屏蔽 CPU/GPU 与单/多环境差异", "modules": ["mani_skill/utils/structs"], "files": ["mani_skill/utils/structs/pose.py", "mani_skill/utils/structs/actor.py", "mani_skill/utils/structs/articulation.py", "mani_skill/utils/structs/types.py"]},
+    {"name": "工具与注册层", "responsibility": "任务注册、资产下载、随机化、观测解析与通用工具", "modules": ["mani_skill/utils"], "files": ["mani_skill/utils/registration.py", "mani_skill/utils/download_asset.py", "mani_skill/envs/utils/observations"]},
+    {"name": "示例与基线层", "responsibility": "提供 RL、BC、Diffusion Policy、ACT 等可运行基线训练与评测脚本", "modules": ["examples/baselines"], "files": ["examples/baselines/ppo/ppo.py", "examples/baselines/bc/bc.py", "examples/baselines/diffusion_policy/train.py"]},
+    {"name": "轨迹层", "responsibility": "录制、回放、合并与转换演示轨迹，支持转成 LeRobot 等数据格式", "modules": ["mani_skill/trajectory"], "files": ["mani_skill/trajectory/dataset.py", "mani_skill/trajectory/replay_trajectory.py", "mani_skill/trajectory/convert_to_lerobot.py"]}
+  ],
+  "data_flow": [
+    "第1步：import mani_skill.envs 触发各任务模块导入，@register_env 把任务写入 REGISTERED_ENVS 并同步注册到 gymnasium",
+    "第2步：gym.make 或 mani_skill.utils.registration.make 按 uid 找到 EnvSpec 并实例化 BaseEnv 子类",
+    "第3步：BaseEnv.__init__ 解析 obs_mode/reward_mode/control_mode，num_envs 大于 1 时 sim_backend 自动切到 physx_cuda",
+    "第4步：_setup_scene 创建 ManiSkillScene，GPU 模式下按平方根网格创建 num_envs 个 sapien 子场景并设置间距",
+    "第5步：_load_agent 按 robot_uids 从 REGISTERED_AGENTS 取 BaseAgent，加载 URDF/MJCF 为 Articulation 并装配控制器",
+    "第6步：_load_scene 加载任务资产，_setup_sensors 依据 obs_mode 创建 Camera，_load_lighting 布置光照",
+    "第7步：reset 设置主 RNG 与回合 RNG，调用 _initialize_episode 批量随机化物体位姿与目标，GPU 下 _gpu_apply_all 同步",
+    "第8步：step 调 _step_action 把动作交给 agent.controller，按 sim_steps_per_control 执行物理步，再 _gpu_fetch_all 取回状态",
+    "第9步：get_obs 依据 obs_mode 组织状态或传感器数据，get_reward 按 reward_mode 调用任务奖励函数，evaluate 给出 success",
+    "第10步：observation_space 由 _init_raw_obs 自动推断，action_space 直接来自 agent.controller，任务不手写空间",
+    "第11步：ManiSkillVectorEnv 包装环境，提供自动重置与成功率指标，供 RL 基线收集 rollout",
+    "第12步：训练脚本用向量环境采样并更新策略，录制轨迹可经 trajectory 层保存为演示数据"
+  ],
+  "entry_points": [
+    {"path": "mani_skill/envs/template.py", "what": "自定义任务的完整模板，注释说明每个需重写的函数，是扩展任务的起点"},
+    {"path": "mani_skill/envs/minimal_template.py", "what": "最小任务模板，仅加载机器人，用于快速起步"},
+    {"path": "mani_skill/utils/registration.py", "what": "register_env 装饰器与 make 函数，任务注册与实例化的核心入口"},
+    {"path": "examples/baselines/ppo/ppo.py", "what": "PPO 基线训练脚本，展示如何用向量环境与并行仿真训练策略"},
+    {"path": "examples/baselines/bc/bc.py", "what": "行为克隆基线，从演示轨迹训练状态或视觉策略"},
+    {"path": "examples/baselines/diffusion_policy/train.py", "what": "Diffusion Policy 基线训练脚本"},
+    {"path": "mani_skill/envs/tasks/tabletop/pick_cube.py", "what": "经典抓取放球任务，可作为读源码与写新任务的范例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：GPU 并行仿真、任务矩阵、基线与系统支持"},
+    {"path": "mani_skill/envs/template.py", "why": "任务抽象全貌：需要重写哪些函数、重配置与回合初始化如何分工"},
+    {"path": "mani_skill/envs/tasks/tabletop/pick_cube.py", "why": "一个完整任务的实现，对照模板理解资产加载、随机化、观测与奖励"},
+    {"path": "mani_skill/envs/sapien_env.py", "why": "BaseEnv 是全局核心，看清 obs/action/reward 模式与 step/reset 的完整流程"},
+    {"path": "mani_skill/utils/registration.py", "why": "任务如何被注册与实例化，是扩展任务与排查 make 报错的必读"},
+    {"path": "mani_skill/agents/base_agent.py", "why": "机器人抽象与控制器装配，理解动作空间从何而来"},
+    {"path": "mani_skill/agents/controllers/base_controller.py", "why": "控制器接口，理解策略动作如何变成关节控制信号"},
+    {"path": "mani_skill/envs/scene.py", "why": "GPU 并行机制的核心：多个子场景如何被合并与统一管理"},
+    {"path": "mani_skill/vector/wrappers/gymnasium.py", "why": "向量环境封装，理解并行训练时的自动重置与指标"}
+  ],
+  "extension_points": [
+    "想加新任务：复制 mani_skill/envs/template.py，继承 BaseEnv，实现 _load_scene/_initialize_episode/evaluate/_get_obs_extra 并用 @register_env 注册",
+    "想加新机器人：继承 mani_skill/agents/base_agent.py 的 BaseAgent，设置 uid 与 urdf_path，用 @register_agent 注册",
+    "想加新控制器：继承 mani_skill/agents/controllers/base_controller.py 的 BaseController 与 ControllerConfig，在 agent 的 _controller_configs 中声明",
+    "想加新传感器：继承 mani_skill/sensors/base_sensor.py 的 BaseSensor，实现 capture 与 get_obs",
+    "想加新场景：继承 mani_skill/utils/scene_builder/scene_builder.py 的 SceneBuilder，用场景构建器注册机制登记",
+    "想改观测或奖励：在任务里重写 _get_obs_extra 与 compute_dense_reward，无需改动框架",
+    "想接入新 RL 库：参考 mani_skill/vector/wrappers/sb3.py 或 gymnasium.py 写适配包装器"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，跑通 Colab 快速上手，感受 GPU 并行仿真的吞吐",
+    "第2步：读 mani_skill/envs/template.py，理解一个任务必须实现哪些函数",
+    "第3步：读 mani_skill/envs/tasks/tabletop/pick_cube.py，把模板落到一个真实任务",
+    "第4步：读 mani_skill/envs/sapien_env.py，理解 BaseEnv 的 obs/action/reward 与 step/reset 生命周期",
+    "第5步：读 mani_skill/utils/registration.py，搞清任务如何被注册并被 gym.make 找到",
+    "第6步：读 mani_skill/agents/base_agent.py 与 controllers/base_controller.py，理解机器人动作空间来源",
+    "第7步：读 mani_skill/envs/scene.py，理解 GPU 并行场景如何组织",
+    "第8步：读 examples/baselines/ppo/ppo.py，看策略如何在并行环境上训练"
+  ],
+  "diagram_mermaid": "graph TD\n  REG[register_env 注册任务] --> MAKE[gym.make 按 uid 实例化]\n  MAKE --> ENV[BaseEnv 初始化]\n  ENV --> SCENE[ManiSkillScene 创建子场景]\n  ENV --> AGENT[BaseAgent 加载机器人与控制器]\n  SCENE --> LOADSCENE[_load_scene 加载任务资产]\n  AGENT --> SENSOR[Camera 与传感器装配]\n  LOADSCENE --> RESET[reset 调用 _initialize_episode 随机化]\n  SENSOR --> RESET\n  RESET --> STEP[step 接收动作]\n  STEP --> CTRL[controller 转成关节目标]\n  CTRL --> PHYS[按 sim_steps_per_control 执行物理步]\n  PHYS --> OBS[get_obs 组织观测]\n  PHYS --> REW[get_reward 与 evaluate]\n  OBS --> VEC[ManiSkillVectorEnv 向量封装]\n  REW --> VEC\n  VEC --> TRAIN[RL 基线采样训练]",
+  "surprises": [
+    "同一份任务代码不改动即可在 CPU 单环境与 GPU 数千并行环境运行，只靠 num_envs 触发 sim_backend 自动切换",
+    "observation_space 不是手写的，而是运行时用一次 reset 得到的 _init_raw_obs 自动推断出来的",
+    "GPU 并行实际是把 num_envs 个 sapien.Scene 按平方根网格拼进一个物理系统，ManiSkillScene 对用户伪装成单个场景",
+    "任务注册时同时写入 ManiSkill 自己的 REGISTERED_ENVS 和 gymnasium registry，两条 make 路径并存容易混淆",
+    "动作空间由机器人控制器而非任务决定，任务只通过 SUPPORTED_ROBOTS 声明支持哪些机器人",
+    "reset 分两级：_reconfigure 重建整个场景而 _initialize_episode 只重置状态，reconfiguration_freq 决定前者调用频率，改资产时容易踩坑"
+  ],
+  "confidence": "高"
+}

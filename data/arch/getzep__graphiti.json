@@ -1,0 +1,88 @@
+{
+  "repo": "getzep/graphiti",
+  "name": "Graphiti",
+  "one_liner": "为 AI Agent 构建可增量更新的时序知识图谱记忆",
+  "problem": "解决传统 RAG 无法表达事实随时间变化的问题：把原始 Episode 增量抽取成实体与关系，用 valid_at 与 invalid_at 记录事实有效期，旧事实失效而非删除，并支持语义加关键词加图遍历的混合检索。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Graphiti", "role": "主入口类，持有 driver/llm_client/embedder/cross_encoder，编排 add_episode 与 search 全流程", "file": "graphiti_core/graphiti.py"},
+    {"name": "GraphDriver", "role": "图数据库抽象基类，定义 execute_query/session/build_indices_and_constraints 等后端契约", "file": "graphiti_core/driver/driver.py"},
+    {"name": "Neo4jDriver", "role": "Neo4j 后端实现，把抽象查询映射到 Cypher 与索引构建", "file": "graphiti_core/driver/neo4j_driver.py"},
+    {"name": "EpisodicNode", "role": "Episode 节点：原始输入数据的载体与溯源根，带 source 与 reference_time", "file": "graphiti_core/nodes.py"},
+    {"name": "EntityNode", "role": "实体节点：从 Episode 抽取的人物或概念，带 name_embedding 与随时间演化的 summary", "file": "graphiti_core/nodes.py"},
+    {"name": "EntityEdge", "role": "实体间关系边，携带 valid_at 与 invalid_at 构成事实的时序有效期", "file": "graphiti_core/edges.py"},
+    {"name": "CommunityNode", "role": "社区聚类节点，对实体做聚类后生成社区摘要以支持全局检索", "file": "graphiti_core/nodes.py"},
+    {"name": "LLMClient", "role": "LLM 抽象基类，统一 generate_response 的重试、缓存、结构化输出与多语言抽取指令", "file": "graphiti_core/llm_client/client.py"},
+    {"name": "EmbedderClient", "role": "嵌入抽象基类，定义 create 与 create_batch 供节点边生成向量", "file": "graphiti_core/embedder/client.py"},
+    {"name": "CrossEncoderClient", "role": "重排抽象基类，对混合检索候选做相关性重排", "file": "graphiti_core/cross_encoder/client.py"},
+    {"name": "search", "role": "混合检索入口，按 edge/node/episode/community 四类分别做语义加 BM25 加图遍历", "file": "graphiti_core/search/search.py"}
+  ],
+  "layers": [
+    {"name": "核心编排层", "responsibility": "编排 Episode 写入与检索，管理客户端与请求作用域", "modules": ["graphiti_core"], "files": ["graphiti_core/graphiti.py", "graphiti_core/graphiti_types.py"]},
+    {"name": "图数据模型层", "responsibility": "定义节点、边、Episode 与时序字段及其持久化方法", "modules": ["graphiti_core"], "files": ["graphiti_core/nodes.py", "graphiti_core/edges.py", "graphiti_core/models/edges"]},
+    {"name": "存储驱动层", "responsibility": "图数据库后端抽象与 Neo4j/FalkorDB/Kuzu/Neptune 实现", "modules": ["graphiti_core/driver"], "files": ["graphiti_core/driver/driver.py", "graphiti_core/driver/neo4j_driver.py", "graphiti_core/driver/falkordb_driver.py"]},
+    {"name": "抽取与维护层", "responsibility": "实体关系抽取、去重解析、时序失效与社区构建", "modules": ["graphiti_core/utils/maintenance"], "files": ["graphiti_core/utils/maintenance/node_operations.py", "graphiti_core/utils/maintenance/edge_operations.py", "graphiti_core/utils/maintenance/community_operations.py"]},
+    {"name": "模型接入层", "responsibility": "LLM、嵌入、重排三类 provider 的抽象与具体实现", "modules": ["graphiti_core/llm_client", "graphiti_core/embedder", "graphiti_core/cross_encoder"], "files": ["graphiti_core/llm_client/client.py", "graphiti_core/embedder/client.py", "graphiti_core/cross_encoder/client.py"]},
+    {"name": "检索层", "responsibility": "混合检索实现与检索配置配方", "modules": ["graphiti_core/search"], "files": ["graphiti_core/search/search.py", "graphiti_core/search/search_config.py", "graphiti_core/search/search_config_recipes.py"]},
+    {"name": "提示词层", "responsibility": "抽取、去重、摘要、评估等各阶段提示词模板", "modules": ["graphiti_core/prompts"], "files": ["graphiti_core/prompts/extract_nodes.py", "graphiti_core/prompts/extract_edges.py", "graphiti_core/prompts/dedupe_nodes.py"]},
+    {"name": "服务与工具层", "responsibility": "MCP 服务器、FastAPI 服务与批量写入等工具", "modules": ["mcp_server", "server", "graphiti_core/utils"], "files": ["mcp_server/src/graphiti_mcp_server.py", "server/graph_service/main.py", "graphiti_core/utils/bulk_utils.py"]}
+  ],
+  "data_flow": [
+    "第1步：调用 add_episode 传入 name、episode_body、reference_time、group_id 等参数",
+    "第2步：retrieve_episodes 按 reference_time 取最近若干历史 Episode 作为抽取上下文",
+    "第3步：extract_nodes 用 LLM 从当前与历史 Episode 中抽取实体节点",
+    "第4步：resolve_extracted_nodes 做实体去重与合并，返回节点与 uuid 映射",
+    "第5步：extract_edges 抽取实体间关系边，并解析每条边的 valid_at/invalid_at",
+    "第6步：resolve_extracted_edges 解析重复边，并对被新事实取代的旧边执行时序失效",
+    "第7步：extract_attributes_from_nodes 为节点生成属性与随时间演化的摘要",
+    "第8步：_process_episode_data 构造 EpisodicEdge 并把节点边写入图数据库",
+    "第9步：可选 build_communities 对实体聚类并生成社区节点与摘要",
+    "第10步：search 查询走语义加 BM25 加图遍历的混合检索，可选 cross_encoder 重排后返回"
+  ],
+  "entry_points": [
+    {"path": "examples/quickstart/quickstart_neo4j.py", "what": "Neo4j 快速上手，演示初始化、add_episode 与 search 的完整调用"},
+    {"path": "examples/quickstart/quickstart_falkordb.py", "what": "FalkorDB 后端快速上手，展示如何替换图存储"},
+    {"path": "graphiti_core/graphiti.py:Graphiti.add_episode", "what": "写入 Episode 的主入口，驱动抽取到落库的全流程"},
+    {"path": "graphiti_core/graphiti.py:Graphiti.search", "what": "检索主入口，按查询与配置返回节点边社区"},
+    {"path": "mcp_server/src/graphiti_mcp_server.py", "what": "MCP 服务器入口，把图记忆能力暴露给 Agent 客户端"},
+    {"path": "server/graph_service/main.py", "what": "FastAPI 服务入口，提供 HTTP 化的图记忆服务"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立认知：时序知识图谱、Episode 溯源与混合检索的整体定位"},
+    {"path": "graphiti_core/graphiti.py", "why": "核心编排，add_episode 与 search 是理解系统全貌的必经之路"},
+    {"path": "graphiti_core/nodes.py", "why": "EpisodicNode 与 EntityNode 的数据结构与持久化，理解溯源与实体演化"},
+    {"path": "graphiti_core/edges.py", "why": "EntityEdge 的 valid_at 与 invalid_at，理解时序有效性建模"},
+    {"path": "graphiti_core/utils/maintenance/edge_operations.py", "why": "关系抽取与旧边失效逻辑，是时序语义最烧脑的部分"},
+    {"path": "graphiti_core/driver/driver.py", "why": "图存储抽象契约，理解后端如何可插拔"},
+    {"path": "graphiti_core/search/search.py", "why": "混合检索实现，理解语义加关键词加图遍历如何融合"},
+    {"path": "graphiti_core/llm_client/client.py", "why": "LLM 抽象与重试缓存，理解所有抽取调用的统一入口"},
+    {"path": "examples/quickstart/quickstart_neo4j.py", "why": "最小可运行示例，把抽象概念落到具体调用"}
+  ],
+  "extension_points": [
+    "新增图存储后端：继承 graphiti_core/driver/driver.py 的 GraphDriver 与 GraphDriverSession，参照 neo4j_driver.py 与 falkordb_driver.py 实现",
+    "新增 LLM 供应商：继承 graphiti_core/llm_client/client.py 的 LLMClient 并实现 _generate_response",
+    "新增嵌入模型：继承 graphiti_core/embedder/client.py 的 EmbedderClient，实现 create 与 create_batch",
+    "新增重排器：继承 graphiti_core/cross_encoder/client.py 的 CrossEncoderClient",
+    "自定义本体：add_episode 传入 entity_types 与 edge_types 的 Pydantic 模型，约束实体与关系类型",
+    "自定义提示词：通过 ChatPromptLibrary 覆盖，参考 graphiti_core/prompts/lib.py 的组合方式",
+    "自定义检索策略：改 graphiti_core/search/search_config_recipes.py 中的检索配方组合"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解时序知识图谱、Episode 溯源与混合检索三个核心概念",
+    "第2步：读 examples/quickstart/quickstart_neo4j.py，跑通最小闭环",
+    "第3步：读 graphiti_core/graphiti.py 的 __init__ 与 add_episode，掌握组件装配与写入流程",
+    "第4步：读 graphiti_core/nodes.py 与 edges.py，掌握实体、Episode 与时序边的数据结构",
+    "第5步：读 graphiti_core/utils/maintenance/edge_operations.py，理解关系抽取与旧边失效",
+    "第6步：读 graphiti_core/driver/driver.py，理解存储后端抽象与扩展方式",
+    "第7步：读 graphiti_core/search/search.py，理解混合检索与重排的协同"
+  ],
+  "diagram_mermaid": "graph TD\n  A[Episode 原始数据] --> B[retrieve_episodes 取历史上下文]\n  B --> C[extract_nodes 抽取实体]\n  C --> D[resolve_extracted_nodes 去重合并]\n  D --> E[extract_edges 抽取关系]\n  E --> F[resolve_extracted_edges 解析并失效旧边]\n  F --> G[extract_attributes 生成摘要与属性]\n  G --> H[写入图数据库 Neo4j]\n  H --> I[build_communities 可选社区聚类]\n  J[search 查询] --> K[语义加 BM25 加图遍历混合检索]\n  K --> L[返回节点边与社区]",
+  "surprises": [
+    "事实更新不删除旧数据：当新 Episode 与旧事实冲突时，旧 EntityEdge 被设置 invalid_at 而非删除，因此可以查询任意历史时刻为真的事实",
+    "add_episode 文档明确要求逐条顺序 await、不可并发调用，但内部对多条边的解析却用 semaphore_gather 并发，顺序性只约束 Episode 之间",
+    "时序失效不是简单比较时间戳：_apply_temporal_invalidation 会用候选边的 valid_at 反推已解析边的 invalid_at，逻辑比直觉复杂",
+    "group_id 既是图分区键又是并发请求作用域，_resolve_request_scope 会按 group_id 克隆 driver，避免并发写入互相污染数据库目标",
+    "仓库同时内置 Neo4j、FalkorDB、Kuzu 与 Neptune 四个后端，Kuzu 已因上游停维护被标记为弃用，但代码仍在"
+  ],
+  "confidence": "高"
+}

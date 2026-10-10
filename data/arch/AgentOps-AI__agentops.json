@@ -1,0 +1,90 @@
+{
+  "repo": "AgentOps-AI/agentops",
+  "name": "AgentOps",
+  "one_liner": "AI Agent 的可观测、调试与成本追踪平台，基于 OpenTelemetry",
+  "problem": "解决「Agent 是黑盒、出错难定位、成本不可控」的问题：用装饰器与自动埋点把 Agent 每一步的调用、LLM 请求、工具执行变成结构化 Span，上报到可视化面板做回放、调试与成本统计。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Client", "role": "单例门面：读取配置、初始化追踪核心与 API 客户端、启动鉴权任务、按需开启自动埋点，并管理默认会话", "file": "agentops/client/client.py"},
+    {"name": "TracingCore", "role": "追踪核心：装配 TracerProvider 与处理器、创建/结束 trace、生成 span 并维护活动 trace 表", "file": "agentops/sdk/core.py"},
+    {"name": "TraceContext", "role": "会话级 trace 的上下文包装：持有根 span 与 context token，作为上下文管理器在退出时按异常与否写入 OK/ERROR 状态", "file": "agentops/sdk/core.py"},
+    {"name": "create_entity_decorator", "role": "装饰器工厂：为每种实体类型生成 @agent/@task/@tool/@workflow 等装饰器，统一处理同步/异步/生成器函数与类装饰", "file": "agentops/sdk/decorators/factory.py"},
+    {"name": "_create_as_current_span", "role": "Span 创建原语：按 操作名.类型 命名，写入 agentops.span.kind 等标准属性，用 OTel context 管理实现正确嵌套", "file": "agentops/sdk/decorators/utility.py"},
+    {"name": "AuthenticatedOTLPExporter", "role": "带鉴权的 OTLP 导出器：支持动态 JWT，token 刷新无需重建 exporter，是 span 上报到 AgentOps 后端的出口", "file": "agentops/sdk/exporters.py"},
+    {"name": "InternalSpanProcessor", "role": "内部 span 处理器：拦截 span 结束事件用于终端打印与本地可视化提示，与批量导出处理器并列", "file": "agentops/sdk/processors.py"},
+    {"name": "CommonInstrumentor", "role": "自动埋点基类：封装按版本探测、包装与卸载逻辑，各 LLM/框架 instrumentor 继承它实现无侵入埋点", "file": "agentops/instrumentation/common/instrumentor.py"},
+    {"name": "SpanKind", "role": "语义约定之 Span 类型枚举：workflow/session/task/agent/tool/llm/guardrail 等，决定 span 在面板中的归类", "file": "agentops/semconv/span_kinds.py"},
+    {"name": "SpanAttributes", "role": "语义约定之属性键常量：agentops.span.kind、operation.name、agentops.<kind>.input 等统一命名", "file": "agentops/semconv/span_attributes.py"},
+    {"name": "ApiClient", "role": "后端 API 客户端：负责鉴权换取 JWT、项目信息等控制面交互，与数据面的 OTLP 上报分离", "file": "agentops/client/api/__init__.py"}
+  ],
+  "layers": [
+    {"name": "门面与初始化层", "responsibility": "对外暴露 init 与各装饰器，管理单例 Client、配置解析与默认会话生命周期", "modules": ["agentops", "agentops/client"], "files": ["agentops/__init__.py", "agentops/client/client.py", "agentops/config.py"]},
+    {"name": "追踪核心层", "responsibility": "装配遥测管线、创建与结束 trace/span、维护上下文与活动 trace 表", "modules": ["agentops/sdk"], "files": ["agentops/sdk/core.py", "agentops/sdk/types.py", "agentops/sdk/attributes.py"]},
+    {"name": "装饰器埋点层", "responsibility": "提供 @trace/@agent/@task/@tool 等装饰器，自动为被装饰函数创建对应类型的 span 并记录输入输出", "modules": ["agentops/sdk/decorators"], "files": ["agentops/sdk/decorators/__init__.py", "agentops/sdk/decorators/factory.py", "agentops/sdk/decorators/utility.py"]},
+    {"name": "遥测导出层", "responsibility": "span 处理器与 OTLP 导出器，负责批量、鉴权地把遥测数据发往后端", "modules": ["agentops/sdk"], "files": ["agentops/sdk/exporters.py", "agentops/sdk/processors.py"]},
+    {"name": "语义约定层", "responsibility": "定义 Span 类型、属性键、状态与资源属性的统一命名规范", "modules": ["agentops/semconv"], "files": ["agentops/semconv/span_kinds.py", "agentops/semconv/span_attributes.py", "agentops/semconv/resource.py"]},
+    {"name": "自动埋点层", "responsibility": "通过 import hook 探测并包装 LLM 提供商与 Agent 框架，实现无侵入埋点", "modules": ["agentops/instrumentation"], "files": ["agentops/instrumentation/__init__.py", "agentops/instrumentation/common/instrumentor.py", "agentops/instrumentation/providers/openai/instrumentor.py"]},
+    {"name": "传输与鉴权层", "responsibility": "控制面 API 调用、HTTP 适配与 token 获取", "modules": ["agentops/client/http", "agentops/client/api"], "files": ["agentops/client/http/http_client.py", "agentops/client/api/__init__.py", "agentops/client/api/base.py"]},
+    {"name": "兼容与辅助层", "responsibility": "旧版 Session/Event 模型兼容、序列化、日志与环境信息采集", "modules": ["agentops/legacy", "agentops/helpers", "agentops/logging"], "files": ["agentops/legacy/event.py", "agentops/helpers/serialization.py", "agentops/logging/config.py"]}
+  ],
+  "data_flow": [
+    "第1步：import agentops 时若配置自动初始化，则线程安全地创建 Client 单例并解析 Config",
+    "第2步：Client.init() 读取 API key，构建 ApiClient，调用 tracer.initialize_from_config 装配追踪核心",
+    "第3步：setup_telemetry 创建 AuthenticatedOTLPExporter、BatchSpanProcessor 与 InternalSpanProcessor，并注册到全局 TracerProvider",
+    "第4步：若 instrument_llm_calls 为真，调用 instrument_all() 用 import hook 自动探测并包装已安装的 LLM 库与 Agent 框架",
+    "第5步：用户用 @trace/@agent/@task/@tool 装饰函数或类，装饰器在调用时通过 _create_as_current_span 创建对应 SpanKind 的 span",
+    "第6步：span 创建时写入 agentops.span.kind、operation.name 等标准属性，并序列化函数输入到 agentops.<kind>.input",
+    "第7步：函数返回后记录输出属性，退出 context 时 span 自动 end，异常则标记为 ERROR 状态",
+    "第8步：会话级别由 tracer.start_trace 创建根 span，end_trace 写入结束状态并触发立即导出",
+    "第9步：自动埋点的 provider instrumentor 在真实 LLM 调用处创建 LLM span，抽取模型、token、prompt 等属性",
+    "第10步：span 结束时进入 BatchSpanProcessor 队列，达到批量或时间阈值后由 AuthenticatedOTLPExporter 携带 JWT 发往 OTLP 端点",
+    "第11步：后端接收 span 并在 AgentOps 面板中按 Session 组织成可回放的执行轨迹",
+    "第12步：若开启 log_session_replay_url，客户端会打印可在面板回放的会话链接方便调试"
+  ],
+  "entry_points": [
+    {"path": "agentops/__init__.py:init", "what": "初始化 AgentOps SDK，配置 API key、标签与自动埋点开关"},
+    {"path": "agentops/sdk/decorators/__init__.py", "what": "定义并导出 @trace/@agent/@task/@tool/@workflow 等埋点装饰器"},
+    {"path": "agentops/client/client.py:init", "what": "Client 初始化核心，串联配置、追踪核心、API 客户端与自动埋点"},
+    {"path": "agentops/sdk/core.py:setup_telemetry", "what": "遥测管线装配入口，创建 exporter 与 processor 并设为全局 provider"},
+    {"path": "agentops/instrumentation/__init__.py", "what": "自动埋点注册表与 instrument_all 入口，决定埋点哪些库"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立认知：基于 OpenTelemetry 的可观测平台，Session/Agent/Task 等概念与基本用法"},
+    {"path": "agentops/__init__.py", "why": "对外 API 总览：init、装饰器导出与 legacy 兼容入口"},
+    {"path": "agentops/client/client.py", "why": "初始化全链路，理解配置、鉴权与追踪核心如何被装配"},
+    {"path": "agentops/sdk/core.py", "why": "TracingCore 与 setup_telemetry，是追踪机制的中枢"},
+    {"path": "agentops/sdk/decorators/factory.py", "why": "装饰器工厂，看 @agent/@task/@tool 如何统一生成埋点逻辑"},
+    {"path": "agentops/sdk/decorators/utility.py", "why": "_create_as_current_span 如何建 span 与写属性，是最小埋点单元"},
+    {"path": "agentops/sdk/exporters.py", "why": "数据如何带鉴权上报到后端，理解数据面出口"},
+    {"path": "agentops/instrumentation/__init__.py", "why": "自动埋点注册表，理解无侵入埋点覆盖了哪些库"},
+    {"path": "agentops/instrumentation/common/instrumentor.py", "why": "自动埋点基类，扩展新库埋点的起点"},
+    {"path": "agentops/semconv/span_kinds.py", "why": "Span 类型语义约定，理解数据模型如何在面板中归类"}
+  ],
+  "extension_points": [
+    "加一个新实体类型的装饰器：调用 create_entity_decorator(SpanKind.XXX) 生成，见 agentops/sdk/decorators/__init__.py",
+    "加一个新 LLM 或框架的自动埋点：继承 CommonInstrumentor 并在 INSTRUMENTORS 注册，见 agentops/instrumentation/__init__.py",
+    "更换或新增上报后端：替换 AuthenticatedOTLPExporter 或新增 SpanProcessor，见 agentops/sdk/exporters.py",
+    "新增语义属性常量：在 agentops/semconv/span_attributes.py 添加属性键",
+    "自定义对象序列化：改 agentops/helpers/serialization.py 的 safe_serialize",
+    "自定义资源属性：改 agentops/sdk/attributes.py 的 get_global_resource_attributes"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解它基于 OpenTelemetry，Session/Agent/Task/Tool 都是 span",
+    "第2步：读 agentops/__init__.py 的 init 与装饰器导出，跑通一个最小埋点示例",
+    "第3步：读 client/client.py 的 init，看初始化链路如何串联配置、鉴权与追踪核心",
+    "第4步：读 sdk/core.py 的 TracingCore、setup_telemetry、start_trace，掌握 span 与 trace 生命周期",
+    "第5步：读 sdk/decorators/factory.py 与 utility.py，理解装饰器如何自动建 span 并记录输入输出",
+    "第6步：读 sdk/exporters.py 与 processors.py，理解 span 如何批量、带鉴权地上报",
+    "第7步：读 instrumentation/__init__.py 与 common/instrumentor.py，掌握无侵入自动埋点机制",
+    "第8步：读 semconv/span_kinds.py 与 span_attributes.py，理解语义约定如何组织数据模型"
+  ],
+  "diagram_mermaid": "graph TD\n  I[import agentops 并 init] --> C[Client 单例初始化]\n  C --> CF[解析 Config 与 API Key]\n  C --> T[TracingCore 追踪核心]\n  T --> ST[setup_telemetry 装配管线]\n  ST --> EX[AuthenticatedOTLPExporter 导出器]\n  ST --> BP[BatchSpanProcessor 批处理器]\n  C --> IN[instrument_all 自动埋点]\n  D[装饰器 trace agent task tool] --> SP[_create_as_current_span 建 span]\n  IN --> LLM[LLM 调用处自动建 LLM span]\n  SP --> AT[写入 span 属性与输入输出]\n  LLM --> AT\n  AT --> BP\n  BP --> EX\n  EX --> BE[AgentOps 后端与面板]\n  BE --> RP[会话回放与成本分析]",
+  "surprises": [
+    "v4 完全构建在 OpenTelemetry 之上：Session、Agent、Task、Tool 等 AgentOps 概念本质都是带 agentops.span.kind 属性的 OTel Span，而不是自有事件模型",
+    "埋点有两条并行路径：装饰器显式埋点，以及 instrument_all 用 import hook 监控 import 并包装已安装的 LLM 库实现无侵入埋点",
+    "上报用 AuthenticatedOTLPExporter 动态注入 JWT，token 刷新无需重建 exporter，鉴权失败还有每分钟一次的退避限制",
+    "为了向后兼容保留了大量 legacy：agentops.legacy 里仍是旧的 Session/Event 模型，@session 现在只是 @trace 的别名",
+    "SpanKind 枚举同时容纳 OTel 风格的 workflow/agent/tool 与 legacy 的 agent.action/agent.thinking/llm.call，两套命名并存"
+  ],
+  "confidence": "高"
+}

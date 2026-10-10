@@ -1,0 +1,83 @@
+{
+  "repo": "huggingface/smolagents",
+  "name": "smolagents",
+  "one_liner": "极简 Agent 框架，让 LLM 直接用 Python 代码当动作与工具",
+  "problem": "传统 Agent 让 LLM 输出 JSON 工具调用，步骤多、性能差、格式脆弱。本库改让模型写 Python 代码动作并在沙箱执行，把 Agent 核心逻辑压到约千行，用更少 LLM 调用完成复杂任务。",
+  "difficulty": "入门",
+  "core_abstractions": [
+    {"name": "MultiStepAgent", "role": "Agent 抽象基类，定义 ReAct 主循环 run 与 _run_stream，子类实现 _step_stream", "file": "src/smolagents/agents.py"},
+    {"name": "CodeAgent", "role": "把动作写成 Python 代码、解析并交给执行器运行的 Agent", "file": "src/smolagents/agents.py"},
+    {"name": "ToolCallingAgent", "role": "经典 JSON 工具调用式 Agent，与 CodeAgent 并列可选", "file": "src/smolagents/agents.py"},
+    {"name": "Tool", "role": "工具基类，子类实现 forward 并声明 name/description/inputs/output_type", "file": "src/smolagents/tools.py"},
+    {"name": "tool", "role": "把普通函数一键包装成 Tool 的装饰器", "file": "src/smolagents/tools.py"},
+    {"name": "PythonExecutor", "role": "代码执行器抽象接口，定义 send_tools/send_variables/__call__", "file": "src/smolagents/local_python_executor.py"},
+    {"name": "LocalPythonExecutor", "role": "基于 AST 白名单的本地执行器，非安全沙箱", "file": "src/smolagents/local_python_executor.py"},
+    {"name": "RemotePythonExecutor", "role": "远程沙箱执行器基类，派生 E2B/Docker/Modal/Blaxel", "file": "src/smolagents/remote_executors.py"},
+    {"name": "Model", "role": "模型抽象基类，定义 generate/generate_stream，派生各厂商模型", "file": "src/smolagents/models.py"},
+    {"name": "AgentMemory", "role": "对话记忆容器，持有 system prompt 与各 MemoryStep 步骤", "file": "src/smolagents/memory.py"},
+    {"name": "ActionStep", "role": "单步动作/观察/代码/工具调用的记录单元", "file": "src/smolagents/memory.py"},
+    {"name": "RunResult", "role": "聚合输出、token 用量、步骤与耗时的运行结果对象", "file": "src/smolagents/agents.py"}
+  ],
+  "layers": [
+    {"name": "Agent 编排层", "responsibility": "ReAct 主循环、规划步、多智能体托管与提示词装配", "modules": ["src/smolagents"], "files": ["src/smolagents/agents.py", "src/smolagents/monitoring.py"]},
+    {"name": "工具层", "responsibility": "工具基类与装饰器、内置工具箱、MCP 工具集合接入", "modules": ["src/smolagents"], "files": ["src/smolagents/tools.py", "src/smolagents/default_tools.py", "src/smolagents/mcp_client.py"]},
+    {"name": "代码执行层", "responsibility": "本地受限执行与云端沙箱执行", "modules": ["src/smolagents"], "files": ["src/smolagents/local_python_executor.py", "src/smolagents/remote_executors.py"]},
+    {"name": "模型接入层", "responsibility": "统一 ChatMessage 协议，适配 Transformers/LiteLLM/OpenAI 等模型", "modules": ["src/smolagents"], "files": ["src/smolagents/models.py"]},
+    {"name": "记忆与状态层", "responsibility": "步骤记忆、token 用量统计与日志回调", "modules": ["src/smolagents"], "files": ["src/smolagents/memory.py", "src/smolagents/monitoring.py"]},
+    {"name": "提示词与序列化层", "responsibility": "YAML 提示模板、Agent/Tool 的保存与 Hub 上传", "modules": ["src/smolagents/prompts"], "files": ["src/smolagents/prompts/code_agent.yaml", "src/smolagents/serialization.py"]},
+    {"name": "入口与交互层", "responsibility": "CLI、Gradio UI 与网页浏览 Agent", "modules": ["src/smolagents"], "files": ["src/smolagents/cli.py", "src/smolagents/gradio_ui.py", "src/smolagents/vision_web_browser.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户调用 agent.run 传入任务字符串，任务写入 AgentMemory 并追加 TaskStep",
+    "第2步：run 内部驱动 _run_stream，按 max_steps 进入循环，可选按 planning_interval 触发规划步",
+    "第3步：write_memory_to_messages 把记忆步骤转成模型可读的聊天消息序列",
+    "第4步：CodeAgent._step_stream 调用 model.generate 生成输出文本",
+    "第5步：parse_code_blobs 从文本中抽取代码块，fix_final_answer_code 做修补",
+    "第6步：代码作为一次 ToolCall 交给 python_executor 执行",
+    "第7步：执行器把 agent.tools 与 managed_agents 以 Python 函数形式注入命名空间，代码可直接调用",
+    "第8步：执行日志与最后输出写回 memory_step.observations",
+    "第9步：若代码调用了 final_answer 函数，执行器抛出 FinalAnswerException 标记 is_final_answer",
+    "第10步：非最终步则回到第3步继续循环，最终步产出 FinalAnswerStep",
+    "第11步：run 收集最后一步输出，可选组装 RunResult 返回"
+  ],
+  "entry_points": [
+    {"path": "src/smolagents/agents.py", "what": "MultiStepAgent.run 与 CodeAgent._step_stream，Agent 运行主入口"},
+    {"path": "src/smolagents/cli.py", "what": "smolagent 命令行入口，支持交互式配置"},
+    {"path": "src/smolagents/vision_web_browser.py", "what": "webagent 命令行入口，基于 helium 的网页浏览 Agent"},
+    {"path": "smolagent", "what": "通用多步 CodeAgent CLI 命令"},
+    {"path": "webagent", "what": "网页浏览专用 Agent CLI 命令"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读它建立代码即动作的整体认知与安全提示"},
+    {"path": "src/smolagents/agents.py", "why": "核心文件，MultiStepAgent/CodeAgent/ToolCallingAgent 全在这里"},
+    {"path": "src/smolagents/tools.py", "why": "Tool 基类与 @tool 装饰器，理解扩展点的起点"},
+    {"path": "src/smolagents/local_python_executor.py", "why": "代码动作如何被受限执行，AST 白名单机制"},
+    {"path": "src/smolagents/models.py", "why": "模型抽象与各厂商适配，理解 ChatMessage 协议"},
+    {"path": "src/smolagents/memory.py", "why": "记忆步骤模型，理解循环如何累积上下文"},
+    {"path": "src/smolagents/prompts/code_agent.yaml", "why": "CodeAgent 的系统提示模板，决定输出代码块格式"},
+    {"path": "src/smolagents/default_tools.py", "why": "内置工具实现范例，写新工具可照抄"}
+  ],
+  "extension_points": [
+    "加新工具：继承 src/smolagents/tools.py 的 Tool 实现 forward，或用 @tool 装饰普通函数",
+    "自定义 Agent 行为：继承 MultiStepAgent 并实现 _step_stream",
+    "自定义执行环境：继承 PythonExecutor 实现 __call__，或继承 RemotePythonExecutor",
+    "接入新模型：继承 Model 实现 generate，参考 models.py 中各适配类",
+    "改动作格式：编辑 src/smolagents/prompts/code_agent.yaml 提示模板与 code_block_tags"
+  ],
+  "learning_path": [
+    "第1步读 README.md，理解代码即动作与传统 JSON 调用的差异",
+    "第2步读 src/smolagents/agents.py 的 MultiStepAgent.run 与 _run_stream 主循环",
+    "第3步读 CodeAgent._step_stream，看生成到解析到执行三步",
+    "第4步读 src/smolagents/tools.py 的 Tool 与 @tool，理解工具即函数",
+    "第5步读 src/smolagents/local_python_executor.py，理解受限执行与 final_answer 终止",
+    "第6步读 src/smolagents/models.py 与 memory.py，补齐模型与记忆细节"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户任务] --> B[写入 AgentMemory]\n  B --> C[记忆转聊天消息]\n  C --> D[模型生成代码动作]\n  D --> E[解析代码块]\n  E --> F[PythonExecutor 执行]\n  F --> G[工具以函数形式调用]\n  G --> H{调用 final_answer}\n  H -->|否| I[写回观察结果]\n  I --> C\n  H -->|是| J[返回最终答案]\n  J --> K[组装 RunResult]",
+  "surprises": [
+    "LocalPythonExecutor 名字像沙箱，实则只是 AST 白名单限制，官方明确声明不是安全边界，不能跑不可信代码",
+    "终止条件不是模型输出某个 JSON 字段，而是代码里调用 final_answer 函数并触发异常来中断执行",
+    "工具在沙箱中就是普通 Python 函数，模型可以写 for 循环在一次动作里批量调用多个工具，因此比 JSON 调用少约 30% 步骤",
+    "同一套基类下 CodeAgent 与 ToolCallingAgent 仅覆盖 _step_stream 就切换了动作表示形式，抽象非常薄"
+  ],
+  "confidence": "高"
+}

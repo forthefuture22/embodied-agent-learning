@@ -1,0 +1,95 @@
+{
+  "repo": "RoboVerseOrg/RoboVerse",
+  "name": "RoboVerse",
+  "one_liner": "统一多种仿真器与任务的机器人学习平台与基准",
+  "problem": "机器人学习被仿真器碎片化：Isaac Sim、MuJoCo、SAPIEN、Genesis 等各有 API 与资产格式，任务无法跨后端复用。RoboVerse 用统一的场景配置与任务接口把多仿真器、多任务、多机器人收敛到一套 gym 兼容 API，并附带数据集与基准。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "BaseSimHandler", "role": "所有仿真后端的抽象基类，规定 _set_states / _set_dof_targets / _get_states / _simulate 等物理交互契约与能力标志", "file": "packages/metasim/metasim/sim/base.py"},
+    {"name": "BaseTaskEnv", "role": "任务环境基类，包裹 handler 形成完整任务，要求子类实现 _observation / _reward / _terminated / _observation_space 等", "file": "packages/metasim/metasim/task/base.py"},
+    {"name": "RLTaskEnv", "role": "面向强化学习的任务基类，提供 reset/step、自动重置、动作裁剪与奖励终止计算", "file": "packages/metasim/metasim/task/rl_task.py"},
+    {"name": "ScenarioCfg", "role": "场景配置中心，声明 simulator、robots、objects、cameras、num_envs 等，是构建一切环境的输入", "file": "packages/metasim/metasim/scenario/scenario.py"},
+    {"name": "RobotCfg", "role": "机器人配置类，描述关节、执行器、初始状态等，供 get_robot 按名解析", "file": "packages/metasim/metasim/scenario/robot.py"},
+    {"name": "BaseObjCfg", "role": "物体配置基类，描述可操作物体的资产、几何与物理属性", "file": "packages/metasim/metasim/scenario/objects.py"},
+    {"name": "TASK_REGISTRY", "role": "全局任务注册表，register_task 装饰器把任务类按名字登记，供 get_task_class 查找", "file": "packages/metasim/metasim/task/registry.py"},
+    {"name": "SIM_BACKENDS", "role": "仿真器分发表，把 SimType 枚举映射到后端 handler 的模块与类，是后端选择的唯一真相", "file": "packages/metasim/metasim/utils/setup_util.py"},
+    {"name": "GymEnvWrapper", "role": "把 RL 任务包装成标准 gymnasium 环境的单环境适配器，供 gym.make 使用", "file": "packages/metasim/metasim/task/gym_registration.py"},
+    {"name": "HybridSimHandler", "role": "混合仿真器基类，让一个场景里不同物体由不同后端驱动，并转发能力标志", "file": "packages/metasim/metasim/sim/hybrid.py"},
+    {"name": "ParallelSimWrapper", "role": "并行仿真包装器，把多个后端实例组合起来做批量仿真", "file": "packages/metasim/metasim/sim/parallel.py"},
+    {"name": "BaseQueryType", "role": "查询抽象基类，用于从仿真器提取接触力、site 等额外信息", "file": "packages/metasim/metasim/queries/base.py"}
+  ],
+  "layers": [
+    {"name": "仿真后端层", "responsibility": "用 BaseSimHandler 统一封装 MuJoCo、Isaac Sim、Isaac Gym、SAPIEN、PyBullet、Genesis、MJX、Newton、Blender 等后端", "modules": ["packages/metasim/metasim/sim"], "files": ["packages/metasim/metasim/sim/base.py", "packages/metasim/metasim/sim/mujoco/mujoco.py", "packages/metasim/metasim/sim/hybrid.py", "packages/metasim/metasim/sim/parallel.py"]},
+    {"name": "场景配置层", "responsibility": "用 dataclass 描述场景、机器人、物体、相机、光照、地面与仿真参数", "modules": ["packages/metasim/metasim/scenario"], "files": ["packages/metasim/metasim/scenario/scenario.py", "packages/metasim/metasim/scenario/robot.py", "packages/metasim/metasim/scenario/objects.py", "packages/metasim/metasim/scenario/scene.py"]},
+    {"name": "任务层", "responsibility": "定义任务基类、注册表、gym 注册与 RL 任务封装", "modules": ["packages/metasim/metasim/task"], "files": ["packages/metasim/metasim/task/base.py", "packages/metasim/metasim/task/registry.py", "packages/metasim/metasim/task/rl_task.py", "packages/metasim/metasim/task/gym_registration.py"]},
+    {"name": "内容层", "responsibility": "具体任务、机器人、场景、地面与随机化预设，覆盖 RLBench/LIBERO/ManiSkill/MetaWorld/robosuite 等基准", "modules": ["roboverse_pack/tasks", "roboverse_pack/robots", "roboverse_pack/scenes", "roboverse_pack/grounds"], "files": ["roboverse_pack/tasks/pick_place/base.py", "roboverse_pack/robots/aloha.py"]},
+    {"name": "查询与随机化层", "responsibility": "提取接触力等额外状态，并对场景做域随机化", "modules": ["packages/metasim/metasim/queries", "packages/metasim/metasim/randomization"], "files": ["packages/metasim/metasim/queries/base.py", "packages/metasim/metasim/randomization/core"]},
+    {"name": "学习层", "responsibility": "基于统一环境做 RL（SB3/CleanRL/FastTD3/rsl_rl）、IL（ACT/DP）与 VLA 训练评估", "modules": ["roboverse_learn/rl", "roboverse_learn/il", "roboverse_learn/vla"], "files": ["roboverse_learn/rl/sb3/ppo_train.py", "roboverse_learn/il/policies"]},
+    {"name": "教程与工具层", "responsibility": "编号教程链、开发脚本与第三方集成工具", "modules": ["examples", "scripts", "tools"], "files": ["examples/0_static_scene.py", "examples/9_cfg_task.py", "examples/rl/0_ppo.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户构造 ScenarioCfg，指定 simulator、robots、objects、cameras 与 num_envs",
+    "第2步：ScenarioCfg.__post_init__ 用 get_robot / get_scene / get_ground 把字符串资源名解析成配置对象并做校验",
+    "第3步：用户定义任务类继承 BaseTaskEnv 或 RLTaskEnv，用 @register_task 装饰注册到 TASK_REGISTRY",
+    "第4步：用户实例化 Task(scenario)，或用 metasim.register_gym_envs 后 gym.make(\"RoboVerse/<task>\")",
+    "第5步：BaseTaskEnv.__init__ 调 _instantiate_env，经 get_sim_handler_class(SimType) 从 SIM_BACKENDS 取后端 handler 类",
+    "第6步：handler 依据场景初始化具体仿真器，加载机器人、物体与地面资产",
+    "第7步：reset 写入初始状态并返回观测，环境开始一个 episode",
+    "第8步：step 接收动作，先触发 pre_physics_step_callback 做动作预处理",
+    "第9步：handler._set_dof_targets 下发目标，_simulate 推进物理，_get_states 读回新状态",
+    "第10步：任务用 _reward / _terminated / _time_out 计算奖励与终止，触发 post_physics_step_callback",
+    "第11步：返回 obs/reward/terminated/truncated/info，RL 学习层用这些数据训练 PPO 等策略",
+    "第12步：脚本可批量采集轨迹并保存为统一数据集，供 IL/VLA 训练使用"
+  ],
+  "entry_points": [
+    {"path": "packages/metasim/metasim/__init__.py:18", "what": "register_gym_envs，发现并注册所有任务为 RoboVerse/<task> 的 gym 环境"},
+    {"path": "packages/metasim/metasim/task/gym_registration.py:241", "what": "register_all_tasks_with_gym，批量把任务注册进 gymnasium"},
+    {"path": "packages/metasim/metasim/task/gym_registration.py:260", "what": "register_task_with_gym，注册单个任务并绑定单环境与向量入口"},
+    {"path": "packages/metasim/metasim/task/base.py:20", "what": "BaseTaskEnv，所有任务的父类，定义 step/reset 与回调契约"},
+    {"path": "packages/metasim/metasim/task/rl_task.py:23", "what": "RLTaskEnv，面向 RL 的任务基类"},
+    {"path": "examples/0_static_scene.py", "what": "教程链起点，创建静态场景并加载仿真器"},
+    {"path": "examples/9_cfg_task.py", "what": "演示如何用配置定义一个任务"},
+    {"path": "examples/rl/0_ppo.py", "what": "用统一环境训练 PPO 的 RL 示例"},
+    {"path": "roboverse_learn/rl/sb3/ppo_train.py", "what": "基于 Stable-Baselines3 的 PPO 训练脚本"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先理解仓库布局：MetaSim 核心包与内容/学习代码两层的分工"},
+    {"path": "examples/0_static_scene.py", "why": "最简入门，看场景如何被创建与仿真器如何被拉起"},
+    {"path": "packages/metasim/metasim/sim/base.py", "why": "BaseSimHandler，理解仿真器统一接口与后端能力标志"},
+    {"path": "packages/metasim/metasim/utils/setup_util.py", "why": "SIM_BACKENDS 分发表与 get_sim_handler_class，理解后端如何被选择"},
+    {"path": "packages/metasim/metasim/scenario/scenario.py", "why": "ScenarioCfg，理解场景配置的全部字段与解析流程"},
+    {"path": "packages/metasim/metasim/task/base.py", "why": "BaseTaskEnv，理解任务的 step/reset 与回调扩展点"},
+    {"path": "packages/metasim/metasim/task/registry.py", "why": "register_task 与 TASK_REGISTRY，理解任务注册与发现机制"},
+    {"path": "packages/metasim/metasim/task/rl_task.py", "why": "RLTaskEnv，理解 RL 任务的动作、奖励与自动重置"},
+    {"path": "packages/metasim/metasim/task/gym_registration.py", "why": "gym 适配层，理解统一环境如何接入标准 gymnasium 生态"},
+    {"path": "examples/9_cfg_task.py", "why": "看一个完整任务如何用配置组装出来"}
+  ],
+  "extension_points": [
+    "想加新仿真器：在 packages/metasim/metasim/constants.py 的 SimType 枚举加一个值，在 packages/metasim/metasim/utils/setup_util.py 的 SIM_BACKENDS 加一条 BackendSpec，再在 packages/metasim/metasim/sim/<backend>/ 写继承 BaseSimHandler 的 handler 类",
+    "想加新任务：在 roboverse_pack/tasks/<name>/ 下写继承 BaseTaskEnv 或 RLTaskEnv 的类，用 @register_task(\"name\") 装饰，并声明 supported_simulators",
+    "想加新机器人：在 roboverse_pack/robots/ 下写 RobotCfg 子类，让 get_robot 能按名解析",
+    "想加新物体或场景或地面：分别继承 scenario/objects.py 的 BaseObjCfg、scenario/scene.py 的 SceneCfg、scenario/grounds.py 的 GroundCfg",
+    "想加新查询：继承 packages/metasim/metasim/queries/base.py 的 BaseQueryType，实现从 handler 提取信息",
+    "想加新随机化策略：在 randomization/presets 下写预设并在场景中引用",
+    "想换学习算法：在 roboverse_learn/rl/ 下按 SB3/CleanRL/FastTD3 的既有模式加训练脚本，复用统一 gym 接口"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 docs，理解 MetaSim 核心包与内容/学习代码的分工以及仓库目录表",
+    "第2步：跑并读 examples/0_static_scene.py 到 9_cfg_task.py 的编号教程链，建立直观印象",
+    "第3步：读 packages/metasim/metasim/sim/base.py，理解 BaseSimHandler 的统一接口与能力标志",
+    "第4步：读 packages/metasim/metasim/utils/setup_util.py 的 SIM_BACKENDS，理解后端如何按 SimType 分发",
+    "第5步：读 packages/metasim/metasim/scenario/scenario.py，掌握 ScenarioCfg 如何组织场景",
+    "第6步：读 packages/metasim/metasim/task/base.py 与 registry.py，理解任务契约与注册发现机制",
+    "第7步：读 packages/metasim/metasim/task/gym_registration.py 与 rl_task.py，理解如何接入 gym 与 RL",
+    "第8步：读 roboverse_learn/rl/sb3/ppo_train.py，看统一环境上如何跑强化学习训练"
+  ],
+  "diagram_mermaid": "graph TD\n  USER[用户代码或脚本] --> SC[ScenarioCfg 场景配置]\n  SC --> RESOLVE[解析机器人与场景资源]\n  USER --> TASK[任务类 继承 BaseTaskEnv]\n  TASK --> REG[register_task 注册到 TASK_REGISTRY]\n  TASK --> ENV[实例化任务或 gym.make]\n  ENV --> DISPATCH[get_sim_handler_class 按 SimType 分发]\n  DISPATCH --> HANDLER[具体后端 Handler 如 MuJoCo]\n  HANDLER --> SIM[初始化仿真器并加载资产]\n  ENV --> RESET[reset 写入初始状态]\n  ENV --> STEP[step 接收动作]\n  STEP --> PHYSICS[_set_dof_targets 与 _simulate 推进物理]\n  PHYSICS --> STATE[_get_states 读回状态]\n  STATE --> REWARD[_reward 与 _terminated 计算]\n  REWARD --> OUT[返回 obs 与 reward 与 info]\n  OUT --> LEARN[roboverse_learn 训练 RL 或 IL 或 VLA]",
+  "surprises": [
+    "一个仓库其实是两个包：仿真核心 MetaSim 在 packages/metasim 且 import 名是 metasim，内容与学习代码是根目录的 roboverse-py，安装时必须先装 metasim 再装根包",
+    "加仿真器被刻意做成极简两步：注释明确写着 Adding a simulator = one SimType value + one entry here，即改 constants.py 与 setup_util.py 两处",
+    "任务发现默认走 AST 静态索引而非导入全部模块，只有设置 METASIM_TASK_DISCOVERY=eager 才恢复旧的 import-everything 行为",
+    "任务用 supported_simulators 主动声明支持的仿真器，越界会在构造时就报错，而不是等到后端深处才失败",
+    "gym 包装会强制 num_envs=1 并 deepcopy 场景配置，因为任务类的 scenario 是共享类属性，否则 gym.make 会污染整个进程的默认值"
+  ],
+  "confidence": "高"
+}

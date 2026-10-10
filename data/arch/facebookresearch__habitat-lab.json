@@ -1,0 +1,97 @@
+{
+  "repo": "facebookresearch/habitat-lab",
+  "name": "Habitat-Lab",
+  "one_liner": "室内具身 AI 高层库，统一组织任务、数据集与仿真器",
+  "problem": "室内导航与交互任务研究缺少统一的仿真环境、任务定义与训练基线。Habitat-Lab 以 Habitat-Sim 为核心，用可插拔的 Task/Dataset/Simulator 三件套和 Hydra 配置体系，支持导航、重排、指令跟随、问答等多类具身任务的训练与评测。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Env", "role": "核心环境类，把 dataset、simulator、task 三者连接起来，管理 episode 迭代、reset 与 step", "file": "habitat-lab/habitat/core/env.py"},
+    {"name": "RLEnv", "role": "对 Env 的 gym.Env 包装，子类实现 get_reward/get_done/get_info，供 RL 训练使用", "file": "habitat-lab/habitat/core/env.py"},
+    {"name": "EmbodiedTask", "role": "任务基类，定义动作空间、观测空间、度量与 step/reset，是扩展任务的形式化接口", "file": "habitat-lab/habitat/core/embodied_task.py"},
+    {"name": "Dataset", "role": "episode 集合的抽象，提供 episode 迭代器与场景划分，是任务实例的来源", "file": "habitat-lab/habitat/core/dataset.py"},
+    {"name": "Simulator", "role": "仿真器抽象，提供动作执行、传感器套件、agent 状态与场景重配置接口", "file": "habitat-lab/habitat/core/simulator.py"},
+    {"name": "Sensor", "role": "传感器基类，定义观测的 uuid、空间与 get_observation，sim 与 task 都可挂载", "file": "habitat-lab/habitat/core/simulator.py"},
+    {"name": "Measure", "role": "度量基类，提供 reset_metric/update_metric/get_metric，用于统计成功率、距离等指标", "file": "habitat-lab/habitat/core/embodied_task.py"},
+    {"name": "Action", "role": "任务动作基类，定义 action_space 与 step，把策略动作转成仿真器调用", "file": "habitat-lab/habitat/core/embodied_task.py"},
+    {"name": "Registry", "role": "全局单例注册表，用装饰器注册 task/dataset/sim/sensor/measure/action，是组件发现的核心", "file": "habitat-lab/habitat/core/registry.py"},
+    {"name": "NavigationTask", "role": "导航任务实现，定义导航动作、点目标传感器与导航度量，是任务实现的范例", "file": "habitat-lab/habitat/tasks/nav/nav.py"},
+    {"name": "PointNavDatasetV1", "role": "点导航数据集实现，从 json.gz 加载 episode 并支持按场景分片", "file": "habitat-lab/habitat/datasets/pointnav/pointnav_dataset.py"},
+    {"name": "PPOTrainer", "role": "基线 PPO 训练器，负责搭建 actor-critic、收集 rollout、更新策略与评测", "file": "habitat-baselines/habitat_baselines/rl/ppo/ppo_trainer.py"}
+  ],
+  "layers": [
+    {"name": "配置层", "responsibility": "用 Hydra 与 OmegaConf structured config 组合 habitat 配置树，提供 get_config 与只读校验", "modules": ["habitat-lab/habitat/config"], "files": ["habitat-lab/habitat/config/default.py", "habitat-lab/habitat/config/default_structured_configs.py", "habitat-lab/habitat/config/read_write.py"]},
+    {"name": "核心抽象层", "responsibility": "定义 Env、Task、Dataset、Simulator、Sensor、Measure、Registry 等所有扩展点的基类", "modules": ["habitat-lab/habitat/core"], "files": ["habitat-lab/habitat/core/env.py", "habitat-lab/habitat/core/embodied_task.py", "habitat-lab/habitat/core/dataset.py", "habitat-lab/habitat/core/simulator.py", "habitat-lab/habitat/core/registry.py", "habitat-lab/habitat/core/vector_env.py"]},
+    {"name": "任务层", "responsibility": "实现导航、重排、EQA、VLN 等具体任务及其动作、传感器与度量", "modules": ["habitat-lab/habitat/tasks"], "files": ["habitat-lab/habitat/tasks/nav/nav.py", "habitat-lab/habitat/tasks/nav/object_nav_task.py", "habitat-lab/habitat/tasks/registration.py", "habitat-lab/habitat/tasks/rearrange/rearrange_task.py"]},
+    {"name": "数据集层", "responsibility": "实现各类任务数据集与 episode 生成器，并提供统一 make_dataset 入口", "modules": ["habitat-lab/habitat/datasets"], "files": ["habitat-lab/habitat/datasets/registration.py", "habitat-lab/habitat/datasets/pointnav/pointnav_dataset.py", "habitat-lab/habitat/datasets/pointnav/pointnav_generator.py"]},
+    {"name": "仿真器层", "responsibility": "封装 Habitat-Sim 与 articulated agent，提供动作执行、场景加载与物理交互", "modules": ["habitat-lab/habitat/sims", "habitat-lab/habitat/articulated_agents"], "files": ["habitat-lab/habitat/sims/habitat_simulator/habitat_simulator.py", "habitat-lab/habitat/sims/registration.py"]},
+    {"name": "Gym 接口层", "responsibility": "把 habitat 环境适配成 gymnasium 风格接口，便于通用 RL 库使用", "modules": ["habitat-lab/habitat/gym"], "files": ["habitat-lab/habitat/gym/gym_definitions.py", "habitat-lab/habitat/gym/gym_wrapper.py"]},
+    {"name": "工具层", "responsibility": "提供几何、可视化、profiling 等通用工具", "modules": ["habitat-lab/habitat/utils"], "files": ["habitat-lab/habitat/utils/geometry_utils.py", "habitat-lab/habitat/utils/visualizations/maps.py"]},
+    {"name": "基线训练层", "responsibility": "提供 PPO、DD-PPO、VER、IL 等训练器、策略与 rollout 存储，以及训练入口 run.py", "modules": ["habitat-baselines/habitat_baselines"], "files": ["habitat-baselines/habitat_baselines/run.py", "habitat-baselines/habitat_baselines/rl/ppo/ppo_trainer.py", "habitat-baselines/habitat_baselines/common/baseline_registry.py", "habitat-baselines/habitat_baselines/common/env_factory.py"]},
+    {"name": "人机交互层", "responsibility": "支持人类在环采集数据与与智能体交互", "modules": ["habitat-hitl"], "files": ["habitat-hitl/habitat_hitl/core/__init__.py", "habitat-hitl/habitat_hitl/core/hitl_main.py"]},
+    {"name": "示例层", "responsibility": "提供环境创建、动作演示、注册新传感器与度量的可运行示例", "modules": ["examples"], "files": ["examples/example.py", "examples/register_new_sensors_and_measures.py", "examples/interactive_play.py"]}
+  ],
+  "data_flow": [
+    "第1步：写 YAML 或调 get_config，Hydra 组合 habitat 配置树，patch_config 校验 agents_order 并把配置设为只读",
+    "第2步：Env.__init__ 依据 config.dataset.type 调 make_dataset，从 registry 取 Dataset 子类并加载 episodes",
+    "第3步：取第一个 episode 的 scene，写入 simulator.scene，再按 config.simulator.type 调 make_sim 创建 Simulator",
+    "第4步：按 config.task.type 调 make_task，把 sim 与 dataset 注入 EmbodiedTask 子类",
+    "第5步：observation_space 取 sim.sensor_suite 与 task.sensor_suite 观测空间的并集，action_space 来自 task",
+    "第6步：reset 从 episode_iterator 取下一个 episode，调 reconfigure 让 task 改写 sim 配置并重建场景",
+    "第7步：task.reset 初始化任务状态与目标，measurements.reset_measures 重置所有度量",
+    "第8步：step 调 task.step，把动作名与参数分派给对应 Action，Action.step 驱动 simulator 执行",
+    "第9步：measurements.update_measures 逐个更新 Measure 的 metric，用于统计成功率与距离等",
+    "第10步：RLEnv 把 task 指标包装成 gym 的 reward/done/info，供 RL 算法消费",
+    "第11步：基线 run.py 用 Hydra 实例化 PPOTrainer，trainer 经 EnvFactory 创建环境并进入训练循环",
+    "第12步：PPO 用 rollout_storage 收集 rollout 并更新 actor-critic，评测时用 HabitatEvaluator 统计指标"
+  ],
+  "entry_points": [
+    {"path": "habitat-baselines/habitat_baselines/run.py", "what": "基线训练与评测主入口，用 Hydra 选择配置与 trainer 并调用 train 或 eval"},
+    {"path": "habitat-baselines/habitat_baselines/rl/ppo/ppo_trainer.py", "what": "PPO 训练器实现，包含完整训练循环与 rollout 收集"},
+    {"path": "examples/example.py", "what": "最小可运行示例，展示如何用 get_config 建环境并交互"},
+    {"path": "examples/interactive_play.py", "what": "交互式可视化，手动控制 agent 观察环境"},
+    {"path": "examples/register_new_sensors_and_measures.py", "what": "演示如何注册自定义传感器与度量"},
+    {"path": "examples/benchmark.py", "what": "在数据集上批量跑 agent 并输出基准指标"},
+    {"path": "habitat-lab/habitat/config/habitat/task/pointnav.yaml", "what": "点导航任务的默认配置，理解配置字段与任务参数的范例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：设计目标、安装、数据集与基线"},
+    {"path": "habitat-lab/habitat/core/env.py", "why": "Env 是全局核心，看清 dataset/simulator/task 如何被组合与驱动"},
+    {"path": "habitat-lab/habitat/core/embodied_task.py", "why": "任务、动作与度量的基类，是扩展任务必读"},
+    {"path": "habitat-lab/habitat/core/dataset.py", "why": "episode 抽象与迭代器，理解任务实例来源"},
+    {"path": "habitat-lab/habitat/core/simulator.py", "why": "仿真器与传感器抽象，理解观测如何产生"},
+    {"path": "habitat-lab/habitat/core/registry.py", "why": "全局注册表，理解所有组件如何被发现与实例化"},
+    {"path": "habitat-lab/habitat/config/default.py", "why": "配置装配入口，理解 Hydra structured config 体系"},
+    {"path": "habitat-lab/habitat/tasks/nav/nav.py", "why": "一个完整任务的实现，对照基类理解传感器、动作与度量"},
+    {"path": "habitat-baselines/habitat_baselines/run.py", "why": "基线入口，理解训练器如何被注册与启动"}
+  ],
+  "extension_points": [
+    "想加新任务：继承 habitat-lab/habitat/core/embodied_task.py 的 EmbodiedTask，用 @registry.register_task 注册，并在 config/habitat/task 下加 YAML",
+    "想加新数据集：继承 habitat-lab/habitat/core/dataset.py 的 Dataset，用 @registry.register_dataset 注册",
+    "想加新传感器：继承 habitat-lab/habitat/core/simulator.py 的 Sensor，用 @registry.register_sensor 注册",
+    "想加新度量：继承 habitat-lab/habitat/core/embodied_task.py 的 Measure，用 @registry.register_measure 注册",
+    "想加新动作：继承 Action 或 SimulatorTaskAction，用 @registry.register_task_action 注册",
+    "想加新仿真器：继承 Simulator 并用 @registry.register_simulator 注册",
+    "想加新训练器：继承 habitat-baselines 的 BaseRLTrainer，用 @baseline_registry.register_trainer 注册",
+    "想加新配置项：在 habitat-lab/habitat/config/default_structured_configs.py 定义 dataclass 并接入配置树"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 examples/example.py，跑通一个最小导航环境",
+    "第2步：读 habitat-lab/habitat/core/env.py 的 Env，理解 dataset/simulator/task 三者如何组合",
+    "第3步：读 habitat-lab/habitat/core/embodied_task.py，理解任务、动作与度量的职责划分",
+    "第4步：读 habitat-lab/habitat/core/dataset.py 与 simulator.py，理解 episode 与观测来源",
+    "第5步：读 habitat-lab/habitat/core/registry.py，理解组件注册与字符串 id 引用机制",
+    "第6步：读 habitat-lab/habitat/config/default.py 与 default_structured_configs.py，理解 Hydra 配置体系",
+    "第7步：读 habitat-lab/habitat/tasks/nav/nav.py 与 datasets/pointnav/pointnav_dataset.py，把任务与数据集落到实例",
+    "第8步：读 habitat-baselines/habitat_baselines/run.py 与 rl/ppo/ppo_trainer.py，理解基线训练循环"
+  ],
+  "diagram_mermaid": "graph TD\n  CFG[Hydra 配置树] --> ENV[Env 初始化]\n  ENV --> DS[make_dataset 加载 episodes]\n  ENV --> SIM[make_sim 创建仿真器]\n  ENV --> TASK[make_task 创建任务]\n  DS --> ENV\n  SIM --> OBS[sim 与 task 的 sensor_suite 并集]\n  TASK --> OBS\n  ENV --> RESET[reset 取 episode 并重配置场景]\n  RESET --> STEP[step 分派动作给 Action]\n  STEP --> SIMSTEP[Simulator 执行动作]\n  SIMSTEP --> MEAS[Measurements 更新度量]\n  MEAS --> RLENV[RLEnv 转成 reward 与 done]\n  RLENV --> FACTORY[EnvFactory 建环境]\n  FACTORY --> TRAINER[PPOTrainer 训练循环]",
+  "surprises": [
+    "Env 把 dataset、simulator、task 三者紧耦合在一起，切换 episode 会触发 sim.reconfigure 重建场景，任务实例与 episode 一一对应",
+    "几乎所有组件都靠全局单例 Registry 注册，import 即注册，配置里只写字符串 id，排查组件缺失时要从注册时机入手",
+    "observation_space 是 simulator 与 task 两套 sensor_suite 观测空间的并集，任务可以自带传感器而不只依赖仿真器",
+    "RLEnv 只是对 Env 的 gym 包装，reward 与 done 必须由子类实现，核心 Env 本身完全不产生奖励",
+    "配置用 Hydra structured config，patch_config 之后 OmegaConf 被设为只读，运行时修改配置需要 read_write 上下文",
+    "Measure 之间有顺序依赖，check_measure_dependencies 要求被依赖的度量必须在配置列表里排在前面，否则断言失败"
+  ],
+  "confidence": "高"
+}

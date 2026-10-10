@@ -1,0 +1,458 @@
+[
+ {
+  "file": "AgentOps-AI__agentops.json",
+  "repo": "AgentOps-AI/agentops",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 49,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "DLR-RM__stable-baselines3.json",
+  "repo": "DLR-RM/stable-baselines3",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 7,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 52,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "Farama-Foundation__Gymnasium.json",
+  "repo": "Farama-Foundation/Gymnasium",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 7,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 30,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 7
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "Genesis-Embodied-AI__Genesis.json",
+  "repo": "Genesis-Embodied-AI/Genesis",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 41,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 3
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "OpenBMB__MiniCPM-V.json",
+  "repo": "OpenBMB/MiniCPM-V",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 7,
+  "flow": 9,
+  "key_files": 8,
+  "paths_checked": 39,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "Physical-Intelligence__openpi.json",
+  "repo": "Physical-Intelligence/openpi",
+  "confidence": "高",
+  "abstractions": 9,
+  "layers": 7,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "RoboVerseOrg__RoboVerse.json",
+  "repo": "RoboVerseOrg/RoboVerse",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 7,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 52,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "browser-use__browser-use.json",
+  "repo": "browser-use/browser-use",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 53,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "facebookresearch__habitat-lab.json",
+  "repo": "facebookresearch/habitat-lab",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 10,
+  "flow": 12,
+  "key_files": 9,
+  "paths_checked": 59,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "geekan__MetaGPT.json",
+  "repo": "geekan/MetaGPT",
+  "confidence": "高",
+  "abstractions": 7,
+  "layers": 6,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 38,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "getzep__graphiti.json",
+  "repo": "getzep/graphiti",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 9,
+  "paths_checked": 49,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "haosulab__ManiSkill.json",
+  "repo": "haosulab/ManiSkill",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 10,
+  "flow": 12,
+  "key_files": 9,
+  "paths_checked": 62,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "hiyouga__LLaMA-Factory.json",
+  "repo": "hiyouga/LLaMA-Factory",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 49,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 5
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "huggingface__lerobot.json",
+  "repo": "huggingface/lerobot",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 42,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 6
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "huggingface__smolagents.json",
+  "repo": "huggingface/smolagents",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 7,
+  "flow": 11,
+  "key_files": 8,
+  "paths_checked": 38,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 2
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "isaac-sim__IsaacLab.json",
+  "repo": "isaac-sim/IsaacLab",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 7,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 38,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "langchain-ai__langgraph.json",
+  "repo": "langchain-ai/langgraph",
+  "confidence": "高",
+  "abstractions": 7,
+  "layers": 6,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 36,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "mem0ai__mem0.json",
+  "repo": "mem0ai/mem0",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 6,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 40,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "modelcontextprotocol__python-sdk.json",
+  "repo": "modelcontextprotocol/python-sdk",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 57,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "openai__openai-agents-python.json",
+  "repo": "openai/openai-agents-python",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 9,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 53,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "openvla__openvla.json",
+  "repo": "openvla/openvla",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 9,
+  "flow": 12,
+  "key_files": 9,
+  "paths_checked": 58,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "real-stanford__diffusion_policy.json",
+  "repo": "real-stanford/diffusion_policy",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 49,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "stanfordnlp__dspy.json",
+  "repo": "stanfordnlp/dspy",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 9,
+  "flow": 11,
+  "key_files": 8,
+  "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "unclecode__crawl4ai.json",
+  "repo": "unclecode/crawl4ai",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 9,
+  "paths_checked": 49,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ }
+]

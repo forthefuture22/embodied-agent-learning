@@ -1,0 +1,93 @@
+{
+  "repo": "hiyouga/LLaMA-Factory",
+  "name": "LLaMA-Factory",
+  "one_liner": "零代码微调上百种大模型的一站式训练框架，统一 CLI 与 WebUI",
+  "problem": "大模型微调链路冗长：模型加载、对话模板拼接、数据预处理、LoRA/量化、分布式训练各自为政。LLaMA-Factory 用统一配置与解耦的模型/数据/训练三层，把 100+ 模型与 SFT/DPO/PPO 等方法收敛到一套 CLI 与 WebUI。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Template", "role": "对话模板抽象，把多轮消息按各模型约定的槽位编码成 token ids，并定义 stop words、thinking 词、工具调用词", "file": "src/llamafactory/data/template.py"},
+    {"name": "Formatter", "role": "模板的槽位渲染器，StringFormatter/FunctionFormatter/ToolFormatter 等负责把 content 填进分隔符", "file": "src/llamafactory/data/formatter.py"},
+    {"name": "DatasetProcessor", "role": "数据集处理器抽象基类，规定 preprocess_dataset 与 print_data_example，具体子类对应 pretrain/supervised/pairwise 等阶段", "file": "src/llamafactory/data/processor/processor_utils.py"},
+    {"name": "BasePlugin", "role": "多模态插件抽象，负责图像/视频/音频等非文本模态与占位符的转换", "file": "src/llamafactory/data/mm_plugin.py"},
+    {"name": "ModelArguments", "role": "模型侧配置数据类，声明 model_name_or_path、量化、adapter、注意力实现等参数", "file": "src/llamafactory/hparams/model_args.py"},
+    {"name": "FinetuningArguments", "role": "微调方法配置数据类，用 stage 字段决定 pt/sft/rm/ppo/dpo/kto 等分支与 LoRA 相关开关", "file": "src/llamafactory/hparams/finetuning_args.py"},
+    {"name": "load_model", "role": "模型加载入口函数，按 ModelArguments/FinetuningArguments 加载基座、注入量化与 LoRA adapter", "file": "src/llamafactory/model/loader.py"},
+    {"name": "BaseEngine", "role": "推理引擎抽象基类，统一 huggingface/vllm/sglang 三种后端在 ChatModel 下的调用契约", "file": "src/llamafactory/chat/base_engine.py"},
+    {"name": "run_sft", "role": "SFT 工作流函数，串起 tokenizer、template、dataset、model 与 Trainer，是三层解耦的组装样板", "file": "src/llamafactory/train/sft/workflow.py"},
+    {"name": "CustomSeq2SeqTrainer", "role": "继承 transformers Trainer 的定制训练器，加入 packing、4D 注意力掩码、序列长度统计等能力", "file": "src/llamafactory/train/sft/trainer.py"},
+    {"name": "BaseTrainer", "role": "v1 新架构的训练器抽象基类，与旧架构并存的下一代接口", "file": "src/llamafactory/v1/core/base_trainer.py"}
+  ],
+  "layers": [
+    {"name": "入口与启动层", "responsibility": "解析子命令并在单卡/多卡/分布式间选择启动方式", "modules": ["src/llamafactory"], "files": ["src/llamafactory/cli.py", "src/llamafactory/launcher.py"]},
+    {"name": "配置参数层", "responsibility": "用 dataclass 定义 Model/Data/Training/Finetuning/Generating 五类参数，并从 YAML 或命令行解析", "modules": ["src/llamafactory/hparams"], "files": ["src/llamafactory/hparams/parser.py", "src/llamafactory/hparams/model_args.py", "src/llamafactory/hparams/finetuning_args.py", "src/llamafactory/hparams/data_args.py"]},
+    {"name": "数据层", "responsibility": "加载数据集、按 Template 编码成 token、用 Processor 预处理并做 collator 打包", "modules": ["src/llamafactory/data"], "files": ["src/llamafactory/data/template.py", "src/llamafactory/data/loader.py", "src/llamafactory/data/formatter.py", "src/llamafactory/data/processor/processor_utils.py"]},
+    {"name": "模型层", "responsibility": "加载 tokenizer 与基座模型，注入量化、LoRA adapter 与各类 model_utils 补丁", "modules": ["src/llamafactory/model"], "files": ["src/llamafactory/model/loader.py", "src/llamafactory/model/adapter.py", "src/llamafactory/model/patcher.py"]},
+    {"name": "训练层", "responsibility": "按 stage 分发到 pt/sft/rm/ppo/dpo/kto 各工作流，各工作流自建 Trainer 与 DataCollator", "modules": ["src/llamafactory/train"], "files": ["src/llamafactory/train/tuner.py", "src/llamafactory/train/sft/workflow.py", "src/llamafactory/train/dpo/workflow.py", "src/llamafactory/train/callbacks.py"]},
+    {"name": "推理与对话层", "responsibility": "统一 chat/api 的推理接口，支持 huggingface/vllm/sglang 后端", "modules": ["src/llamafactory/chat", "src/llamafactory/api"], "files": ["src/llamafactory/chat/chat_model.py", "src/llamafactory/chat/base_engine.py", "src/llamafactory/api/app.py"]},
+    {"name": "WebUI 层", "responsibility": "Gradio 界面收集表单后拼成同一套 args dict，复用 train 流水线", "modules": ["src/llamafactory/webui"], "files": ["src/llamafactory/webui/runner.py", "src/llamafactory/webui/interface.py"]},
+    {"name": "v1 新架构层", "responsibility": "下一代重构：独立的 config/core/plugins/trainers，用插件机制重做数据与模型扩展", "modules": ["src/llamafactory/v1"], "files": ["src/llamafactory/v1/core/base_trainer.py", "src/llamafactory/v1/core/model_engine.py", "src/llamafactory/v1/launcher.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户运行 llamafactory-cli train examples/train_lora/xxx.yaml",
+    "第2步：cli.main 根据 USE_V1 选择旧版或 v1 的 launcher，调用 launch()",
+    "第3步：launcher 取 sys.argv 的 train 子命令，单卡直接进程内调用 train.tuner.run_exp",
+    "第4步：read_args 用 OmegaConf 把 YAML 与命令行覆盖项合并成 args dict",
+    "第5步：get_train_args 把 dict 解析为 Model/Data/Training/Finetuning/Generating 五类 dataclass",
+    "第6步：run_exp 依 finetuning_args.stage 分发到 run_sft/run_pt/run_dpo/run_rm/run_ppo/run_kto",
+    "第7步：以 run_sft 为例，load_tokenizer 得到 tokenizer 与 processor",
+    "第8步：get_template_and_fix_tokenizer 按 data_args.template 取 Template 并修正 padding 等 tokenizer 属性",
+    "第9步：get_dataset 用 Template 与对应 DatasetProcessor 把原始数据编码成 input_ids/labels",
+    "第10步：load_model 加载基座模型并按 FinetuningArguments 注入量化与 LoRA adapter",
+    "第11步：构造 CustomSeq2SeqTrainer 与 DataCollator 后执行 trainer.train 训练循环",
+    "第12步：ReporterCallback 写出模型卡与配置，plot_loss 绘制训练曲线"
+  ],
+  "entry_points": [
+    {"path": "llamafactory-cli train", "what": "微调主入口，解析配置后执行 pt/sft/rm/ppo/dpo/kto 训练"},
+    {"path": "llamafactory-cli webui", "what": "启动 LlamaBoard Gradio 界面进行零代码微调"},
+    {"path": "llamafactory-cli chat", "what": "命令行对话推理，可加载 LoRA adapter"},
+    {"path": "llamafactory-cli api", "what": "启动 OpenAI 风格 API 服务"},
+    {"path": "llamafactory-cli export", "what": "合并 LoRA adapter 并导出完整模型"},
+    {"path": "src/llamafactory/cli.py:16", "what": "main 函数，按 USE_V1 环境变量选择启动器"},
+    {"path": "src/llamafactory/launcher.py:38", "what": "launch 函数，子命令路由与分布式 torchrun 拉起"},
+    {"path": "src/llamafactory/train/tuner.py:163", "what": "run_exp 函数，训练任务的编排核心"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：支持的模型、方法、数据与 CLI 用法"},
+    {"path": "src/llamafactory/cli.py", "why": "唯一进程入口，理解子命令与新旧架构切换"},
+    {"path": "src/llamafactory/launcher.py", "why": "子命令路由与单卡/多卡启动策略"},
+    {"path": "src/llamafactory/hparams/parser.py", "why": "五类参数 dataclass 的组装与 YAML/CLI 解析入口"},
+    {"path": "src/llamafactory/data/template.py", "why": "Template 抽象与 register_template 注册机制，数据编码的核心"},
+    {"path": "src/llamafactory/train/sft/workflow.py", "why": "最清晰的样板：tokenizer、template、dataset、model 四者如何组合"},
+    {"path": "src/llamafactory/model/loader.py", "why": "模型加载与 adapter/量化注入的统一入口"},
+    {"path": "src/llamafactory/data/loader.py", "why": "数据集加载与 Processor 选择，理解数据层流水线"},
+    {"path": "src/llamafactory/train/tuner.py", "why": "stage 分发中心，理解训练方法如何按名路由"},
+    {"path": "src/llamafactory/webui/runner.py", "why": "看 WebUI 如何复用与 CLI 完全相同的配置与训练函数"}
+  ],
+  "extension_points": [
+    "想加新模型架构：在 src/llamafactory/model/model_utils/ 下新增补丁模块并在 model/patcher.py 挂接，必要时改 model/loader.py 的 load_model 分支",
+    "想加新对话模板：在 src/llamafactory/data/template.py 里调用 register_template 注册一个名字，用户用 template: <名字> 即可选用",
+    "想加新训练方法（新 stage）：在 src/llamafactory/train/ 下新建子包写 workflow.py 与 trainer.py，在 train/tuner.py 的 stage 分发处加分支，并在 hparams/finetuning_args.py 声明新参数",
+    "想加新数据格式：继承 src/llamafactory/data/processor/processor_utils.py 的 DatasetProcessor，在 data/loader.py 的 get_dataset 里注册",
+    "想加新多模态模态：在 src/llamafactory/data/mm_plugin.py 继承 BasePlugin 并注册",
+    "想加新推理后端：继承 src/llamafactory/chat/base_engine.py 的 BaseEngine 并在 ChatModel 中接入"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 pyproject.toml 的 [project.scripts]，知道 llamafactory-cli 有哪些子命令",
+    "第2步：读 src/llamafactory/cli.py 与 launcher.py，搞清楚命令如何被路由到具体功能",
+    "第3步：读 src/llamafactory/hparams/parser.py，掌握五类参数 dataclass 与 YAML/CLI 的解析方式",
+    "第4步：读 src/llamafactory/data/template.py，理解模板如何把对话编码成 token",
+    "第5步：读 src/llamafactory/train/sft/workflow.py，看模型、数据、训练器如何被组合起来",
+    "第6步：读 src/llamafactory/model/loader.py 与 model/adapter.py，理解模型加载与 LoRA/量化注入",
+    "第7步：读 src/llamafactory/train/tuner.py，理解 stage 如何分发到不同训练方法",
+    "第8步：读 src/llamafactory/webui/runner.py，看 WebUI 如何复用同一套配置与训练函数"
+  ],
+  "diagram_mermaid": "graph TD\n  CLI[llamafactory-cli 命令] --> LAUNCH[launcher 子命令路由]\n  LAUNCH --> EXP[run_exp 训练编排]\n  YAML[YAML 或命令行参数] --> PARSE[get_train_args 参数解析]\n  PARSE --> EXP\n  EXP --> STAGE{stage 分发}\n  STAGE --> SFT[run_sft 工作流]\n  STAGE --> DPO[run_dpo 工作流]\n  STAGE --> PPO[run_ppo 工作流]\n  SFT --> TOK[load_tokenizer 加载分词器]\n  TOK --> TPL[Template 对话模板编码]\n  TPL --> DS[get_dataset 数据预处理]\n  SFT --> MDL[load_model 加载模型与 adapter]\n  DS --> TRAIN[Trainer 训练循环]\n  MDL --> TRAIN\n  TRAIN --> CKPT[保存 checkpoint 与模型卡]\n  WEBUI[LlamaBoard 界面] --> EXP",
+  "surprises": [
+    "WebUI 与 CLI 共用同一条路径：webui/runner.py 把表单拼成 args dict 后直接调用 train.tuner.run_exp，没有第二套训练实现",
+    "Template 是隐式的模型契约：换模型但 template 名字不改，token 拼接与 stop words 就会错，训练与推理都可能出问题",
+    "单卡时 launcher 在进程内直接调用，多卡时才用 subprocess 调 torchrun 重新拉起自己，同一份代码两种启动形态",
+    "仓库里同时存在旧架构与 v1 新架构两套包，由 USE_V1 环境变量切换，读代码前要先确认看的是哪一套",
+    "load_model 必须在 fix tokenizer 之后调用，因为模型要按修正后的词表 resize embedding，顺序反了会崩"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,91 @@
+{
+  "repo": "DLR-RM/stable-baselines3",
+  "name": "Stable-Baselines3",
+  "one_liner": "PyTorch 实现的一组可靠强化学习算法库，接口统一",
+  "problem": "强化学习算法实现质量参差、接口各异，难以复现与对比。SB3 用统一的 Algorithm + Policy 抽象把 PPO/A2C/DQN/SAC/TD3/DDPG 等算法收敛到同一套 learn/predict/save/load 接口，并保证实现经过验证。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "BaseAlgorithm", "role": "所有 RL 算法的抽象基类，规定 learn/predict/save/load/set_env 等统一接口与学习循环骨架", "file": "stable_baselines3/common/base_class.py"},
+    {"name": "BasePolicy", "role": "所有策略的抽象基类，继承 nn.Module，规定 predict、_predict、obs_to_tensor、set_training_mode 等契约", "file": "stable_baselines3/common/policies.py"},
+    {"name": "ActorCriticPolicy", "role": "最常用的策略实现，含策略网络与价值网络，提供 forward 返回动作/价值/对数概率及 evaluate_actions", "file": "stable_baselines3/common/policies.py"},
+    {"name": "OnPolicyAlgorithm", "role": "在线策略算法基类，实现 collect_rollouts 采样循环与 rollout_buffer 填充，A2C/PPO 由此派生", "file": "stable_baselines3/common/on_policy_algorithm.py"},
+    {"name": "OffPolicyAlgorithm", "role": "离线策略算法基类，实现经验回放、replay_buffer 采样与按 train_freq 训练，DQN/SAC/TD3/DDPG 由此派生", "file": "stable_baselines3/common/off_policy_algorithm.py"},
+    {"name": "BaseBuffer", "role": "经验缓冲区抽象，ReplayBuffer 与 RolloutBuffer 分别服务离线与在线算法，负责存取与采样", "file": "stable_baselines3/common/buffers.py"},
+    {"name": "BaseCallback", "role": "回调机制抽象，通过 on_step/on_rollout_start/on_training_end 等钩子让用户介入训练循环", "file": "stable_baselines3/common/callbacks.py"},
+    {"name": "VecEnv", "role": "向量化环境抽象基类，定义 reset/step_async/step_wait 等批量接口，统一单环境与多环境", "file": "stable_baselines3/common/vec_env/base_vec_env.py"},
+    {"name": "Logger", "role": "日志抽象，把指标输出到 stdout、TensorBoard、CSV 等多种后端", "file": "stable_baselines3/common/logger.py"},
+    {"name": "BaseModel", "role": "策略与网络的通用父类，管理特征提取器与设备，提供 save/load 与参数向量化能力", "file": "stable_baselines3/common/policies.py"}
+  ],
+  "layers": [
+    {"name": "算法基类层", "responsibility": "定义所有算法的公共接口与学习循环骨架，区分在线/离线两种范式", "modules": ["stable_baselines3/common"], "files": ["stable_baselines3/common/base_class.py", "stable_baselines3/common/on_policy_algorithm.py", "stable_baselines3/common/off_policy_algorithm.py"]},
+    {"name": "策略与网络层", "responsibility": "定义策略抽象与 ActorCritic 网络结构、特征提取器、动作分布", "modules": ["stable_baselines3/common/policies.py"], "files": ["stable_baselines3/common/policies.py", "stable_baselines3/common/torch_layers.py", "stable_baselines3/common/distributions.py"]},
+    {"name": "环境与向量化层", "responsibility": "封装 gym 环境为 VecEnv，提供并行、归一化、监控、图像转置等包装器", "modules": ["stable_baselines3/common/vec_env", "stable_baselines3/common/env_util.py", "stable_baselines3/common/monitor.py", "stable_baselines3/common/env_checker.py"], "files": ["stable_baselines3/common/vec_env/base_vec_env.py", "stable_baselines3/common/vec_env/dummy_vec_env.py", "stable_baselines3/common/vec_env/subproc_vec_env.py", "stable_baselines3/common/vec_env/vec_normalize.py"]},
+    {"name": "经验缓冲层", "responsibility": "存储与采样经验，含 rollout buffer、replay buffer 与 HER 目标重标记缓冲", "modules": ["stable_baselines3/common/buffers.py", "stable_baselines3/her"], "files": ["stable_baselines3/common/buffers.py", "stable_baselines3/her/her_replay_buffer.py"]},
+    {"name": "回调与日志层", "responsibility": "训练过程的事件钩子、进度记录、检查点保存与动作噪声", "modules": ["stable_baselines3/common/callbacks.py", "stable_baselines3/common/logger.py", "stable_baselines3/common/noise.py"], "files": ["stable_baselines3/common/callbacks.py", "stable_baselines3/common/logger.py", "stable_baselines3/common/noise.py"]},
+    {"name": "具体算法层", "responsibility": "各算法的网络更新实现，通过继承在线/离线基类并声明 policy_aliases 接入", "modules": ["stable_baselines3/a2c", "stable_baselines3/ppo", "stable_baselines3/dqn", "stable_baselines3/sac", "stable_baselines3/td3", "stable_baselines3/ddpg", "stable_baselines3/her"], "files": ["stable_baselines3/ppo/ppo.py", "stable_baselines3/dqn/dqn.py", "stable_baselines3/sac/sac.py", "stable_baselines3/td3/td3.py", "stable_baselines3/a2c/a2c.py"]},
+    {"name": "工具与序列化层", "responsibility": "类型别名、调度器、随机种子、zip 模型存取与向量化环境工具", "modules": ["stable_baselines3/common"], "files": ["stable_baselines3/common/utils.py", "stable_baselines3/common/type_aliases.py", "stable_baselines3/common/save_util.py", "stable_baselines3/common/preprocessing.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户创建环境并调用 model = PPO(\"MlpPolicy\", env)，BaseAlgorithm.__init__ 通过 _get_policy_from_name 从 policy_aliases 解析策略类",
+    "第2步：_wrap_env 把 gym 环境包成 DummyVecEnv 并按需加 Monitor，统一成 VecEnv 接口",
+    "第3步：model.learn(total_timesteps) 调用 _setup_learn 初始化 Logger、回调列表、随机种子与 _last_obs",
+    "第4步：_setup_model 依据 observation_space 实例化 policy、rollout_buffer 与 optimizer",
+    "第5步：进入 while 循环，collect_rollouts 用 policy(obs) 采样动作、价值和 log_probs",
+    "第6步：env.step 执行动作得到 new_obs/rewards/dones/infos，num_timesteps 累加",
+    "第7步：每步 callback.update_locals(locals()) 与 callback.on_step 触发用户回调",
+    "第8步：把 (obs, action, reward, value, log_prob) 存入 rollout_buffer，更新 _last_obs",
+    "第9步：rollout 结束调用 compute_returns_and_advantage 计算回报与优势",
+    "第10步：self.train() 从 rollout_buffer 采样 minibatch 做多轮梯度更新优化 policy",
+    "第11步：重复 collect/train 直到 num_timesteps 达到 total_timesteps，触发 on_training_end",
+    "第12步：可用 model.save 存成 zip，或用 model.predict 在新环境上推理动作"
+  ],
+  "entry_points": [
+    {"path": "stable_baselines3/common/base_class.py:512", "what": "BaseAlgorithm.learn 抽象方法，所有算法的训练入口契约"},
+    {"path": "stable_baselines3/common/base_class.py:537", "what": "BaseAlgorithm.predict，用策略推理单个观测的动作"},
+    {"path": "stable_baselines3/common/base_class.py:643", "what": "BaseAlgorithm.load 类方法，从 zip 恢复模型与策略"},
+    {"path": "stable_baselines3/common/base_class.py:819", "what": "BaseAlgorithm.save，把模型与缓冲序列化成 zip"},
+    {"path": "stable_baselines3/common/on_policy_algorithm.py:300", "what": "OnPolicyAlgorithm.learn，在线算法的主训练循环"},
+    {"path": "stable_baselines3/common/on_policy_algorithm.py:162", "what": "collect_rollouts，在线算法采样并填充 rollout buffer"},
+    {"path": "stable_baselines3/common/off_policy_algorithm.py:324", "what": "OffPolicyAlgorithm.learn，离线算法的主训练循环"},
+    {"path": "stable_baselines3/dqn/dqn.py:266", "what": "DQN.learn，DQN 专属训练循环覆写"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先了解定位：可靠实现、统一接口，以及 contrib 与 zoo 的关系"},
+    {"path": "stable_baselines3/common/base_class.py", "why": "BaseAlgorithm 是所有算法的公共骨架，理解 learn/predict/save/load 契约"},
+    {"path": "stable_baselines3/common/on_policy_algorithm.py", "why": "在线算法的采样-训练循环与 collect_rollouts 实现"},
+    {"path": "stable_baselines3/common/off_policy_algorithm.py", "why": "离线算法的经验回放循环，与在线算法对照阅读"},
+    {"path": "stable_baselines3/ppo/ppo.py", "why": "最典型的在线算法，看 policy_aliases 声明与 train 更新逻辑"},
+    {"path": "stable_baselines3/common/policies.py", "why": "BasePolicy/ActorCriticPolicy，理解策略与算法的组合方式"},
+    {"path": "stable_baselines3/common/callbacks.py", "why": "回调机制的全部钩子，扩展训练过程必读"},
+    {"path": "stable_baselines3/common/vec_env/base_vec_env.py", "why": "VecEnv 抽象，理解环境如何被统一与向量化"},
+    {"path": "stable_baselines3/common/buffers.py", "why": "ReplayBuffer 与 RolloutBuffer，理解经验存储与采样"},
+    {"path": "stable_baselines3/dqn/dqn.py", "why": "典型离线算法，与 PPO 对照看两类范式差异"}
+  ],
+  "extension_points": [
+    "想加新算法：新建 stable_baselines3/<algo>/ 目录，继承 OnPolicyAlgorithm 或 OffPolicyAlgorithm，实现 _setup_model/train/learn，并声明 policy_aliases 字典把策略名映射到策略类",
+    "想加新策略：继承 stable_baselines3/common/policies.py 的 BasePolicy 或 ActorCriticPolicy，实现 _predict、forward、evaluate_actions，并在算法的 policy_aliases 里登记",
+    "想加新特征提取器：继承 BaseFeaturesExtractor，通过 policy_kwargs 的 features_extractor_class 传入",
+    "想加新回调：继承 stable_baselines3/common/callbacks.py 的 BaseCallback，重写 _on_step / _on_rollout_end 等钩子，learn 时用 callback= 传入",
+    "想加新环境包装器或向量化后端：继承 VecEnv 或 VecEnvWrapper，实现 reset/step_async/step_wait",
+    "想加新经验缓冲：继承 BaseBuffer 或 ReplayBuffer，在算法的 replay_buffer_class / rollout_buffer_class 指定",
+    "想加新的日志后端：继承 stable_baselines3/common/logger.py 的 KVWriter 并注册"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与官方文档的 RL 入门指南，建立算法与接口的总体印象",
+    "第2步：读 stable_baselines3/common/base_class.py 的 BaseAlgorithm，掌握统一接口与 _setup_learn",
+    "第3步：读 stable_baselines3/common/on_policy_algorithm.py 与 off_policy_algorithm.py，理解在线/离线两种学习循环",
+    "第4步：读 stable_baselines3/ppo/ppo.py，看一个具体算法如何声明策略别名并实现 train",
+    "第5步：读 stable_baselines3/common/policies.py，理解策略与算法如何组合、forward 与 _predict 的分工",
+    "第6步：读 stable_baselines3/common/callbacks.py，掌握回调扩展机制",
+    "第7步：读 stable_baselines3/common/vec_env/base_vec_env.py，理解环境的统一与向量化"
+  ],
+  "diagram_mermaid": "graph TD\n  USER[用户代码 PPO 加 env] --> INIT[BaseAlgorithm 初始化]\n  INIT --> RESOLVE[按 policy_aliases 解析策略类]\n  INIT --> WRAP[_wrap_env 包装成 VecEnv]\n  USER --> LEARN[learn 训练循环]\n  LEARN --> SETUP[_setup_learn 初始化日志与回调]\n  SETUP --> MODEL[_setup_model 实例化 policy 与 buffer]\n  MODEL --> COLLECT[collect_rollouts 采样经验]\n  COLLECT --> POLICY[policy 前向采样动作]\n  POLICY --> STEP[env.step 执行动作]\n  STEP --> CB[callback.on_step 触发回调]\n  STEP --> BUFFER[经验存入 rollout buffer]\n  BUFFER --> ADV[计算回报与优势]\n  ADV --> TRAIN[train 梯度更新 policy]\n  TRAIN --> COLLECT\n  LEARN --> SAVE[save 存成 zip 模型]\n  LEARN --> PREDICT[predict 推理动作]",
+  "surprises": [
+    "算法与策略是解耦的两条线：算法只管学习循环，策略只管网络与动作采样，二者通过 policy_aliases 字典按字符串名绑定",
+    "所有算法共用同一套 learn/predict/save/load 接口，即使单个环境也会被包成 DummyVecEnv，所以内部永远是批量接口",
+    "回调通过 update_locals(locals()) 动态注入训练循环的局部变量，回调里能直接读到当前步的 obs、reward 等内部状态",
+    "策略的 forward 与 _predict 分工不同：forward 训练时返回动作/价值/对数概率，_predict 推理时只返回动作，混用会出错",
+    "模型保存成 zip，policy、optimizer、replay_buffer 一起打包，load 依赖递归 getattr/setattr 恢复，改动属性名可能破坏兼容"
+  ],
+  "confidence": "高"
+}
