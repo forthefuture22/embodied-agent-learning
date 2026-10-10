@@ -2,24 +2,36 @@
 
 一份把**具身智能（Embodied AI）**和 **AI Agent** 两条学习主线，连同各自的 GitHub 高 star 项目，落到同一张思维导图上的学习资料。
 
-不是项目清单堆砌——每个分支都标注了「学什么、为什么学、从哪个项目切入」。
+不止是项目清单——**109 个开源项目已全部克隆到本地并逐个做了代码级可视化梳理**，每个项目的功能全景、模块架构、技术栈、运行入口都有真实数据支撑。
 
 ## 在线访问
 
-- **交互式思维导图**：https://forthefuture22.github.io/embodied-agent-learning/mindmap.html
-- **文字版学习地图**：[learning-map.md](./learning-map.md)
-- **直达某个板块**：`?tab=embodied` · `?tab=agent` · `?tab=cross`
+| 页面 | 链接 | 内容 |
+|---|---|---|
+| 交互式思维导图 | [mindmap.html](https://forthefuture22.github.io/embodied-agent-learning/mindmap.html) | 25 分支 / 134 节点，点击展开、搜索、跳转仓库 |
+| **项目可视化看板** | [projects.html](https://forthefuture22.github.io/embodied-agent-learning/projects.html) | 109 个项目，逐个呈现功能全景 / 模块架构 / 技术栈 / 运行流程 |
+| 文字版学习地图 | [learning-map.md](./learning-map.md) | 分支说明 + 项目表 + 12 周计划 + 避坑提示 |
+
+直达某个板块：`?tab=embodied` · `?tab=agent` · `?tab=cross`
 
 ---
 
-## 内容概览
+## 数据概览
 
-| 板块 | 分支数 | 节点数 | 覆盖内容 |
-|---|---|---|---|
-| **具身智能** | 9 | 46 | RL 地基 → 仿真引擎 → 基准环境 → 模仿学习 → VLA → VLM 底座 → 世界模型 → 运控部署 → 资源清单 |
-| **AI Agent** | 13 | 72 | 核心范式 → 编排框架 → 官方 SDK → 多智能体 → 自主 Agent → 工具协议 → 记忆 → RAG → 电脑操作 → 编码 Agent → 平台 → 数据管道 → 模型服务 |
-| **交叉地带** | 3 | 16 | 语言驱动机器人论文线 · Agent 能力迁移到机器人 · 融合学习路线 |
-| **合计** | **25** | **134** | **112 个仓库**（star 数实时抓取） |
+对 109 个仓库做了完整代码扫描（排除 `.git`、`node_modules`、`venv` 等）：
+
+| 板块 | 分支 | 项目 | 代码行数 | 文件数 |
+|---|---|---|---|---|
+| 具身智能 | 9 | 42 | 8,496,090 | 50,886 |
+| AI Agent | 13 | 67 | 52,231,093 | 239,067 |
+| 交叉地带 | 3 | 复用上表 3 个项目 | — | — |
+| **合计** | **25** | **109** | **60,727,183** | **289,953** |
+
+- **语言分布**：Python 22.8M 行 · TypeScript 12.8M · JSON 8.8M · Go 2.7M · YAML 2.1M · Markdown 2.0M · C++ 1.9M · Rust 1.5M
+- **许可证分布**：Apache-2.0 44 个 · MIT 37 个 · 其他/未标注 28 个
+- **提取覆盖率**：功能说明 108/109 · 运行命令 99/109 · 入口点 90/109
+
+代码量 Top 5：n8n 5.56M 行 · suna 5.41M · LiteLLM 4.14M · Unsloth 3.25M · SGLang 3.01M
 
 ---
 
@@ -27,33 +39,39 @@
 
 ```
 .
-├── README.md              # 本文件
-├── mindmap.html           # 交互式思维导图（单文件，双击即用）
-├── learning-map.md        # 完整学习地图：分支说明 + 项目表 + 12 周计划 + 避坑
+├── README.md                 # 本文件
+├── mindmap.html              # 交互式思维导图（单文件，双击即用）
+├── projects.html             # 项目可视化看板（单文件，内含全部分析数据）
+├── learning-map.md           # 文字版学习地图
 ├── data/
-│   └── stars.json         # star 数据快照
+│   ├── manifest.json         # 从导图提取的树结构 + 109 个仓库清单
+│   ├── repos-meta.json       # GitHub 元数据（体积/语言/许可证/活跃度）
+│   ├── analysis.json         # 109 个项目的代码扫描结果
+│   └── stars.json            # star 数据快照
 └── scripts/
-    └── fetch_stars.py     # 刷新 star 数据
+    ├── build_manifest.js     # 从 mindmap.html 提取仓库清单
+    ├── fetch_meta.py         # 拉取 GitHub 元数据
+    ├── fetch_stars.py        # 刷新 star 数据
+    ├── clone_all.py          # 批量浅克隆到 D:\github
+    ├── analyze_repos.py      # 代码结构分析（断点续跑）
+    ├── build_dashboard.py    # 生成 projects.html
+    └── verify_dashboard.js   # 看板功能级校验
 ```
 
-### `mindmap.html`
+---
 
-单文件交互式 SVG 思维导图，无需安装任何依赖，双击用浏览器打开即可。
+## 可视化梳理做了什么
 
-- 三个标签页切换：具身智能 / AI Agent / 交叉地带
-- 点击分支节点折叠展开，聚焦某个方向
-- 点击项目节点直接跳转 GitHub 仓库
-- 支持搜索高亮、缩放、适应宽度
-- 支持 URL 参数直达：`mindmap.html?tab=embodied`、`?tab=agent`、`?tab=cross`
+对每个项目，从**真实文件系统**中提取四类信息（不是推测，也不依赖 README 自述）：
 
-### `learning-map.md`
+| 维度 | 提取方式 | 用途 |
+|---|---|---|
+| **功能全景** | README 标题 / 摘要 / 特性要点 + GitHub topics | 快速判断这个项目解决什么问题 |
+| **模块架构** | 顶层与二级目录的文件数、代码行数 | 看出代码集中在哪、哪里是核心 |
+| **技术栈** | 按扩展名统计的文件数与 LOC 分布 | 判断学习门槛和语言要求 |
+| **运行流程** | 依赖清单 / 入口文件 / Dockerfile / Makefile / npm scripts | 知道从哪一行开始跑 |
 
-思维导图的文字版，适合阅读、搜索、复制到笔记软件。包含：
-
-- 每个分支的「学什么」说明
-- 完整项目表（star 数 + 一句话定位）
-- **12 周行动计划**（具身线与 Agent 线并行推进）
-- **6 条避坑提示**
+另外提供**项目全景图**：矩形面积正比于代码行数的树图，一眼看出整个项目群的体量分布，点击可定位到对应卡片。
 
 ---
 
@@ -62,35 +80,46 @@
 ```bash
 git clone https://github.com/forthefuture22/embodied-agent-learning.git
 cd embodied-agent-learning
-# 直接用浏览器打开
-start mindmap.html          # Windows
-open  mindmap.html          # macOS
+start mindmap.html      # Windows
+open  mindmap.html      # macOS
 ```
+
+浏览器直接打开即可，无任何依赖。
 
 ---
 
-## 更新 star 数据
-
-项目中的 star 数会随时间变化，可随时刷新：
+## 复现整套流程
 
 ```bash
+# 1. 提取仓库清单
+node scripts/build_manifest.js
+
+# 2. 拉取 GitHub 元数据 + star 数
+python scripts/fetch_meta.py
 python scripts/fetch_stars.py
+
+# 3. 批量浅克隆到 D:\github（约 20 GB，109 个仓库）
+python scripts/clone_all.py --jobs 3 --timeout 900
+
+# 4. 代码结构分析（支持断点续跑，全量约 45 分钟）
+python scripts/analyze_repos.py --flush-every 10
+
+# 5. 生成看板 + 校验
+python scripts/build_dashboard.py
+node scripts/verify_dashboard.js
 ```
 
-脚本读取 `data/stars.json` 中的仓库列表，逐个查询最新 star 数并回写。
-数据源为 `https://img.shields.io/github/stars/{owner}/{repo}.json`
-（GitHub 官方 API 对未认证请求限流较严，shields.io 更稳定）。
+### 已知环境要求
 
-> 刷新后 `data/stars.json` 会更新，但 `mindmap.html` 中的数字是硬编码的，
-> 如需同步到导图，请一并更新 HTML 中 `MAPS` 对象的 `star` 字段。
+- **`git-lfs` 未安装**：`qdrant/qdrant` 等使用 LFS 的仓库会回退为指针文件（不影响代码结构分析）。如需完整 LFS 内容请先安装 git-lfs。
+- **网络不稳定时**：`clone_all.py` 已内置低速自动中断（1KB/s 持续 60 秒即断）与 HTTP/1.1 回退，避免连接挂死。实测首次全量克隆时有 4 个连接卡死，重跑一次即全部补齐。
 
 ---
 
 ## 几条核心判断
 
 1. **具身线的主干是 VLA，但真正能出成果的入口在模仿学习。**
-   [LeRobot](https://github.com/huggingface/lerobot)（28k）是目前唯一把「采集—训练—部署」打通的端到端工具链，
-   比直接啃 OpenVLA 现实得多。
+   [LeRobot](https://github.com/huggingface/lerobot)（28k，19.5 万行）是目前唯一把「采集—训练—部署」打通的端到端工具链，比直接啃 OpenVLA 现实得多。
 
 2. **VLA 主线记住四个锚点就够：**
    [openpi / π0](https://github.com/Physical-Intelligence/openpi)（14k）→
@@ -115,8 +144,9 @@ python scripts/fetch_stars.py
 
 ## 数据说明
 
-- star 数抓取时间：**2026-10-10**
-- 数据源：GitHub via [shields.io](https://shields.io)
+- star 数抓取时间：**2026-10-10**，数据源 GitHub via [shields.io](https://shields.io)
+- 代码扫描时间：**2026-10-10**，对 `--depth 1` 浅克隆的仓库做全量文件扫描
+- 代码行数为**文件行数**（含注释与空行），用于横向比较体量，不等同于有效代码行数
 - star 数仅代表社区热度，**不代表质量排名**，选型请结合自身场景判断
 
 ---
@@ -125,11 +155,12 @@ python scripts/fetch_stars.py
 
 - [ ] 补充每个分支的必读论文清单（带链接）
 - [ ] 为 VLA 主线补一张演进时间线
-- [ ] 增加「真实实验记录」目录，沉淀跑通过的项目
-- [ ] 把 star 数刷新脚本与 HTML 打通，避免手工同步
+- [ ] 把 star 刷新与 HTML 打通，避免手工同步
+- [ ] 挑 5-10 个核心项目做人工深读，补真正的架构图（当前是结构扫描，非语义架构）
+- [ ] 按视频思路，把若干命令行项目改造成中文网页工具
 
 ---
 
 ## License
 
-学习资料，自由取用。引用请注明来源。
+学习资料，自由取用。引用的第三方项目版权归各自作者所有。

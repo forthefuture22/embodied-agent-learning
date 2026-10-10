@@ -1,0 +1,2427 @@
+{
+ "generatedAt": "2026-10-10",
+ "domains": {
+  "embodied": {
+   "key": "embodied",
+   "label": "具身智能",
+   "branches": [
+    {
+     "label": "① 深度学习与强化学习地基",
+     "items": [
+      {
+       "label": "Ray RLlib",
+       "kind": "leaf",
+       "star": "44k",
+       "repo": "ray-project/ray",
+       "branch": "① 深度学习与强化学习地基",
+       "domain": "embodied"
+      },
+      {
+       "label": "Stable-Baselines3",
+       "kind": "leaf",
+       "star": "14k",
+       "repo": "DLR-RM/stable-baselines3",
+       "branch": "① 深度学习与强化学习地基",
+       "domain": "embodied"
+      },
+      {
+       "label": "Gymnasium",
+       "kind": "leaf",
+       "star": "13k",
+       "repo": "Farama-Foundation/Gymnasium",
+       "branch": "① 深度学习与强化学习地基",
+       "domain": "embodied"
+      }
+     ]
+    },
+    {
+     "label": "② 仿真引擎与平台",
+     "items": [
+      {
+       "label": "Genesis",
+       "kind": "leaf",
+       "star": "30k",
+       "repo": "Genesis-Embodied-AI/Genesis",
+       "branch": "② 仿真引擎与平台",
+       "domain": "embodied"
+      },
+      {
+       "label": "AirSim",
+       "kind": "leaf",
+       "star": "19k",
+       "repo": "microsoft/AirSim",
+       "branch": "② 仿真引擎与平台",
+       "domain": "embodied"
+      },
+      {
+       "label": "MuJoCo",
+       "kind": "leaf",
+       "star": "16k",
+       "repo": "google-deepmind/mujoco",
+       "branch": "② 仿真引擎与平台",
+       "domain": "embodied"
+      },
+      {
+       "label": "Bullet3",
+       "kind": "leaf",
+       "star": "15k",
+       "repo": "bulletphysics/bullet3",
+       "branch": "② 仿真引擎与平台",
+       "domain": "embodied"
+      },
+      {
+       "label": "Isaac Lab",
+       "kind": "leaf",
+       "star": "8.3k",
+       "repo": "isaac-sim/IsaacLab",
+       "branch": "② 仿真引擎与平台",
+       "domain": "embodied"
+      },
+      {
+       "label": "Isaac Sim",
+       "kind": "leaf",
+       "star": "4.2k",
+       "repo": "isaac-sim/IsaacSim",
+       "branch": "② 仿真引擎与平台",
+       "domain": "embodied"
+      }
+     ]
+    },
+    {
+     "label": "③ 操作 / 导航基准环境",
+     "items": [
+      {
+       "label": "ManiSkill",
+       "kind": "leaf",
+       "star": "3.4k",
+       "repo": "haosulab/ManiSkill",
+       "branch": "③ 操作 / 导航基准环境",
+       "domain": "embodied"
+      },
+      {
+       "label": "Habitat-Lab",
+       "kind": "leaf",
+       "star": "3.2k",
+       "repo": "facebookresearch/habitat-lab",
+       "branch": "③ 操作 / 导航基准环境",
+       "domain": "embodied"
+      },
+      {
+       "label": "RoboTwin",
+       "kind": "leaf",
+       "star": "3k",
+       "repo": "RoboTwin-Platform/RoboTwin",
+       "branch": "③ 操作 / 导航基准环境",
+       "domain": "embodied"
+      },
+      {
+       "label": "robosuite",
+       "kind": "leaf",
+       "star": "2.6k",
+       "repo": "ARISE-Initiative/robosuite",
+       "branch": "③ 操作 / 导航基准环境",
+       "domain": "embodied"
+      },
+      {
+       "label": "RoboVerse",
+       "kind": "leaf",
+       "star": "1.9k",
+       "repo": "RoboVerseOrg/RoboVerse",
+       "branch": "③ 操作 / 导航基准环境",
+       "domain": "embodied"
+      },
+      {
+       "label": "RLBench",
+       "kind": "leaf",
+       "star": "1.8k",
+       "repo": "stepjam/RLBench",
+       "branch": "③ 操作 / 导航基准环境",
+       "domain": "embodied"
+      },
+      {
+       "label": "BEHAVIOR-1K",
+       "kind": "leaf",
+       "star": "1.7k",
+       "repo": "StanfordVL/BEHAVIOR-1K",
+       "branch": "③ 操作 / 导航基准环境",
+       "domain": "embodied"
+      }
+     ]
+    },
+    {
+     "label": "④ 示教 · 模仿学习 · 数据",
+     "items": [
+      {
+       "label": "LeRobot",
+       "kind": "leaf",
+       "star": "28k",
+       "repo": "huggingface/lerobot",
+       "branch": "④ 示教 · 模仿学习 · 数据",
+       "domain": "embodied"
+      },
+      {
+       "label": "Diffusion Policy",
+       "kind": "leaf",
+       "star": "4.6k",
+       "repo": "real-stanford/diffusion_policy",
+       "branch": "④ 示教 · 模仿学习 · 数据",
+       "domain": "embodied"
+      },
+      {
+       "label": "Open X-Embodiment",
+       "kind": "leaf",
+       "star": "2.1k",
+       "repo": "google-deepmind/open_x_embodiment",
+       "branch": "④ 示教 · 模仿学习 · 数据",
+       "domain": "embodied"
+      },
+      {
+       "label": "RDT-1B",
+       "kind": "leaf",
+       "star": "1.8k",
+       "repo": "thu-ml/RoboticsDiffusionTransformer",
+       "branch": "④ 示教 · 模仿学习 · 数据",
+       "domain": "embodied"
+      },
+      {
+       "label": "robomimic",
+       "kind": "leaf",
+       "star": "1.6k",
+       "repo": "ARISE-Initiative/robomimic",
+       "branch": "④ 示教 · 模仿学习 · 数据",
+       "domain": "embodied"
+      },
+      {
+       "label": "DROID",
+       "kind": "leaf",
+       "star": "448",
+       "repo": "droid-dataset/droid",
+       "branch": "④ 示教 · 模仿学习 · 数据",
+       "domain": "embodied"
+      }
+     ]
+    },
+    {
+     "label": "⑤ VLA 视觉-语言-动作主线",
+     "items": [
+      {
+       "label": "openpi (π0)",
+       "kind": "leaf",
+       "star": "14k",
+       "repo": "Physical-Intelligence/openpi",
+       "branch": "⑤ VLA 视觉-语言-动作主线",
+       "domain": "embodied"
+      },
+      {
+       "label": "GR00T N1",
+       "kind": "leaf",
+       "star": "8.2k",
+       "repo": "NVIDIA/Isaac-GR00T",
+       "branch": "⑤ VLA 视觉-语言-动作主线",
+       "domain": "embodied"
+      },
+      {
+       "label": "OpenVLA",
+       "kind": "leaf",
+       "star": "7.1k",
+       "repo": "openvla/openvla",
+       "branch": "⑤ VLA 视觉-语言-动作主线",
+       "domain": "embodied"
+      },
+      {
+       "label": "Octo",
+       "kind": "leaf",
+       "star": "1.8k",
+       "repo": "octo-models/octo",
+       "branch": "⑤ VLA 视觉-语言-动作主线",
+       "domain": "embodied"
+      }
+     ]
+    },
+    {
+     "label": "⑥ 多模态底座 VLM",
+     "items": [
+      {
+       "label": "CLIP",
+       "kind": "leaf",
+       "star": "34k",
+       "repo": "openai/CLIP",
+       "branch": "⑥ 多模态底座 VLM",
+       "domain": "embodied"
+      },
+      {
+       "label": "MiniCPM-V",
+       "kind": "leaf",
+       "star": "27k",
+       "repo": "OpenBMB/MiniCPM-V",
+       "branch": "⑥ 多模态底座 VLM",
+       "domain": "embodied"
+      },
+      {
+       "label": "OmniLMM",
+       "kind": "leaf",
+       "star": "27k",
+       "repo": "OpenBMB/OmniLMM",
+       "branch": "⑥ 多模态底座 VLM",
+       "domain": "embodied"
+      },
+      {
+       "label": "LLaVA",
+       "kind": "leaf",
+       "star": "25k",
+       "repo": "haotian-liu/LLaVA",
+       "branch": "⑥ 多模态底座 VLM",
+       "domain": "embodied"
+      },
+      {
+       "label": "Qwen2.5-VL",
+       "kind": "leaf",
+       "star": "20k",
+       "repo": "QwenLM/Qwen2.5-VL",
+       "branch": "⑥ 多模态底座 VLM",
+       "domain": "embodied"
+      },
+      {
+       "label": "InternVL",
+       "kind": "leaf",
+       "star": "10k",
+       "repo": "OpenGVLab/InternVL",
+       "branch": "⑥ 多模态底座 VLM",
+       "domain": "embodied"
+      }
+     ]
+    },
+    {
+     "label": "⑦ 世界模型 WAM",
+     "items": [
+      {
+       "label": "Vista（驾驶世界模型）",
+       "kind": "leaf",
+       "star": "907",
+       "repo": "OpenDriveLab/Vista",
+       "branch": "⑦ 世界模型 WAM",
+       "domain": "embodied"
+      },
+      {
+       "label": "Genie 2（Google，闭源）",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "⑦ 世界模型 WAM",
+       "domain": "embodied"
+      },
+      {
+       "label": "WALL-E（字节，闭源）",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "⑦ 世界模型 WAM",
+       "domain": "embodied"
+      },
+      {
+       "label": "UniSim（闭源）",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "⑦ 世界模型 WAM",
+       "domain": "embodied"
+      },
+      {
+       "label": "开源缺口：可复现 WAM 仍稀缺，建议从 Genesis 上手",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "⑦ 世界模型 WAM",
+       "domain": "embodied"
+      }
+     ]
+    },
+    {
+     "label": "⑧ 运控 · 真机 · 部署",
+     "items": [
+      {
+       "label": "ROS 2",
+       "kind": "leaf",
+       "star": "6.1k",
+       "repo": "ros2/ros2",
+       "branch": "⑧ 运控 · 真机 · 部署",
+       "domain": "embodied"
+      },
+      {
+       "label": "Pinocchio",
+       "kind": "leaf",
+       "star": "3.8k",
+       "repo": "stack-of-tasks/pinocchio",
+       "branch": "⑧ 运控 · 真机 · 部署",
+       "domain": "embodied"
+      },
+      {
+       "label": "unitree_rl_gym",
+       "kind": "leaf",
+       "star": "3.6k",
+       "repo": "unitreerobotics/unitree_rl_gym",
+       "branch": "⑧ 运控 · 真机 · 部署",
+       "domain": "embodied"
+      },
+      {
+       "label": "legged_gym",
+       "kind": "leaf",
+       "star": "3.1k",
+       "repo": "leggedrobotics/legged_gym",
+       "branch": "⑧ 运控 · 真机 · 部署",
+       "domain": "embodied"
+      },
+      {
+       "label": "unitree_ros2",
+       "kind": "leaf",
+       "star": "858",
+       "repo": "unitreerobotics/unitree_ros2",
+       "branch": "⑧ 运控 · 真机 · 部署",
+       "domain": "embodied"
+      }
+     ]
+    },
+    {
+     "label": "⑨ 入门清单与资源聚合",
+     "items": [
+      {
+       "label": "Embodied-AI-Guide（中文）",
+       "kind": "leaf",
+       "star": "16k",
+       "repo": "TianxingChen/Embodied-AI-Guide",
+       "branch": "⑨ 入门清单与资源聚合",
+       "domain": "embodied"
+      },
+      {
+       "label": "Awesome-LLM-Robotics",
+       "kind": "leaf",
+       "star": "4.5k",
+       "repo": "GT-RIPL/Awesome-LLM-Robotics",
+       "branch": "⑨ 入门清单与资源聚合",
+       "domain": "embodied"
+      },
+      {
+       "label": "Awesome-Robotics-Foundation-Models",
+       "kind": "leaf",
+       "star": "1.4k",
+       "repo": "robotics-survey/Awesome-Robotics-Foundation-Models",
+       "branch": "⑨ 入门清单与资源聚合",
+       "domain": "embodied"
+      },
+      {
+       "label": "embodied-ai-learning-handbook",
+       "kind": "leaf",
+       "star": "56",
+       "repo": "zc-xzc/embodied-ai-learning-handbook",
+       "branch": "⑨ 入门清单与资源聚合",
+       "domain": "embodied"
+      }
+     ]
+    }
+   ]
+  },
+  "agent": {
+   "key": "agent",
+   "label": "AI Agent",
+   "branches": [
+    {
+     "label": "① 核心范式与原理",
+     "items": [
+      {
+       "label": "DSPy（Prompt 可编程优化）",
+       "kind": "leaf",
+       "star": "39k",
+       "repo": "stanfordnlp/dspy",
+       "branch": "① 核心范式与原理",
+       "domain": "agent"
+      },
+      {
+       "label": "ReAct / CoT 推理循环",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 核心范式与原理",
+       "domain": "agent"
+      },
+      {
+       "label": "Tool Use 工具调用",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 核心范式与原理",
+       "domain": "agent"
+      },
+      {
+       "label": "Planning 任务分解",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 核心范式与原理",
+       "domain": "agent"
+      },
+      {
+       "label": "Reflection 自我反思",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 核心范式与原理",
+       "domain": "agent"
+      },
+      {
+       "label": "Memory 长期记忆",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 核心范式与原理",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "② 通用编排框架",
+     "items": [
+      {
+       "label": "LangChain",
+       "kind": "leaf",
+       "star": "148k",
+       "repo": "langchain-ai/langchain",
+       "branch": "② 通用编排框架",
+       "domain": "agent"
+      },
+      {
+       "label": "LlamaIndex",
+       "kind": "leaf",
+       "star": "52k",
+       "repo": "run-llama/llama_index",
+       "branch": "② 通用编排框架",
+       "domain": "agent"
+      },
+      {
+       "label": "LangGraph",
+       "kind": "leaf",
+       "star": "43k",
+       "repo": "langchain-ai/langgraph",
+       "branch": "② 通用编排框架",
+       "domain": "agent"
+      },
+      {
+       "label": "Agno",
+       "kind": "leaf",
+       "star": "43k",
+       "repo": "agno-agi/agno",
+       "branch": "② 通用编排框架",
+       "domain": "agent"
+      },
+      {
+       "label": "AgentScope",
+       "kind": "leaf",
+       "star": "33k",
+       "repo": "modelscope/agentscope",
+       "branch": "② 通用编排框架",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "③ 官方与轻量 SDK",
+     "items": [
+      {
+       "label": "OpenAI Agents SDK",
+       "kind": "leaf",
+       "star": "30k",
+       "repo": "openai/openai-agents-python",
+       "branch": "③ 官方与轻量 SDK",
+       "domain": "agent"
+      },
+      {
+       "label": "smolagents",
+       "kind": "leaf",
+       "star": "30k",
+       "repo": "huggingface/smolagents",
+       "branch": "③ 官方与轻量 SDK",
+       "domain": "agent"
+      },
+      {
+       "label": "Semantic Kernel",
+       "kind": "leaf",
+       "star": "29k",
+       "repo": "microsoft/semantic-kernel",
+       "branch": "③ 官方与轻量 SDK",
+       "domain": "agent"
+      },
+      {
+       "label": "Google ADK",
+       "kind": "leaf",
+       "star": "22k",
+       "repo": "google/adk-python",
+       "branch": "③ 官方与轻量 SDK",
+       "domain": "agent"
+      },
+      {
+       "label": "Pydantic-AI",
+       "kind": "leaf",
+       "star": "21k",
+       "repo": "pydantic/pydantic-ai",
+       "branch": "③ 官方与轻量 SDK",
+       "domain": "agent"
+      },
+      {
+       "label": "Qwen-Agent",
+       "kind": "leaf",
+       "star": "17k",
+       "repo": "QwenLM/Qwen-Agent",
+       "branch": "③ 官方与轻量 SDK",
+       "domain": "agent"
+      },
+      {
+       "label": "TaskWeaver",
+       "kind": "leaf",
+       "star": "6.2k",
+       "repo": "microsoft/TaskWeaver",
+       "branch": "③ 官方与轻量 SDK",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "④ 多智能体协作",
+     "items": [
+      {
+       "label": "MetaGPT",
+       "kind": "leaf",
+       "star": "71k",
+       "repo": "geekan/MetaGPT",
+       "branch": "④ 多智能体协作",
+       "domain": "agent"
+      },
+      {
+       "label": "AutoGen",
+       "kind": "leaf",
+       "star": "61k",
+       "repo": "microsoft/autogen",
+       "branch": "④ 多智能体协作",
+       "domain": "agent"
+      },
+      {
+       "label": "CrewAI",
+       "kind": "leaf",
+       "star": "60k",
+       "repo": "crewAIInc/crewAI",
+       "branch": "④ 多智能体协作",
+       "domain": "agent"
+      },
+      {
+       "label": "ChatDev",
+       "kind": "leaf",
+       "star": "34k",
+       "repo": "OpenBMB/ChatDev",
+       "branch": "④ 多智能体协作",
+       "domain": "agent"
+      },
+      {
+       "label": "CAMEL",
+       "kind": "leaf",
+       "star": "18k",
+       "repo": "camel-ai/camel",
+       "branch": "④ 多智能体协作",
+       "domain": "agent"
+      },
+      {
+       "label": "AgentVerse",
+       "kind": "leaf",
+       "star": "5.2k",
+       "repo": "OpenBMB/AgentVerse",
+       "branch": "④ 多智能体协作",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "⑤ 自主探索型 Agent",
+     "items": [
+      {
+       "label": "AutoGPT",
+       "kind": "leaf",
+       "star": "188k",
+       "repo": "Significant-Gravitas/AutoGPT",
+       "branch": "⑤ 自主探索型 Agent",
+       "domain": "agent"
+      },
+      {
+       "label": "AgentGPT",
+       "kind": "leaf",
+       "star": "36k",
+       "repo": "reworkd/AgentGPT",
+       "branch": "⑤ 自主探索型 Agent",
+       "domain": "agent"
+      },
+      {
+       "label": "XAgent",
+       "kind": "leaf",
+       "star": "8.6k",
+       "repo": "OpenBMB/XAgent",
+       "branch": "⑤ 自主探索型 Agent",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "⑥ 工具 · 协议 · 沙箱",
+     "items": [
+      {
+       "label": "MCP servers",
+       "kind": "leaf",
+       "star": "91k",
+       "repo": "modelcontextprotocol/servers",
+       "branch": "⑥ 工具 · 协议 · 沙箱",
+       "domain": "agent"
+      },
+      {
+       "label": "A2A 协议",
+       "kind": "leaf",
+       "star": "26k",
+       "repo": "a2aproject/A2A",
+       "branch": "⑥ 工具 · 协议 · 沙箱",
+       "domain": "agent"
+      },
+      {
+       "label": "MCP python-sdk",
+       "kind": "leaf",
+       "star": "25k",
+       "repo": "modelcontextprotocol/python-sdk",
+       "branch": "⑥ 工具 · 协议 · 沙箱",
+       "domain": "agent"
+      },
+      {
+       "label": "E2B（安全沙箱）",
+       "kind": "leaf",
+       "star": "14k",
+       "repo": "e2b-dev/E2B",
+       "branch": "⑥ 工具 · 协议 · 沙箱",
+       "domain": "agent"
+      },
+      {
+       "label": "MCP Inspector",
+       "kind": "leaf",
+       "star": "11k",
+       "repo": "modelcontextprotocol/inspector",
+       "branch": "⑥ 工具 · 协议 · 沙箱",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "⑦ 记忆层",
+     "items": [
+      {
+       "label": "mem0",
+       "kind": "leaf",
+       "star": "67k",
+       "repo": "mem0ai/mem0",
+       "branch": "⑦ 记忆层",
+       "domain": "agent"
+      },
+      {
+       "label": "Graphiti（Zep）",
+       "kind": "leaf",
+       "star": "32k",
+       "repo": "getzep/graphiti",
+       "branch": "⑦ 记忆层",
+       "domain": "agent"
+      },
+      {
+       "label": "cognee",
+       "kind": "leaf",
+       "star": "32k",
+       "repo": "topoteretes/cognee",
+       "branch": "⑦ 记忆层",
+       "domain": "agent"
+      },
+      {
+       "label": "Letta（原 MemGPT）",
+       "kind": "leaf",
+       "star": "25k",
+       "repo": "letta-ai/letta",
+       "branch": "⑦ 记忆层",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "⑧ RAG 与向量库",
+     "items": [
+      {
+       "label": "RAGFlow",
+       "kind": "leaf",
+       "star": "92k",
+       "repo": "infiniflow/ragflow",
+       "branch": "⑧ RAG 与向量库",
+       "domain": "agent"
+      },
+      {
+       "label": "Milvus",
+       "kind": "leaf",
+       "star": "46k",
+       "repo": "milvus-io/milvus",
+       "branch": "⑧ RAG 与向量库",
+       "domain": "agent"
+      },
+      {
+       "label": "FAISS",
+       "kind": "leaf",
+       "star": "41k",
+       "repo": "facebookresearch/faiss",
+       "branch": "⑧ RAG 与向量库",
+       "domain": "agent"
+      },
+      {
+       "label": "Qdrant",
+       "kind": "leaf",
+       "star": "35k",
+       "repo": "qdrant/qdrant",
+       "branch": "⑧ RAG 与向量库",
+       "domain": "agent"
+      },
+      {
+       "label": "Chroma",
+       "kind": "leaf",
+       "star": "29k",
+       "repo": "chroma-core/chroma",
+       "branch": "⑧ RAG 与向量库",
+       "domain": "agent"
+      },
+      {
+       "label": "kotaemon",
+       "kind": "leaf",
+       "star": "26k",
+       "repo": "Cinnamon/kotaemon",
+       "branch": "⑧ RAG 与向量库",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "⑨ 浏览器与电脑操作",
+     "items": [
+      {
+       "label": "browser-use",
+       "kind": "leaf",
+       "star": "117k",
+       "repo": "browser-use/browser-use",
+       "branch": "⑨ 浏览器与电脑操作",
+       "domain": "agent"
+      },
+      {
+       "label": "Playwright",
+       "kind": "leaf",
+       "star": "97k",
+       "repo": "microsoft/playwright",
+       "branch": "⑨ 浏览器与电脑操作",
+       "domain": "agent"
+      },
+      {
+       "label": "OmniParser",
+       "kind": "leaf",
+       "star": "26k",
+       "repo": "microsoft/OmniParser",
+       "branch": "⑨ 浏览器与电脑操作",
+       "domain": "agent"
+      },
+      {
+       "label": "Stagehand",
+       "kind": "leaf",
+       "star": "26k",
+       "repo": "browserbase/stagehand",
+       "branch": "⑨ 浏览器与电脑操作",
+       "domain": "agent"
+      },
+      {
+       "label": "suna",
+       "kind": "leaf",
+       "star": "20k",
+       "repo": "kortix-ai/suna",
+       "branch": "⑨ 浏览器与电脑操作",
+       "domain": "agent"
+      },
+      {
+       "label": "UI-TARS",
+       "kind": "leaf",
+       "star": "12k",
+       "repo": "bytedance/UI-TARS",
+       "branch": "⑨ 浏览器与电脑操作",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "⑩ 编码智能体",
+     "items": [
+      {
+       "label": "Claude Code",
+       "kind": "leaf",
+       "star": "150k",
+       "repo": "anthropics/claude-code",
+       "branch": "⑩ 编码智能体",
+       "domain": "agent"
+      },
+      {
+       "label": "Gemini CLI",
+       "kind": "leaf",
+       "star": "107k",
+       "repo": "google-gemini/gemini-cli",
+       "branch": "⑩ 编码智能体",
+       "domain": "agent"
+      },
+      {
+       "label": "OpenHands",
+       "kind": "leaf",
+       "star": "90k",
+       "repo": "All-Hands-AI/OpenHands",
+       "branch": "⑩ 编码智能体",
+       "domain": "agent"
+      },
+      {
+       "label": "gpt-engineer",
+       "kind": "leaf",
+       "star": "55k",
+       "repo": "gpt-engineer-org/gpt-engineer",
+       "branch": "⑩ 编码智能体",
+       "domain": "agent"
+      },
+      {
+       "label": "Aider",
+       "kind": "leaf",
+       "star": "49k",
+       "repo": "Aider-AI/aider",
+       "branch": "⑩ 编码智能体",
+       "domain": "agent"
+      },
+      {
+       "label": "SWE-agent",
+       "kind": "leaf",
+       "star": "21k",
+       "repo": "SWE-agent/SWE-agent",
+       "branch": "⑩ 编码智能体",
+       "domain": "agent"
+      },
+      {
+       "label": "SWE-bench（评测基准）",
+       "kind": "leaf",
+       "star": "6k",
+       "repo": "princeton-nlp/SWE-bench",
+       "branch": "⑩ 编码智能体",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "⑪ 平台与工作流",
+     "items": [
+      {
+       "label": "n8n",
+       "kind": "leaf",
+       "star": "207k",
+       "repo": "n8n-io/n8n",
+       "branch": "⑪ 平台与工作流",
+       "domain": "agent"
+      },
+      {
+       "label": "Dify",
+       "kind": "leaf",
+       "star": "158k",
+       "repo": "langgenius/dify",
+       "branch": "⑪ 平台与工作流",
+       "domain": "agent"
+      },
+      {
+       "label": "Flowise",
+       "kind": "leaf",
+       "star": "55k",
+       "repo": "FlowiseAI/Flowise",
+       "branch": "⑪ 平台与工作流",
+       "domain": "agent"
+      },
+      {
+       "label": "DB-GPT",
+       "kind": "leaf",
+       "star": "20k",
+       "repo": "eosphoros-ai/DB-GPT",
+       "branch": "⑪ 平台与工作流",
+       "domain": "agent"
+      },
+      {
+       "label": "agent-lightning",
+       "kind": "leaf",
+       "star": "19k",
+       "repo": "microsoft/agent-lightning",
+       "branch": "⑪ 平台与工作流",
+       "domain": "agent"
+      },
+      {
+       "label": "AgentOps（可观测）",
+       "kind": "leaf",
+       "star": "5.9k",
+       "repo": "AgentOps-AI/agentops",
+       "branch": "⑪ 平台与工作流",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "⑫ 数据获取与文档解析",
+     "items": [
+      {
+       "label": "Firecrawl",
+       "kind": "leaf",
+       "star": "190k",
+       "repo": "Firecrawl/firecrawl",
+       "branch": "⑫ 数据获取与文档解析",
+       "domain": "agent"
+      },
+      {
+       "label": "markitdown",
+       "kind": "leaf",
+       "star": "189k",
+       "repo": "microsoft/markitdown",
+       "branch": "⑫ 数据获取与文档解析",
+       "domain": "agent"
+      },
+      {
+       "label": "crawl4ai",
+       "kind": "leaf",
+       "star": "85k",
+       "repo": "unclecode/crawl4ai",
+       "branch": "⑫ 数据获取与文档解析",
+       "domain": "agent"
+      },
+      {
+       "label": "Docling",
+       "kind": "leaf",
+       "star": "69k",
+       "repo": "docling-project/docling",
+       "branch": "⑫ 数据获取与文档解析",
+       "domain": "agent"
+      },
+      {
+       "label": "gpt-researcher",
+       "kind": "leaf",
+       "star": "30k",
+       "repo": "assafelovic/gpt-researcher",
+       "branch": "⑫ 数据获取与文档解析",
+       "domain": "agent"
+      },
+      {
+       "label": "deep-research",
+       "kind": "leaf",
+       "star": "20k",
+       "repo": "dzhng/deep-research",
+       "branch": "⑫ 数据获取与文档解析",
+       "domain": "agent"
+      }
+     ]
+    },
+    {
+     "label": "⑬ 模型服务与微调",
+     "items": [
+      {
+       "label": "vLLM",
+       "kind": "leaf",
+       "star": "93k",
+       "repo": "vllm-project/vllm",
+       "branch": "⑬ 模型服务与微调",
+       "domain": "agent"
+      },
+      {
+       "label": "Unsloth",
+       "kind": "leaf",
+       "star": "78k",
+       "repo": "unslothai/unsloth",
+       "branch": "⑬ 模型服务与微调",
+       "domain": "agent"
+      },
+      {
+       "label": "LLaMA-Factory",
+       "kind": "leaf",
+       "star": "75k",
+       "repo": "hiyouga/LLaMA-Factory",
+       "branch": "⑬ 模型服务与微调",
+       "domain": "agent"
+      },
+      {
+       "label": "LiteLLM（模型网关）",
+       "kind": "leaf",
+       "star": "61k",
+       "repo": "BerriAI/litellm",
+       "branch": "⑬ 模型服务与微调",
+       "domain": "agent"
+      },
+      {
+       "label": "SGLang",
+       "kind": "leaf",
+       "star": "37k",
+       "repo": "sgl-project/sglang",
+       "branch": "⑬ 模型服务与微调",
+       "domain": "agent"
+      }
+     ]
+    }
+   ]
+  },
+  "cross": {
+   "key": "cross",
+   "label": "交叉地带",
+   "branches": [
+    {
+     "label": "① 语言驱动机器人（论文线）",
+     "items": [
+      {
+       "label": "SayCan：LLM 规划 + 技能可行性打分",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 语言驱动机器人（论文线）",
+       "domain": "cross"
+      },
+      {
+       "label": "PaLM-E：多模态具身大模型",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 语言驱动机器人（论文线）",
+       "domain": "cross"
+      },
+      {
+       "label": "Code as Policies：用代码表达策略",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 语言驱动机器人（论文线）",
+       "domain": "cross"
+      },
+      {
+       "label": "VoxPoser：LLM 生成 3D 价值图",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 语言驱动机器人（论文线）",
+       "domain": "cross"
+      },
+      {
+       "label": "Inner Monologue：闭环语言反馈",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "① 语言驱动机器人（论文线）",
+       "domain": "cross"
+      }
+     ]
+    },
+    {
+     "label": "② Agent 能力 × 机器人",
+     "items": [
+      {
+       "label": "技能即工具：MCP servers",
+       "kind": "leaf",
+       "star": "91k",
+       "repo": "modelcontextprotocol/servers",
+       "branch": "② Agent 能力 × 机器人",
+       "domain": "cross"
+      },
+      {
+       "label": "长期记忆：mem0",
+       "kind": "leaf",
+       "star": "67k",
+       "repo": "mem0ai/mem0",
+       "branch": "② Agent 能力 × 机器人",
+       "domain": "cross"
+      },
+      {
+       "label": "感知底座：InternVL",
+       "kind": "leaf",
+       "star": "10k",
+       "repo": "OpenGVLab/InternVL",
+       "branch": "② Agent 能力 × 机器人",
+       "domain": "cross"
+      },
+      {
+       "label": "任务规划：LLM Planner + 技能库",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "② Agent 能力 × 机器人",
+       "domain": "cross"
+      },
+      {
+       "label": "反思闭环：Reflexion 模式",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "② Agent 能力 × 机器人",
+       "domain": "cross"
+      }
+     ]
+    },
+    {
+     "label": "③ 融合学习路线（建议顺序）",
+     "items": [
+      {
+       "label": "第 1 步：RL + 仿真地基（Gymnasium / MuJoCo / Isaac Lab）",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "③ 融合学习路线（建议顺序）",
+       "domain": "cross"
+      },
+      {
+       "label": "第 2 步：跑通一个模仿学习 Demo（LeRobot / Diffusion Policy）",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "③ 融合学习路线（建议顺序）",
+       "domain": "cross"
+      },
+      {
+       "label": "第 3 步：微调或部署一个开源 VLA（OpenVLA / openpi）",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "③ 融合学习路线（建议顺序）",
+       "domain": "cross"
+      },
+      {
+       "label": "第 4 步：学 Agent 范式与 MCP 协议",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "③ 融合学习路线（建议顺序）",
+       "domain": "cross"
+      },
+      {
+       "label": "第 5 步：把机器人技能封装成 MCP 工具",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "③ 融合学习路线（建议顺序）",
+       "domain": "cross"
+      },
+      {
+       "label": "第 6 步：做「语言 → 规划 → 执行 → 反馈」闭环",
+       "kind": "concept",
+       "star": null,
+       "repo": null,
+       "branch": "③ 融合学习路线（建议顺序）",
+       "domain": "cross"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "repos": {
+  "ray-project/ray": {
+   "repo": "ray-project/ray",
+   "name": "Ray RLlib",
+   "star": "44k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "① 深度学习与强化学习地基"
+   ]
+  },
+  "DLR-RM/stable-baselines3": {
+   "repo": "DLR-RM/stable-baselines3",
+   "name": "Stable-Baselines3",
+   "star": "14k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "① 深度学习与强化学习地基"
+   ]
+  },
+  "Farama-Foundation/Gymnasium": {
+   "repo": "Farama-Foundation/Gymnasium",
+   "name": "Gymnasium",
+   "star": "13k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "① 深度学习与强化学习地基"
+   ]
+  },
+  "Genesis-Embodied-AI/Genesis": {
+   "repo": "Genesis-Embodied-AI/Genesis",
+   "name": "Genesis",
+   "star": "30k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "② 仿真引擎与平台"
+   ]
+  },
+  "microsoft/AirSim": {
+   "repo": "microsoft/AirSim",
+   "name": "AirSim",
+   "star": "19k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "② 仿真引擎与平台"
+   ]
+  },
+  "google-deepmind/mujoco": {
+   "repo": "google-deepmind/mujoco",
+   "name": "MuJoCo",
+   "star": "16k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "② 仿真引擎与平台"
+   ]
+  },
+  "bulletphysics/bullet3": {
+   "repo": "bulletphysics/bullet3",
+   "name": "Bullet3",
+   "star": "15k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "② 仿真引擎与平台"
+   ]
+  },
+  "isaac-sim/IsaacLab": {
+   "repo": "isaac-sim/IsaacLab",
+   "name": "Isaac Lab",
+   "star": "8.3k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "② 仿真引擎与平台"
+   ]
+  },
+  "isaac-sim/IsaacSim": {
+   "repo": "isaac-sim/IsaacSim",
+   "name": "Isaac Sim",
+   "star": "4.2k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "② 仿真引擎与平台"
+   ]
+  },
+  "haosulab/ManiSkill": {
+   "repo": "haosulab/ManiSkill",
+   "name": "ManiSkill",
+   "star": "3.4k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "③ 操作 / 导航基准环境"
+   ]
+  },
+  "facebookresearch/habitat-lab": {
+   "repo": "facebookresearch/habitat-lab",
+   "name": "Habitat-Lab",
+   "star": "3.2k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "③ 操作 / 导航基准环境"
+   ]
+  },
+  "RoboTwin-Platform/RoboTwin": {
+   "repo": "RoboTwin-Platform/RoboTwin",
+   "name": "RoboTwin",
+   "star": "3k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "③ 操作 / 导航基准环境"
+   ]
+  },
+  "ARISE-Initiative/robosuite": {
+   "repo": "ARISE-Initiative/robosuite",
+   "name": "robosuite",
+   "star": "2.6k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "③ 操作 / 导航基准环境"
+   ]
+  },
+  "RoboVerseOrg/RoboVerse": {
+   "repo": "RoboVerseOrg/RoboVerse",
+   "name": "RoboVerse",
+   "star": "1.9k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "③ 操作 / 导航基准环境"
+   ]
+  },
+  "stepjam/RLBench": {
+   "repo": "stepjam/RLBench",
+   "name": "RLBench",
+   "star": "1.8k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "③ 操作 / 导航基准环境"
+   ]
+  },
+  "StanfordVL/BEHAVIOR-1K": {
+   "repo": "StanfordVL/BEHAVIOR-1K",
+   "name": "BEHAVIOR-1K",
+   "star": "1.7k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "③ 操作 / 导航基准环境"
+   ]
+  },
+  "huggingface/lerobot": {
+   "repo": "huggingface/lerobot",
+   "name": "LeRobot",
+   "star": "28k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "④ 示教 · 模仿学习 · 数据"
+   ]
+  },
+  "real-stanford/diffusion_policy": {
+   "repo": "real-stanford/diffusion_policy",
+   "name": "Diffusion Policy",
+   "star": "4.6k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "④ 示教 · 模仿学习 · 数据"
+   ]
+  },
+  "google-deepmind/open_x_embodiment": {
+   "repo": "google-deepmind/open_x_embodiment",
+   "name": "Open X-Embodiment",
+   "star": "2.1k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "④ 示教 · 模仿学习 · 数据"
+   ]
+  },
+  "thu-ml/RoboticsDiffusionTransformer": {
+   "repo": "thu-ml/RoboticsDiffusionTransformer",
+   "name": "RDT-1B",
+   "star": "1.8k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "④ 示教 · 模仿学习 · 数据"
+   ]
+  },
+  "ARISE-Initiative/robomimic": {
+   "repo": "ARISE-Initiative/robomimic",
+   "name": "robomimic",
+   "star": "1.6k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "④ 示教 · 模仿学习 · 数据"
+   ]
+  },
+  "droid-dataset/droid": {
+   "repo": "droid-dataset/droid",
+   "name": "DROID",
+   "star": "448",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "④ 示教 · 模仿学习 · 数据"
+   ]
+  },
+  "Physical-Intelligence/openpi": {
+   "repo": "Physical-Intelligence/openpi",
+   "name": "openpi (π0)",
+   "star": "14k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑤ VLA 视觉-语言-动作主线"
+   ]
+  },
+  "NVIDIA/Isaac-GR00T": {
+   "repo": "NVIDIA/Isaac-GR00T",
+   "name": "GR00T N1",
+   "star": "8.2k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑤ VLA 视觉-语言-动作主线"
+   ]
+  },
+  "openvla/openvla": {
+   "repo": "openvla/openvla",
+   "name": "OpenVLA",
+   "star": "7.1k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑤ VLA 视觉-语言-动作主线"
+   ]
+  },
+  "octo-models/octo": {
+   "repo": "octo-models/octo",
+   "name": "Octo",
+   "star": "1.8k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑤ VLA 视觉-语言-动作主线"
+   ]
+  },
+  "openai/CLIP": {
+   "repo": "openai/CLIP",
+   "name": "CLIP",
+   "star": "34k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑥ 多模态底座 VLM"
+   ]
+  },
+  "OpenBMB/MiniCPM-V": {
+   "repo": "OpenBMB/MiniCPM-V",
+   "name": "MiniCPM-V",
+   "star": "27k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑥ 多模态底座 VLM"
+   ]
+  },
+  "OpenBMB/OmniLMM": {
+   "repo": "OpenBMB/OmniLMM",
+   "name": "OmniLMM",
+   "star": "27k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑥ 多模态底座 VLM"
+   ]
+  },
+  "haotian-liu/LLaVA": {
+   "repo": "haotian-liu/LLaVA",
+   "name": "LLaVA",
+   "star": "25k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑥ 多模态底座 VLM"
+   ]
+  },
+  "QwenLM/Qwen2.5-VL": {
+   "repo": "QwenLM/Qwen2.5-VL",
+   "name": "Qwen2.5-VL",
+   "star": "20k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑥ 多模态底座 VLM"
+   ]
+  },
+  "OpenGVLab/InternVL": {
+   "repo": "OpenGVLab/InternVL",
+   "name": "InternVL",
+   "star": "10k",
+   "domains": [
+    "embodied",
+    "cross"
+   ],
+   "branches": [
+    "⑥ 多模态底座 VLM",
+    "② Agent 能力 × 机器人"
+   ]
+  },
+  "OpenDriveLab/Vista": {
+   "repo": "OpenDriveLab/Vista",
+   "name": "Vista（驾驶世界模型）",
+   "star": "907",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑦ 世界模型 WAM"
+   ]
+  },
+  "ros2/ros2": {
+   "repo": "ros2/ros2",
+   "name": "ROS 2",
+   "star": "6.1k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑧ 运控 · 真机 · 部署"
+   ]
+  },
+  "stack-of-tasks/pinocchio": {
+   "repo": "stack-of-tasks/pinocchio",
+   "name": "Pinocchio",
+   "star": "3.8k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑧ 运控 · 真机 · 部署"
+   ]
+  },
+  "unitreerobotics/unitree_rl_gym": {
+   "repo": "unitreerobotics/unitree_rl_gym",
+   "name": "unitree_rl_gym",
+   "star": "3.6k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑧ 运控 · 真机 · 部署"
+   ]
+  },
+  "leggedrobotics/legged_gym": {
+   "repo": "leggedrobotics/legged_gym",
+   "name": "legged_gym",
+   "star": "3.1k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑧ 运控 · 真机 · 部署"
+   ]
+  },
+  "unitreerobotics/unitree_ros2": {
+   "repo": "unitreerobotics/unitree_ros2",
+   "name": "unitree_ros2",
+   "star": "858",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑧ 运控 · 真机 · 部署"
+   ]
+  },
+  "TianxingChen/Embodied-AI-Guide": {
+   "repo": "TianxingChen/Embodied-AI-Guide",
+   "name": "Embodied-AI-Guide（中文）",
+   "star": "16k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑨ 入门清单与资源聚合"
+   ]
+  },
+  "GT-RIPL/Awesome-LLM-Robotics": {
+   "repo": "GT-RIPL/Awesome-LLM-Robotics",
+   "name": "Awesome-LLM-Robotics",
+   "star": "4.5k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑨ 入门清单与资源聚合"
+   ]
+  },
+  "robotics-survey/Awesome-Robotics-Foundation-Models": {
+   "repo": "robotics-survey/Awesome-Robotics-Foundation-Models",
+   "name": "Awesome-Robotics-Foundation-Models",
+   "star": "1.4k",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑨ 入门清单与资源聚合"
+   ]
+  },
+  "zc-xzc/embodied-ai-learning-handbook": {
+   "repo": "zc-xzc/embodied-ai-learning-handbook",
+   "name": "embodied-ai-learning-handbook",
+   "star": "56",
+   "domains": [
+    "embodied"
+   ],
+   "branches": [
+    "⑨ 入门清单与资源聚合"
+   ]
+  },
+  "stanfordnlp/dspy": {
+   "repo": "stanfordnlp/dspy",
+   "name": "DSPy（Prompt 可编程优化）",
+   "star": "39k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "① 核心范式与原理"
+   ]
+  },
+  "langchain-ai/langchain": {
+   "repo": "langchain-ai/langchain",
+   "name": "LangChain",
+   "star": "148k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "② 通用编排框架"
+   ]
+  },
+  "run-llama/llama_index": {
+   "repo": "run-llama/llama_index",
+   "name": "LlamaIndex",
+   "star": "52k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "② 通用编排框架"
+   ]
+  },
+  "langchain-ai/langgraph": {
+   "repo": "langchain-ai/langgraph",
+   "name": "LangGraph",
+   "star": "43k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "② 通用编排框架"
+   ]
+  },
+  "agno-agi/agno": {
+   "repo": "agno-agi/agno",
+   "name": "Agno",
+   "star": "43k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "② 通用编排框架"
+   ]
+  },
+  "modelscope/agentscope": {
+   "repo": "modelscope/agentscope",
+   "name": "AgentScope",
+   "star": "33k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "② 通用编排框架"
+   ]
+  },
+  "openai/openai-agents-python": {
+   "repo": "openai/openai-agents-python",
+   "name": "OpenAI Agents SDK",
+   "star": "30k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "③ 官方与轻量 SDK"
+   ]
+  },
+  "huggingface/smolagents": {
+   "repo": "huggingface/smolagents",
+   "name": "smolagents",
+   "star": "30k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "③ 官方与轻量 SDK"
+   ]
+  },
+  "microsoft/semantic-kernel": {
+   "repo": "microsoft/semantic-kernel",
+   "name": "Semantic Kernel",
+   "star": "29k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "③ 官方与轻量 SDK"
+   ]
+  },
+  "google/adk-python": {
+   "repo": "google/adk-python",
+   "name": "Google ADK",
+   "star": "22k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "③ 官方与轻量 SDK"
+   ]
+  },
+  "pydantic/pydantic-ai": {
+   "repo": "pydantic/pydantic-ai",
+   "name": "Pydantic-AI",
+   "star": "21k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "③ 官方与轻量 SDK"
+   ]
+  },
+  "QwenLM/Qwen-Agent": {
+   "repo": "QwenLM/Qwen-Agent",
+   "name": "Qwen-Agent",
+   "star": "17k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "③ 官方与轻量 SDK"
+   ]
+  },
+  "microsoft/TaskWeaver": {
+   "repo": "microsoft/TaskWeaver",
+   "name": "TaskWeaver",
+   "star": "6.2k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "③ 官方与轻量 SDK"
+   ]
+  },
+  "geekan/MetaGPT": {
+   "repo": "geekan/MetaGPT",
+   "name": "MetaGPT",
+   "star": "71k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "④ 多智能体协作"
+   ]
+  },
+  "microsoft/autogen": {
+   "repo": "microsoft/autogen",
+   "name": "AutoGen",
+   "star": "61k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "④ 多智能体协作"
+   ]
+  },
+  "crewAIInc/crewAI": {
+   "repo": "crewAIInc/crewAI",
+   "name": "CrewAI",
+   "star": "60k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "④ 多智能体协作"
+   ]
+  },
+  "OpenBMB/ChatDev": {
+   "repo": "OpenBMB/ChatDev",
+   "name": "ChatDev",
+   "star": "34k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "④ 多智能体协作"
+   ]
+  },
+  "camel-ai/camel": {
+   "repo": "camel-ai/camel",
+   "name": "CAMEL",
+   "star": "18k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "④ 多智能体协作"
+   ]
+  },
+  "OpenBMB/AgentVerse": {
+   "repo": "OpenBMB/AgentVerse",
+   "name": "AgentVerse",
+   "star": "5.2k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "④ 多智能体协作"
+   ]
+  },
+  "Significant-Gravitas/AutoGPT": {
+   "repo": "Significant-Gravitas/AutoGPT",
+   "name": "AutoGPT",
+   "star": "188k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑤ 自主探索型 Agent"
+   ]
+  },
+  "reworkd/AgentGPT": {
+   "repo": "reworkd/AgentGPT",
+   "name": "AgentGPT",
+   "star": "36k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑤ 自主探索型 Agent"
+   ]
+  },
+  "OpenBMB/XAgent": {
+   "repo": "OpenBMB/XAgent",
+   "name": "XAgent",
+   "star": "8.6k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑤ 自主探索型 Agent"
+   ]
+  },
+  "modelcontextprotocol/servers": {
+   "repo": "modelcontextprotocol/servers",
+   "name": "MCP servers",
+   "star": "91k",
+   "domains": [
+    "agent",
+    "cross"
+   ],
+   "branches": [
+    "⑥ 工具 · 协议 · 沙箱",
+    "② Agent 能力 × 机器人"
+   ]
+  },
+  "a2aproject/A2A": {
+   "repo": "a2aproject/A2A",
+   "name": "A2A 协议",
+   "star": "26k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑥ 工具 · 协议 · 沙箱"
+   ]
+  },
+  "modelcontextprotocol/python-sdk": {
+   "repo": "modelcontextprotocol/python-sdk",
+   "name": "MCP python-sdk",
+   "star": "25k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑥ 工具 · 协议 · 沙箱"
+   ]
+  },
+  "e2b-dev/E2B": {
+   "repo": "e2b-dev/E2B",
+   "name": "E2B（安全沙箱）",
+   "star": "14k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑥ 工具 · 协议 · 沙箱"
+   ]
+  },
+  "modelcontextprotocol/inspector": {
+   "repo": "modelcontextprotocol/inspector",
+   "name": "MCP Inspector",
+   "star": "11k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑥ 工具 · 协议 · 沙箱"
+   ]
+  },
+  "mem0ai/mem0": {
+   "repo": "mem0ai/mem0",
+   "name": "mem0",
+   "star": "67k",
+   "domains": [
+    "agent",
+    "cross"
+   ],
+   "branches": [
+    "⑦ 记忆层",
+    "② Agent 能力 × 机器人"
+   ]
+  },
+  "getzep/graphiti": {
+   "repo": "getzep/graphiti",
+   "name": "Graphiti（Zep）",
+   "star": "32k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑦ 记忆层"
+   ]
+  },
+  "topoteretes/cognee": {
+   "repo": "topoteretes/cognee",
+   "name": "cognee",
+   "star": "32k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑦ 记忆层"
+   ]
+  },
+  "letta-ai/letta": {
+   "repo": "letta-ai/letta",
+   "name": "Letta（原 MemGPT）",
+   "star": "25k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑦ 记忆层"
+   ]
+  },
+  "infiniflow/ragflow": {
+   "repo": "infiniflow/ragflow",
+   "name": "RAGFlow",
+   "star": "92k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑧ RAG 与向量库"
+   ]
+  },
+  "milvus-io/milvus": {
+   "repo": "milvus-io/milvus",
+   "name": "Milvus",
+   "star": "46k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑧ RAG 与向量库"
+   ]
+  },
+  "facebookresearch/faiss": {
+   "repo": "facebookresearch/faiss",
+   "name": "FAISS",
+   "star": "41k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑧ RAG 与向量库"
+   ]
+  },
+  "qdrant/qdrant": {
+   "repo": "qdrant/qdrant",
+   "name": "Qdrant",
+   "star": "35k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑧ RAG 与向量库"
+   ]
+  },
+  "chroma-core/chroma": {
+   "repo": "chroma-core/chroma",
+   "name": "Chroma",
+   "star": "29k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑧ RAG 与向量库"
+   ]
+  },
+  "Cinnamon/kotaemon": {
+   "repo": "Cinnamon/kotaemon",
+   "name": "kotaemon",
+   "star": "26k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑧ RAG 与向量库"
+   ]
+  },
+  "browser-use/browser-use": {
+   "repo": "browser-use/browser-use",
+   "name": "browser-use",
+   "star": "117k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑨ 浏览器与电脑操作"
+   ]
+  },
+  "microsoft/playwright": {
+   "repo": "microsoft/playwright",
+   "name": "Playwright",
+   "star": "97k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑨ 浏览器与电脑操作"
+   ]
+  },
+  "microsoft/OmniParser": {
+   "repo": "microsoft/OmniParser",
+   "name": "OmniParser",
+   "star": "26k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑨ 浏览器与电脑操作"
+   ]
+  },
+  "browserbase/stagehand": {
+   "repo": "browserbase/stagehand",
+   "name": "Stagehand",
+   "star": "26k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑨ 浏览器与电脑操作"
+   ]
+  },
+  "kortix-ai/suna": {
+   "repo": "kortix-ai/suna",
+   "name": "suna",
+   "star": "20k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑨ 浏览器与电脑操作"
+   ]
+  },
+  "bytedance/UI-TARS": {
+   "repo": "bytedance/UI-TARS",
+   "name": "UI-TARS",
+   "star": "12k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑨ 浏览器与电脑操作"
+   ]
+  },
+  "anthropics/claude-code": {
+   "repo": "anthropics/claude-code",
+   "name": "Claude Code",
+   "star": "150k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑩ 编码智能体"
+   ]
+  },
+  "google-gemini/gemini-cli": {
+   "repo": "google-gemini/gemini-cli",
+   "name": "Gemini CLI",
+   "star": "107k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑩ 编码智能体"
+   ]
+  },
+  "All-Hands-AI/OpenHands": {
+   "repo": "All-Hands-AI/OpenHands",
+   "name": "OpenHands",
+   "star": "90k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑩ 编码智能体"
+   ]
+  },
+  "gpt-engineer-org/gpt-engineer": {
+   "repo": "gpt-engineer-org/gpt-engineer",
+   "name": "gpt-engineer",
+   "star": "55k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑩ 编码智能体"
+   ]
+  },
+  "Aider-AI/aider": {
+   "repo": "Aider-AI/aider",
+   "name": "Aider",
+   "star": "49k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑩ 编码智能体"
+   ]
+  },
+  "SWE-agent/SWE-agent": {
+   "repo": "SWE-agent/SWE-agent",
+   "name": "SWE-agent",
+   "star": "21k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑩ 编码智能体"
+   ]
+  },
+  "princeton-nlp/SWE-bench": {
+   "repo": "princeton-nlp/SWE-bench",
+   "name": "SWE-bench（评测基准）",
+   "star": "6k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑩ 编码智能体"
+   ]
+  },
+  "n8n-io/n8n": {
+   "repo": "n8n-io/n8n",
+   "name": "n8n",
+   "star": "207k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑪ 平台与工作流"
+   ]
+  },
+  "langgenius/dify": {
+   "repo": "langgenius/dify",
+   "name": "Dify",
+   "star": "158k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑪ 平台与工作流"
+   ]
+  },
+  "FlowiseAI/Flowise": {
+   "repo": "FlowiseAI/Flowise",
+   "name": "Flowise",
+   "star": "55k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑪ 平台与工作流"
+   ]
+  },
+  "eosphoros-ai/DB-GPT": {
+   "repo": "eosphoros-ai/DB-GPT",
+   "name": "DB-GPT",
+   "star": "20k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑪ 平台与工作流"
+   ]
+  },
+  "microsoft/agent-lightning": {
+   "repo": "microsoft/agent-lightning",
+   "name": "agent-lightning",
+   "star": "19k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑪ 平台与工作流"
+   ]
+  },
+  "AgentOps-AI/agentops": {
+   "repo": "AgentOps-AI/agentops",
+   "name": "AgentOps（可观测）",
+   "star": "5.9k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑪ 平台与工作流"
+   ]
+  },
+  "Firecrawl/firecrawl": {
+   "repo": "Firecrawl/firecrawl",
+   "name": "Firecrawl",
+   "star": "190k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑫ 数据获取与文档解析"
+   ]
+  },
+  "microsoft/markitdown": {
+   "repo": "microsoft/markitdown",
+   "name": "markitdown",
+   "star": "189k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑫ 数据获取与文档解析"
+   ]
+  },
+  "unclecode/crawl4ai": {
+   "repo": "unclecode/crawl4ai",
+   "name": "crawl4ai",
+   "star": "85k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑫ 数据获取与文档解析"
+   ]
+  },
+  "docling-project/docling": {
+   "repo": "docling-project/docling",
+   "name": "Docling",
+   "star": "69k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑫ 数据获取与文档解析"
+   ]
+  },
+  "assafelovic/gpt-researcher": {
+   "repo": "assafelovic/gpt-researcher",
+   "name": "gpt-researcher",
+   "star": "30k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑫ 数据获取与文档解析"
+   ]
+  },
+  "dzhng/deep-research": {
+   "repo": "dzhng/deep-research",
+   "name": "deep-research",
+   "star": "20k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑫ 数据获取与文档解析"
+   ]
+  },
+  "vllm-project/vllm": {
+   "repo": "vllm-project/vllm",
+   "name": "vLLM",
+   "star": "93k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑬ 模型服务与微调"
+   ]
+  },
+  "unslothai/unsloth": {
+   "repo": "unslothai/unsloth",
+   "name": "Unsloth",
+   "star": "78k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑬ 模型服务与微调"
+   ]
+  },
+  "hiyouga/LLaMA-Factory": {
+   "repo": "hiyouga/LLaMA-Factory",
+   "name": "LLaMA-Factory",
+   "star": "75k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑬ 模型服务与微调"
+   ]
+  },
+  "BerriAI/litellm": {
+   "repo": "BerriAI/litellm",
+   "name": "LiteLLM（模型网关）",
+   "star": "61k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑬ 模型服务与微调"
+   ]
+  },
+  "sgl-project/sglang": {
+   "repo": "sgl-project/sglang",
+   "name": "SGLang",
+   "star": "37k",
+   "domains": [
+    "agent"
+   ],
+   "branches": [
+    "⑬ 模型服务与微调"
+   ]
+  }
+ }
+}

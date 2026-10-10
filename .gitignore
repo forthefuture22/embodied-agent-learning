@@ -16,6 +16,8 @@ env/
 Thumbs.db
 desktop.ini
 
-# 临时文件
+# 临时文件与运行日志
 *.tmp
 *.log
+clone*.log
+analyze*.log
