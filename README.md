@@ -79,7 +79,24 @@
 | L2 分支 | `#/embodied/3` | 项目紧凑表格（可横向比较） |
 | L3 项目 | `#/embodied/3/huggingface__lerobot` | 完整详情（语义架构 + 结构四维） |
 
-侧栏树自动展开当前路径并高亮；做过语义架构分析的项目带 `◆` 标记。首屏信息量从 435 KB 降到 28 KB。
+侧栏树自动展开当前路径并高亮；**109 个项目全部带 `◆` 标记**（语义架构分析已全部完成）。首屏信息量从 435 KB 降到 28 KB。
+
+### 语义架构分析（109/109）
+
+每个项目都有一份由子 agent 深读源码产出的结构化分析，15 个字段：
+
+| 字段组 | 回答的问题 |
+|---|---|
+| `one_liner` / `problem` / `difficulty` | 这是什么、解决什么问题、多难 |
+| `core_abstractions` / `layers` | 系统由哪些核心抽象构成、如何分层 |
+| `data_flow` / `diagram_mermaid` | 数据从输入到输出怎么走（含可渲染的架构图） |
+| `key_files` / `learning_path` | 该按什么顺序读源码 |
+| `extension_points` / `surprises` | 想扩展改哪里、有哪些反直觉的坑 |
+| `confidence` | 分析者对这份结论的把握 |
+
+**质量保障**：`scripts/verify_arch.py` 会逐条校验所有 `file` / `path` 是否在本地仓库真实存在——这是防幻觉的关键闸门。最终 **109/109 通过，路径真实性 100%**（累计校验 5000+ 条路径引用）。
+
+分析过程中子 agent 还发现并修复了多处克隆不完整问题（Isaac Lab 缺 `source/`、GR00T 缺 `gr00t/`、AutoGen 的 `python/` 与 `dotnet/` 被删），并如实标注了若干仓库的实况偏差（OpenHands 克隆实为 TS 前端、RAGFlow 已用 Go 重写、Letta 已是 landing page 元仓库等）。
 
 ---
 
@@ -178,9 +195,9 @@ node scripts/verify_dashboard.js
 
 完整规划见 [docs/TASK-DESIGN.md](./docs/TASK-DESIGN.md)。
 
-- [x] 挑核心项目做语义级深读（**第 1 批 9 个已完成**：LeRobot · π0 · Diffusion Policy · Isaac Lab · Gymnasium · Genesis · LangGraph · MetaGPT · mem0）
-- [ ] 第 2 批语义架构（8 个项目，名单已排定）
-- [ ] 架构质量校验脚本 `verify_arch.py`（字段齐全 + 路径真实性）
+- [x] **语义级架构分析 109/109 全部完成**（8 批 × 3-5 个并行子 agent，全部通过校验，路径真实性 100%）
+- [x] 反幻觉校验脚本 `verify_arch.py`（结构完整性 / 路径真实性 / 图表合法性 / 内容质量）
+- [x] 信息架构重构（入口树 + 四级下钻，首屏从 435 KB 降到 28 KB）
 - [ ] 网页工具改造试点（优先 A 类：gpt-engineer · SWE-agent · Docling 等无需 GPU 的项目）
 - [ ] 补充每个分支的必读论文清单（带链接）
 - [ ] 为 VLA 主线补一张演进时间线
