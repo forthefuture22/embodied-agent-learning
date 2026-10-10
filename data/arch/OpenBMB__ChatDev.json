@@ -1,0 +1,88 @@
+{
+  "repo": "OpenBMB/ChatDev",
+  "name": "ChatDev 2.0 (DevAll)",
+  "one_liner": "零代码多智能体编排平台，用 YAML 定义图化工作流",
+  "problem": "让用户无需写代码，用 YAML 定义 Agent 节点与边，编排软件开发、3D 生成、深度研究等多智能体流程；经典虚拟软件公司流程以内置图形式保留。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "GraphConfig", "role": "不可变的图配置，包装从 YAML 解析出的节点与边定义", "file": "entity/graph_config.py"},
+    {"name": "GraphContext", "role": "可变运行时状态，保存节点、边、拓扑层、输出与输出目录", "file": "workflow/graph_context.py"},
+    {"name": "Node", "role": "节点配置基类，承载 id、type、context_window 与各类型专属 config", "file": "entity/configs/node/node.py"},
+    {"name": "AgentConfig", "role": "agent 节点配置，定义 role 提示词、provider、tooling、memory 与 thinking", "file": "entity/configs/node/agent.py"},
+    {"name": "GraphExecutor", "role": "图执行器，串联建图、内存/思维管理、节点执行与结果归档", "file": "workflow/graph.py"},
+    {"name": "GraphManager", "role": "建图器，实例化节点、连边、环检测并构建拓扑层", "file": "workflow/graph_manager.py"},
+    {"name": "NodeRegistry", "role": "节点类型注册表，register_node_type 把 config 类与 executor 类绑定为插件", "file": "runtime/node/registry.py"},
+    {"name": "NodeExecutor", "role": "节点执行器基类，统一 execute 接口与取消检查", "file": "runtime/node/executor/base.py"},
+    {"name": "AgentNodeExecutor", "role": "agent 节点执行器，组装对话、调用模型并驱动工具调用", "file": "runtime/node/executor/agent_executor.py"},
+    {"name": "RuntimeBuilder", "role": "装配 RuntimeContext，注入工具、函数、日志与 token 管理器", "file": "workflow/runtime/runtime_builder.py"},
+    {"name": "DAGExecutor", "role": "按拓扑层逐层执行，层内并行并串行化 Human 节点", "file": "workflow/executor/dag_executor.py"},
+    {"name": "ToolManager", "role": "管理 agent 可调用的外部工具规格与执行", "file": "runtime/node/agent/tool/tool_manager.py"}
+  ],
+  "layers": [
+    {"name": "配置解析层", "responsibility": "把 YAML 解析成 GraphDefinition、Node、EdgeConfig 等数据类", "modules": ["entity"], "files": ["entity/graph_config.py", "entity/configs/node/node.py", "entity/configs/node/agent.py"]},
+    {"name": "图构建层", "responsibility": "实例化节点、连接边、检测环并生成拓扑层与执行顺序", "modules": ["workflow"], "files": ["workflow/graph_manager.py", "workflow/topology_builder.py", "workflow/cycle_manager.py"]},
+    {"name": "执行引擎层", "responsibility": "驱动图执行，按 DAG 或含环策略调度节点并归档结果", "modules": ["workflow/executor", "workflow/runtime"], "files": ["workflow/graph.py", "workflow/executor/dag_executor.py", "workflow/runtime/runtime_builder.py"]},
+    {"name": "节点运行时层", "responsibility": "节点类型注册与各类型执行器实现", "modules": ["runtime/node"], "files": ["runtime/node/registry.py", "runtime/node/builtin_nodes.py", "runtime/node/executor/agent_executor.py"]},
+    {"name": "能力层", "responsibility": "内置函数工具、边处理器、模型 provider 与记忆/思维扩展", "modules": ["functions", "runtime/node/agent"], "files": ["functions/function_calling/code_executor.py", "functions/function_calling/uv_related.py", "runtime/node/agent/providers/openai_provider.py"]},
+    {"name": "服务层", "responsibility": "FastAPI 服务与 websocket，提供执行、会话、工作流与制品接口", "modules": ["server"], "files": ["server/app.py", "server/services/workflow_run_service.py", "server/routes/execute.py"]},
+    {"name": "接口层", "responsibility": "CLI 与 Web 服务启动入口", "modules": ["."], "files": ["run.py", "server_main.py"]}
+  ],
+  "data_flow": [
+    "第1步：run.py 读取 YAML 配置，load_config 解析出 design 定义",
+    "第2步：GraphConfig.from_definition 包装配置，GraphContext 建立运行时状态与输出目录",
+    "第3步：GraphExecutor 经 RuntimeBuilder 装配工具、函数、日志与 token 管理器",
+    "第4步：GraphManager.build_graph_structure 实例化节点、连边、环检测并拓扑分层",
+    "第5步：无环图由 DAGExecutor 按层并行执行，含环图走 cycle 执行策略",
+    "第6步：每个节点分派到注册表中的 NodeExecutor 执行",
+    "第7步：agent 节点经 provider 调用模型，按 role 提示词生成内容并按需调用工具",
+    "第8步：agent 可调用 python/uv 工具生成并 subprocess 执行代码",
+    "第9步：节点输出经边处理器与条件路由写回 GraphContext.outputs",
+    "第10步：结果由 ResultArchiver 落盘到 WareHouse 目录，CLI 打印 final_message，Web 端经 websocket 返回"
+  ],
+  "entry_points": [
+    {"path": "run.py", "what": "CLI 入口，加载 YAML 工作流并执行，打印最终消息"},
+    {"path": "server_main.py", "what": "启动 FastAPI 后端服务与热重载"},
+    {"path": "server/app.py", "what": "FastAPI 应用实例，注册各路由"},
+    {"path": "yaml_instance/ChatDev_v1.yaml", "what": "经典虚拟软件公司多智能体工作流的图定义"},
+    {"path": "check/check.py", "what": "load_config 负责解析并校验 YAML 配置"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先了解 2.0 已从软件公司转为零代码多智能体平台"},
+    {"path": "run.py", "why": "看 CLI 如何加载 YAML 并驱动整个执行链"},
+    {"path": "entity/graph_config.py", "why": "理解不可变配置对象与解析入口"},
+    {"path": "workflow/graph_context.py", "why": "理解可变运行时状态与配置的分离"},
+    {"path": "workflow/graph_manager.py", "why": "理解建图、环检测与拓扑分层"},
+    {"path": "runtime/node/registry.py", "why": "理解节点类型如何插件化注册"},
+    {"path": "runtime/node/builtin_nodes.py", "why": "看内置节点类型清单与注册方式"},
+    {"path": "workflow/executor/dag_executor.py", "why": "理解分层执行与层内并行"},
+    {"path": "runtime/node/executor/agent_executor.py", "why": "理解 agent 节点如何被提示词驱动并调用工具"},
+    {"path": "yaml_instance/ChatDev_v1.yaml", "why": "对照经典 ChatDev 流程如何用图表达"}
+  ],
+  "extension_points": [
+    "加新阶段或新流程：在 YAML 的 graph.nodes 与 graph.edges 中增删，参考 yaml_instance/ChatDev_v1.yaml",
+    "加新节点类型：实现配置类与执行器类，用 runtime/node/registry.py 的 register_node_type 注册，参考 runtime/node/builtin_nodes.py",
+    "加新工具：在 functions/function_calling/ 添加函数，参考 code_executor.py 与 uv_related.py",
+    "加新模型 provider：在 runtime/node/agent/providers/ 添加实现，参考 openai_provider.py",
+    "加新边处理器或路由条件：改 functions/edge_processor/transformers.py 与 runtime/edge/conditions",
+    "自定义执行策略：扩展 workflow/runtime/execution_strategy.py"
+  ],
+  "learning_path": [
+    "第1步读 README.md，明确 2.0 的零代码图平台定位与 1.0 的关系",
+    "第2步读 run.py，跟踪 YAML 到执行的调用链",
+    "第3步读 entity/graph_config.py 与 workflow/graph_context.py，区分配置与运行时",
+    "第4步读 workflow/graph_manager.py，理解建图与拓扑",
+    "第5步读 runtime/node/registry.py 与 runtime/node/builtin_nodes.py，理解节点类型体系",
+    "第6步读 workflow/executor/dag_executor.py，理解分层执行",
+    "第7步读 runtime/node/executor/agent_executor.py，理解 agent 与工具调用",
+    "第8步读 yaml_instance/ChatDev_v1.yaml，对照经典软件公司流程"
+  ],
+  "diagram_mermaid": "graph TD\n  Y[YAML 配置] --> GC[GraphConfig 配置对象]\n  GC --> CTX[GraphContext 运行时状态]\n  CTX --> GM[GraphManager 建图与拓扑]\n  GM --> EX[GraphExecutor 执行器]\n  EX --> RB[RuntimeBuilder 装配运行时]\n  EX --> DAG[DAGExecutor 分层调度]\n  DAG --> NE[NodeExecutor 节点执行]\n  NE --> AG[AgentNodeExecutor 模型调用]\n  AG --> TL[ToolManager 工具]\n  TL --> PY[代码生成与执行]\n  NE --> OUT[GraphContext outputs]\n  OUT --> AR[ResultArchiver 归档]\n  AR --> WH[WareHouse 产物目录]",
+  "surprises": [
+    "main 分支已是 ChatDev 2.0 DevAll，经典的 ChatChain 与 Role 类已不存在，被 YAML 图与 agent 节点取代；经典软件公司流程仅以 yaml_instance/ChatDev_v1.yaml 形式保留",
+    "配置与运行时严格分离：GraphConfig 不可变、GraphContext 可变，理解二者区别是读懂执行链的关键",
+    "节点类型完全插件化，新增节点类型只需注册 config 与 executor，无需改核心执行器",
+    "代码执行是直接 subprocess 运行生成的 .py 文件并使用临时目录，并非沙箱隔离",
+    "图执行分 DAG 分层与含环两套策略，由 GraphManager 依据拓扑自动判定"
+  ],
+  "confidence": "高"
+}

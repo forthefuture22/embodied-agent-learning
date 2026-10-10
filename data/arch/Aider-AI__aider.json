@@ -1,0 +1,85 @@
+{
+  "repo": "Aider-AI/aider",
+  "name": "Aider",
+  "one_liner": "终端里的 AI 结对编程，用 diff 式编辑改现有代码库",
+  "problem": "让 LLM 在真实的大型代码库里做外科手术式的精确修改，而不是整文件重写：通过代码索引给模型最相关的上下文，用 diff 格式约束输出，改完自动 git 提交并跑 lint 与测试。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Coder", "role": "核心编排器基类：持有模型、文件集合、消息历史与 repo map，串起发送请求、解析编辑、应用修改、自动提交的完整循环，create 工厂按 edit_format 分发到具体子类", "file": "aider/coders/base_coder.py"},
+    {"name": "EditFormat Coder", "role": "编辑策略的抽象：每种 edit_format 对应一个子类，实现 get_edits 与 apply_edits，把 LLM 输出解析成文件修改并落盘", "file": "aider/coders/editblock_coder.py"},
+    {"name": "UnifiedDiffCoder", "role": "udiff 编辑策略实现：解析标准 unified diff hunk 并用多重回退策略套用到文件上，是 diff 格式的另一种表达", "file": "aider/coders/udiff_coder.py"},
+    {"name": "RepoMap", "role": "代码库索引：用 tree-sitter 抽取符号 tags，按文件内引用关系做 PageRank 排序，在 token 预算内挑选最相关代码骨架喂给模型", "file": "aider/repomap.py"},
+    {"name": "Model", "role": "模型后端抽象：继承 ModelSettings，用 litellm 统一上百种云与本地模型，承载 edit_format、weak_model、editor_model 等按模型的能力开关", "file": "aider/models.py"},
+    {"name": "GitRepo", "role": "git 集成：管理仓库根、tracked 文件、自动提交与 commit message 生成，是 /undo 与变更追踪的基础", "file": "aider/repo.py"},
+    {"name": "Commands", "role": "斜杠命令分发器：/model /add /diff /undo /tokens 等交互命令的实现入口", "file": "aider/commands.py"},
+    {"name": "ChatChunks", "role": "prompt 装配与 prompt cache：把 system、示例、历史、repo map、文件内容切分成可缓存与不可缓存的块，按顺序拼成最终 messages", "file": "aider/coders/chat_chunks.py"},
+    {"name": "ChatSummary", "role": "对话历史压缩：当历史超出 token 预算时用弱模型把旧消息总结成简短摘要", "file": "aider/history.py"},
+    {"name": "InputOutput", "role": "终端交互层：负责读取用户输入、渲染流式输出、确认框、颜色与 pretty 显示", "file": "aider/io.py"}
+  ],
+  "layers": [
+    {"name": "入口与配置层", "responsibility": "解析命令行与配置文件，加载 .env，构造模型与 Coder 并启动主循环", "modules": ["aider"], "files": ["aider/__main__.py", "aider/main.py", "aider/args.py"]},
+    {"name": "编排核心层", "responsibility": "Coder 主循环：组装 prompt、发请求、解析编辑、应用、提交、反思重试", "modules": ["aider/coders"], "files": ["aider/coders/base_coder.py"]},
+    {"name": "编辑策略层", "responsibility": "各类 diff 与整文件编辑格式的生成提示与解析应用，是扩展新编辑方式的地方", "modules": ["aider/coders"], "files": ["aider/coders/editblock_coder.py", "aider/coders/udiff_coder.py", "aider/coders/wholefile_coder.py", "aider/coders/patch_coder.py", "aider/coders/architect_coder.py"]},
+    {"name": "代码索引层", "responsibility": "构建 repo map 与 git 仓库抽象，为模型提供代码上下文", "modules": ["aider"], "files": ["aider/repomap.py", "aider/repo.py"]},
+    {"name": "模型接入层", "responsibility": "模型元信息、别名、按模型的参数与能力开关，统一经 litellm 调用", "modules": ["aider"], "files": ["aider/models.py", "aider/llm.py", "aider/resources/model-settings.yml"]},
+    {"name": "交互与命令层", "responsibility": "终端 I/O、斜杠命令、流式渲染与确认交互", "modules": ["aider"], "files": ["aider/io.py", "aider/commands.py", "aider/mdstream.py"]},
+    {"name": "上下文与质量层", "responsibility": "历史压缩、lint 与 test 校验并驱动自我修复反思", "modules": ["aider"], "files": ["aider/history.py", "aider/linter.py", "aider/coders/chat_chunks.py"]}
+  ],
+  "data_flow": [
+    "第1步：main 解析 argv 与 .aider.conf.yml，加载 .env，构造 Model 与 InputOutput",
+    "第2步：Coder.create 依据 edit_format 选择具体 Coder 子类并实例化，若启用则创建 RepoMap 与 GitRepo",
+    "第3步：用户在终端输入需求，preproc_user_input 识别斜杠命令、@文件提及与 URL 并补入聊天",
+    "第4步：format_chat_chunks 组装 system 提示、示例、历史、repo map、只读文件与待改文件内容为 ChatChunks",
+    "第5步：get_repo_map 用 tree-sitter tags 与 PageRank 在 token 预算内挑选相关代码骨架，作为上下文注入",
+    "第6步：send 经 Model.send_completion 调 litellm 流式请求，边流式渲染边累积 partial_response_content",
+    "第7步：apply_updates 调 get_edits 解析 LLM 输出中的编辑块，先 dry-run 预演再真正 apply_edits 落盘",
+    "第8步：编辑失败时把错误与相似行作为 reflected_message 回灌模型，最多 max_reflections 轮自我修复",
+    "第9步：auto_commit 对改动文件生成 commit message 并 git 提交，返回提交信息写回对话",
+    "第10步：若开启 auto_lint 或 auto_test，跑 linter 与测试，把报错再回灌给模型修复"
+  ],
+  "entry_points": [
+    {"path": "aider/__main__.py", "what": "python -m aider 的入口，转调 main"},
+    {"path": "aider/main.py", "what": "main 函数：解析参数、装配模型与 Coder、启动交互循环"},
+    {"path": "aider/coders/base_coder.py", "what": "Coder.create 工厂：按 edit_format 分发到具体 Coder 子类"},
+    {"path": "aider/coders/base_coder.py", "what": "Coder.run 与 send_message：单轮对话的主流程"},
+    {"path": "aider/repomap.py", "what": "RepoMap.get_repo_map：按 token 预算生成代码库地图"},
+    {"path": "aider", "what": "CLI 命令 aider，安装后直接启动终端结对编程"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：终端结对、repo map、git 集成三大卖点"},
+    {"path": "aider/main.py", "why": "看清参数体系与模型、Coder 如何被装配起来"},
+    {"path": "aider/coders/base_coder.py", "why": "最核心文件：Coder 主循环、prompt 装配、编辑应用与反思重试"},
+    {"path": "aider/coders/editblock_coder.py", "why": "理解 SEARCH/REPLACE 块如何解析、模糊匹配与落盘"},
+    {"path": "aider/coders/udiff_coder.py", "why": "理解 unified diff 格式的解析与多重回退套用策略"},
+    {"path": "aider/repomap.py", "why": "理解代码索引如何用 tree-sitter 与 PageRank 构建并做 token 裁剪"},
+    {"path": "aider/models.py", "why": "理解模型后端抽象与 edit_format、weak_model 等按模型能力开关"},
+    {"path": "aider/repo.py", "why": "理解 git 集成与自动提交如何实现"},
+    {"path": "aider/coders/chat_chunks.py", "why": "理解 prompt 分块与 prompt cache 的组织方式"}
+  ],
+  "extension_points": [
+    "新增一种编辑格式：在 aider/coders 下新建继承 Coder 的子类并设 edit_format，实现 get_edits/apply_edits，然后在 aider/coders/__init__.py 的 __all__ 注册",
+    "接入新模型后端：litellm 已覆盖多数厂商，多数情况只需在 aider/models.py 的 MODEL_ALIASES 或 aider/resources/model-settings.yml 添加条目",
+    "改 repo map 排序算法：修改 aider/repomap.py 的 get_ranked_tags，调整 PageRank 与权重",
+    "新增斜杠命令：在 aider/commands.py 添加 cmd_ 方法并注册到命令表",
+    "调整某模型专属行为：编辑 aider/resources/model-settings.yml 覆盖 edit_format、use_repo_map、extra_params 等字段",
+    "新增模型元数据：更新 aider/resources/model-metadata.json 或依赖 litellm 的在线价格表"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，明确它做终端结对、diff 编辑与代码库地图三件事",
+    "第2步：读 aider/main.py，看命令行参数如何装配 Model 与 Coder",
+    "第3步：读 aider/coders/base_coder.py，吃透 send_message 到 apply_updates 的主循环",
+    "第4步：读 aider/coders/editblock_coder.py 与 udiff_coder.py，理解两种 diff 格式的解析与应用",
+    "第5步：读 aider/repomap.py，理解代码索引与 token 预算下的上下文裁剪",
+    "第6步：读 aider/models.py，理解模型后端抽象与按模型的能力开关",
+    "第7步：读 aider/repo.py 与 aider/commands.py，理解 git 自动提交与交互命令"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户输入需求] --> P[预处理斜杠命令与文件提及]\n  P --> CH[组装 ChatChunks 上下文]\n  RM[RepoMap 代码索引] --> CH\n  FILES[聊天中文件内容] --> CH\n  CH --> LLM[经 litellm 调用模型]\n  LLM --> RESP[流式响应与累积内容]\n  RESP --> GE[get_edits 解析编辑块]\n  GE --> DRY[dry-run 预演]\n  DRY --> AE[apply_edits 写入文件]\n  AE -->|失败| REF[错误回灌模型反思重试]\n  REF --> LLM\n  AE -->|成功| GC[auto_commit git 提交]\n  GC --> LINT[lint 与 test 校验]\n  LINT -->|有错| REF\n  LINT -->|通过| DONE[完成本轮]",
+  "surprises": [
+    "编辑格式不是解析标准 diff，而是自定义的 SEARCH/REPLACE 块，还内置了省略号、缩进容错与模糊匹配等一堆针对 LLM 输出的容错策略",
+    "RepoMap 用 PageRank 对符号排序，把代码库当图做重要性打分，而不是简单按文件路径或时间截断",
+    "编辑失败不会中断，而是把失败块和仓库里的相似真实行回灌给模型让它自我修复，最多反思 3 次",
+    "模型本身就携带 edit_format 与 use_repo_map 等设置，同一套代码换模型会自动切换编辑策略与上下文策略",
+    "Coder.create 通过遍历 coders.__all__ 匹配 edit_format 字符串来实例化子类，新增编辑格式必须记得注册进 __all__"
+  ],
+  "confidence": "高"
+}

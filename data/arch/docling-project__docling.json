@@ -1,0 +1,84 @@
+{
+  "repo": "docling-project/docling",
+  "name": "Docling",
+  "one_liner": "把复杂 PDF/Office/图片解析成统一结构化文档表示的文档理解工具",
+  "problem": "解决复杂文档难以结构化的问题：PDF 里的版面、阅读顺序、表格、公式、图片需要多模型协作才能还原，且各格式解析器互不通用。它用统一中间表示和可插拔管线把这件事工程化。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "DocumentConverter", "role": "总入口：按 InputFormat 把格式映射到 FormatOption，缓存并复用已初始化管线，驱动批量转换", "file": "docling/document_converter.py"},
+    {"name": "FormatOption", "role": "格式配置单元，绑定某个格式用哪个 backend 与哪个 pipeline_cls，并携带各自的 options", "file": "docling/document_converter.py"},
+    {"name": "AbstractDocumentBackend", "role": "文档后端抽象：负责把原始字节解析成页级/结构化数据，DeclarativeDocumentBackend 还能直接产出 DoclingDocument", "file": "docling/backend/abstract_backend.py"},
+    {"name": "BasePipeline", "role": "转换管线抽象，定义 execute 模板方法编排 _build_document/_assemble_document/_enrich_document 三阶段", "file": "docling/pipeline/base_pipeline.py"},
+    {"name": "StandardPdfPipeline", "role": "多线程 PDF 管线：把预处理/版面/OCR/表格/装配拆成流水线 stage 用有界队列串联", "file": "docling/pipeline/standard_pdf_pipeline.py"},
+    {"name": "SimplePipeline", "role": "直出管线：对声明式后端直接调用 backend.convert 得到 DoclingDocument，不走识别模型", "file": "docling/pipeline/simple_pipeline.py"},
+    {"name": "BaseFactory", "role": "模型工厂：按 options 类型注册与实例化模型，并通过 pluggy entry points 加载内外插件", "file": "docling/models/factories/base_factory.py"},
+    {"name": "DoclingDocument", "role": "统一中间表示：承载文本/表格/图片/页面等节点与来源坐标，是各后端与导出格式的公共契约", "file": "docling/datamodel/document.py"},
+    {"name": "Page", "role": "单页工作单元：持有解析结果 parsed_page、各阶段预测 predictions、装配结果 assembled 与后端引用", "file": "docling/datamodel/base_models.py"},
+    {"name": "PipelineOptions", "role": "参数体系基类，派生 PdfPipelineOptions/ThreadedPdfPipelineOptions 控制 OCR、表格、公式、图片等开关与批量", "file": "docling/datamodel/pipeline_options.py"}
+  ],
+  "layers": [
+    {"name": "门面与格式路由层", "responsibility": "解析输入、判定 InputFormat、查表得到 FormatOption、管理管线缓存与批量并发", "modules": ["docling"], "files": ["docling/document_converter.py", "docling/datamodel/document.py"]},
+    {"name": "后端解析层", "responsibility": "各格式的底层解析：PDF 页对象、Office/HTML/XML/EPUB 等转成统一页数据或直出文档", "modules": ["docling/backend"], "files": ["docling/backend/abstract_backend.py", "docling/backend/pdf_backend.py", "docling/backend/docling_parse_backend.py", "docling/backend/html_backend.py"]},
+    {"name": "管线编排层", "responsibility": "定义转换阶段与顺序：简单管线直出，PDF 管线多线程分阶段流水", "modules": ["docling/pipeline"], "files": ["docling/pipeline/base_pipeline.py", "docling/pipeline/standard_pdf_pipeline.py", "docling/pipeline/simple_pipeline.py", "docling/pipeline/native_pdf_pipeline.py"]},
+    {"name": "模型与工厂层", "responsibility": "版面/OCR/表格/图片描述等模型抽象与按 options 的工厂注册、插件加载", "modules": ["docling/models", "docling/models/factories"], "files": ["docling/models/base_model.py", "docling/models/base_layout_model.py", "docling/models/base_ocr_model.py", "docling/models/base_table_model.py", "docling/models/factories/base_factory.py", "docling/models/factories/layout_factory.py"]},
+    {"name": "模型实现层", "responsibility": "各阶段的具体模型实现：布局、OCR、表格结构、阅读顺序、公式、图片分类", "modules": ["docling/models/stages"], "files": ["docling/models/stages/layout/layout_model.py", "docling/models/stages/ocr/tesseract_ocr_model.py", "docling/models/stages/table_structure/table_structure_model.py", "docling/models/stages/reading_order/readingorder_model.py"]},
+    {"name": "数据模型层", "responsibility": "定义 Page/预测结果/转换结果/输入文档与全部参数选项的 pydantic 模型", "modules": ["docling/datamodel"], "files": ["docling/datamodel/base_models.py", "docling/datamodel/pipeline_options.py", "docling/datamodel/backend_options.py", "docling/datamodel/settings.py"]},
+    {"name": "接口层", "responsibility": "CLI 命令与 MCP/serve 客户端等对外使用方式", "modules": ["docling/cli", "docling/service_client"], "files": ["docling/cli/main.py", "docling/cli/models.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户调用 DocumentConverter().convert(source)，构造 _DocumentConversionInput 识别文件类型并判定 InputFormat",
+    "第2步：_process_document 校验格式是否在 allowed_formats，通过后进入 _execute_pipeline",
+    "第3步：_get_pipeline 按 (pipeline_cls, options_hash) 从缓存取或新建对应管线实例",
+    "第4步：pipeline.execute 建 ConversionResult，依次执行 _build_document、_assemble_document、_enrich_document，最后 _determine_status 并 _unload 释放",
+    "第5步：PDF 场景下 StandardPdfPipeline._build_document 启动生产者线程逐页解析，把 Page 投入 preprocess 队列",
+    "第6步：预处理/版面/OCR/版面后处理/表格/装配各 stage 由独立线程从有界队列取批、按 run_id 分组推理、再发往下一队列",
+    "第7步：装配 stage 汇总各页 assembled，_assemble_document 用阅读顺序模型与标题层级模型生成 DoclingDocument",
+    "第8步：_enrich_document 按需运行图片分类、图片描述、公式代码、图表抽取等富化模型补齐文档节点",
+    "第9步：SimplePipeline 场景则跳过流水线，直接调用 DeclarativeDocumentBackend.convert 得到文档",
+    "第10步：返回 ConversionResult，用户对 result.document 调用 export_to_markdown 等导出"
+  ],
+  "entry_points": [
+    {"path": "docling/document_converter.py:DocumentConverter.convert", "what": "Python 首选入口，单文档转换并返回 ConversionResult"},
+    {"path": "docling/document_converter.py:DocumentConverter.convert_all", "what": "批量入口，按 batch_size 与并发配置处理多个来源"},
+    {"path": "docling/cli/main.py", "what": "docling 命令行入口，pyproject 中 docling = docling.cli.main:app 指向 typer 应用"},
+    {"path": "docling/pipeline/base_pipeline.py:BasePipeline.execute", "what": "管线执行模板方法，是理解三阶段编排的核心"},
+    {"path": "docling/models/factories/base_factory.py:BaseFactory.create_instance", "what": "模型实例化入口，连接 options 与具体模型类"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立定位：复杂 PDF 理解 + 多格式 + 统一 DoclingDocument 表示"},
+    {"path": "docling/document_converter.py", "why": "总入口与格式路由，FormatOption 与 _get_pipeline 缓存机制都在这里"},
+    {"path": "docling/pipeline/base_pipeline.py", "why": "管线三阶段模板方法与 enrich 逻辑，理解扩展管线的骨架"},
+    {"path": "docling/pipeline/standard_pdf_pipeline.py", "why": "多线程流水线实现，看懂 stage 队列与 run_id 批处理是理解性能的关键"},
+    {"path": "docling/backend/abstract_backend.py", "why": "后端契约，新增格式解析器必读"},
+    {"path": "docling/models/factories/base_factory.py", "why": "模型注册与插件加载机制，是模型可插拔的核心"},
+    {"path": "docling/datamodel/base_models.py", "why": "Page/InputFormat/预测结果等核心数据结构集中定义"},
+    {"path": "docling/datamodel/pipeline_options.py", "why": "参数体系全貌，决定开启哪些模型与批处理行为"},
+    {"path": "docling/cli/main.py", "why": "CLI 使用路径与导出选项，贴近实际使用"}
+  ],
+  "extension_points": [
+    "加一个新输入格式：新建 docling/backend/xxx_backend.py 继承 AbstractDocumentBackend 或 DeclarativeDocumentBackend，在 base_models.py 的 InputFormat 加枚举，并在 document_converter.py 定义 XxxFormatOption 与 _get_default_option 映射",
+    "加一个新版面/OCR/表格模型：继承对应 BaseLayoutModel/BaseOcrModel/BaseTableModel，在 models/plugins/defaults.py 注册，用对应工厂 create_instance 选择",
+    "接入外部模型插件：通过 pluggy entry point 暴露 layout_engines/ocr_engines/table_structure_engines 等属性，需 allow_external_plugins=True",
+    "自定义管线：继承 BasePipeline 或 ConvertPipeline 实现 _build_document/_assemble_document/_determine_status 与 get_default_options",
+    "调整处理行为：修改 PipelineOptions 派生类的开关，如 do_ocr、do_table_structure、do_formula_enrichment、images_scale 等",
+    "扩展导出格式：DoclingDocument 的导出由 docling_core 的 serializer 提供，在 CLI export_utils 与调用处选择"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解「复杂 PDF 理解 + 统一 DoclingDocument」的定位与支持格式",
+    "第2步：读 document_converter.py，掌握 InputFormat → FormatOption → Pipeline 的路由与缓存",
+    "第3步：读 backend/abstract_backend.py，理解后端如何产出页数据或直出文档",
+    "第4步：读 pipeline/base_pipeline.py 的 execute，掌握 build/assemble/enrich 三阶段",
+    "第5步：精读 pipeline/standard_pdf_pipeline.py，吃透多线程 stage 队列与批处理",
+    "第6步：读 models/factories/base_factory.py 与 plugins/defaults.py，理解模型如何注册与插拔",
+    "第7步：读 datamodel/base_models.py 与 pipeline_options.py，对齐数据结构与参数体系"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户调用 convert] --> B[识别 InputFormat]\n  B --> C[查表得到 FormatOption]\n  C --> D[取或建 Pipeline 实例]\n  D --> E[execute 建 ConversionResult]\n  E --> F[_build_document 构建]\n  F --> G{是否 PDF 类}\n  G -->|是| H[多线程流水线 预处理 版面 OCR 表格 装配]\n  G -->|否| I[声明式后端直接 convert]\n  H --> J[装配各页 assembled]\n  I --> J\n  J --> K[_assemble_document 生成 DoclingDocument]\n  K --> L[_enrich_document 富化 图片 公式 图表]\n  L --> M[_determine_status 判定状态]\n  M --> N[_unload 释放资源]\n  N --> O[返回 ConversionResult]\n  O --> P[导出 markdown 或 html 或 json]\n  C -.-> Q[BaseFactory 注册模型与插件]",
+  "surprises": [
+    "DoclingDocument 这一核心中间表示并不在本仓库，而在外部包 docling_core.types.doc 中；本仓库只负责生产它，导出 markdown/html/json 也由 docling_core 的 serializer 完成",
+    "同一份代码里有两条差异极大的路径：SimplePipeline 只做格式转换不跑模型，StandardPdfPipeline 则用 6 个线程 stage 与有界队列做流水线，理解 PDF 才能理解性能",
+    "模型可插拔靠两层机制叠加：BaseFactory 按 options 类型注册模型，pluggy entry points 负责加载外部插件，且默认禁止非 docling. 前缀的外部插件",
+    "管线实例按 (pipeline_cls, options_hash) 缓存复用，因此运行期修改 pipeline_options 会改变 hash 并导致缓存失效，代码里专门拷贝 options 来避免这个问题",
+    "多线程流水线用 run_id 而非页面对象身份来分组批处理，且文档超时后只把该 run_id 标记为超时并放行已完成结果，未完成页统一记为 TIMEOUT 失败"
+  ],
+  "confidence": "高"
+}

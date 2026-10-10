@@ -1,0 +1,91 @@
+{
+  "repo": "microsoft/TaskWeaver",
+  "name": "TaskWeaver",
+  "one_liner": "代码优先、把数据分析代码在常驻内核里状态化执行的 Agent 框架",
+  "problem": "多数 Agent 只把对话当记忆，处理 DataFrame 这类复杂数据时不得不在文本里来回搬运。TaskWeaver 让 LLM 直接生成 Python 代码，在带内存的沙箱内核里执行，同时保留对话历史与代码执行历史，用插件把领域能力封装成可被代码调用的函数。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Session", "role": "会话状态容器：持有 Memory、round_index、worker 角色实例与 session 变量，是消息往返的调度中心", "file": "taskweaver/session/session.py"},
+    {"name": "Memory", "role": "对话与代码执行历史的存储，按角色切分 Round，供各角色组 prompt 时取用", "file": "taskweaver/memory/memory.py"},
+    {"name": "Post", "role": "角色之间传递的单条消息，用 send_from 与 send_to 表达路由，可携带代码、计划、附件", "file": "taskweaver/memory/post.py"},
+    {"name": "Planner", "role": "规划角色：把用户请求分解为计划，决定下一条 Post 发给哪个 worker 或回到 User", "file": "taskweaver/planner/planner.py"},
+    {"name": "CodeInterpreter", "role": "代码解释器角色：驱动生成、校验、执行、失败反思的完整循环，并决定是否重试", "file": "taskweaver/code_interpreter/code_interpreter/code_interpreter.py"},
+    {"name": "CodeGenerator", "role": "把对话历史与插件描述组装成 prompt 调 LLM，解析出代码或文本回复", "file": "taskweaver/code_interpreter/code_interpreter/code_generator.py"},
+    {"name": "CodeExecutor", "role": "执行编排：启动执行服务、加载插件、把代码送进内核并格式化输出与产物", "file": "taskweaver/code_interpreter/code_executor.py"},
+    {"name": "Manager", "role": "代码执行服务的抽象接口，负责按 session 分发 Client，屏蔽 local 与 container 差异", "file": "taskweaver/ces/common.py"},
+    {"name": "Environment", "role": "Jupyter kernel 沙箱：为每个 session 拉起内核，支持本地进程与 Docker 容器两种模式", "file": "taskweaver/ces/environment.py"},
+    {"name": "Plugin", "role": "插件基类，实例可调用，运行时接收上下文与配置，是领域能力进入沙箱的载体", "file": "taskweaver/plugin/base.py"},
+    {"name": "PluginRegistry", "role": "从 plugins 目录的 *.yaml 扫描插件定义，带 TTL 热加载，是插件系统的注册中心", "file": "taskweaver/memory/plugin.py"},
+    {"name": "RoleEntry", "role": "角色的注册描述：从 *.role.yaml 解析出模块路径、类名、别名与介绍", "file": "taskweaver/role/role.py"}
+  ],
+  "layers": [
+    {"name": "应用与入口层", "role": "提供库入口、CLI 与控制台交互，用依赖注入装配各模块并管理多会话", "modules": ["taskweaver/app", "taskweaver/cli", "taskweaver/chat"], "files": ["taskweaver/app/app.py", "taskweaver/app/session_manager.py", "taskweaver/cli/__main__.py", "taskweaver/chat/console/chat.py"]},
+    {"name": "会话与角色层", "role": "维护会话状态、注册并实例化角色、驱动 Planner 与 worker 之间的消息路由", "modules": ["taskweaver/session", "taskweaver/role", "taskweaver/planner"], "files": ["taskweaver/session/session.py", "taskweaver/role/role.py", "taskweaver/planner/planner.py"]},
+    {"name": "记忆层", "role": "存储对话轮次、Post、附件、共享内存与经验，是各组件的共享上下文", "modules": ["taskweaver/memory"], "files": ["taskweaver/memory/memory.py", "taskweaver/memory/round.py", "taskweaver/memory/post.py", "taskweaver/memory/plugin.py"]},
+    {"name": "代码智能层", "role": "代码生成、静态校验、执行编排与插件选择，是 code-first 的核心", "modules": ["taskweaver/code_interpreter"], "files": ["taskweaver/code_interpreter/code_interpreter/code_interpreter.py", "taskweaver/code_interpreter/code_interpreter/code_generator.py", "taskweaver/code_interpreter/code_executor.py", "taskweaver/code_interpreter/code_verification.py", "taskweaver/code_interpreter/plugin_selection.py"]},
+    {"name": "插件层", "role": "定义插件基类与注册装饰器，运行时把插件源码与配置装载进内核", "modules": ["taskweaver/plugin"], "files": ["taskweaver/plugin/base.py", "taskweaver/plugin/register.py", "taskweaver/plugin/context.py"]},
+    {"name": "代码执行服务层", "role": "用 Jupyter kernel 提供状态化沙箱，管理内核生命周期、插件装载与执行结果解析", "modules": ["taskweaver/ces"], "files": ["taskweaver/ces/environment.py", "taskweaver/ces/common.py", "taskweaver/ces/manager/sub_proc.py", "taskweaver/ces/manager/defer.py", "taskweaver/ces/kernel/launcher.py", "taskweaver/ces/kernel/ctx_magic.py"]},
+    {"name": "配置与 LLM 层", "role": "集中管理配置项、提供多后端 LLM 适配与依赖注入模块", "modules": ["taskweaver/config", "taskweaver/llm", "taskweaver/module"], "files": ["taskweaver/config/config_mgt.py", "taskweaver/config/module_config.py", "taskweaver/llm/base.py", "taskweaver/llm/openai.py", "taskweaver/module/execution_service.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户通过 CLI、控制台或库调用 Session.send_message 提交请求",
+    "第2步：Session 创建 Round，构造 send_from 为 User 的 Post 并发给 Planner",
+    "第3步：Planner 组装 prompt 调 LLM，产出带 init_plan 与 plan 附件的 Post，并指定 send_to",
+    "第4步：Session 按 send_to 把 Post 路由给对应的 worker，例如 CodeInterpreter",
+    "第5步：CodeInterpreter.reply 先让 CodeExecutor.start 拉起该 session 的 kernel 会话",
+    "第6步：CodeGenerator 把对话历史、插件描述与计划组装成 prompt 调 LLM 生成代码",
+    "第7步：code_snippet_verification 对生成代码做静态校验，命中禁用函数或模块则带修正提示重试",
+    "第8步：CodeExecutor.execute_code 把代码交给 Environment，在 kernel 里执行并回传 stdout、结果与 display 数据",
+    "第9步：CodeExecutor 把图片等 display 数据落盘为 artifact，并把执行结果写入 Post",
+    "第10步：执行失败时 Post 带上 revise_message 重新发回 CodeInterpreter，直到成功或达到最大重试次数",
+    "第11步：Post 回到 Planner，Planner 判断任务是否完成或需要继续调用其他 worker",
+    "第12步：任务完成后 Post 发给 User，Round 标记 finished，整轮日志落盘到 workspace"
+  ],
+  "entry_points": [
+    {"path": "taskweaver/cli/__main__.py", "what": "python -m taskweaver 的入口，解析 -p 项目目录并启动 CLI 或 Web 服务"},
+    {"path": "taskweaver/app/app.py", "what": "TaskWeaverApp 库入口，装配依赖注入模块并暴露 get_session"},
+    {"path": "taskweaver/chat/console/chat.py", "what": "控制台交互入口，读取用户输入并驱动 Session 往返"},
+    {"path": "taskweaver/session/session.py", "what": "Session.send_message 是消息进入系统的真正入口，负责路由与日志"},
+    {"path": "taskweaver/ces/kernel/launcher.py", "what": "沙箱内核启动器，被 Environment 以 python -m 方式拉起"},
+    {"path": "taskweaver/cli/cli.py", "what": "CLI 命令实现，含初始化项目目录等子命令"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立 code-first 与状态化执行的定位，理解与纯对话 Agent 的区别"},
+    {"path": "taskweaver/session/session.py", "why": "会话状态与消息路由的中心，看 Post 如何在角色之间流动"},
+    {"path": "taskweaver/planner/planner.py", "why": "规划角色如何产出计划并决定下一位接收者"},
+    {"path": "taskweaver/code_interpreter/code_interpreter/code_interpreter.py", "why": "生成-校验-执行-反思循环的权威实现"},
+    {"path": "taskweaver/code_interpreter/code_interpreter/code_generator.py", "why": "代码生成核心：对话历史与插件描述如何组成 prompt，以及如何解析 LLM 输出"},
+    {"path": "taskweaver/code_interpreter/code_executor.py", "why": "执行编排与 artifact 处理，连接智能层与沙箱层的桥梁"},
+    {"path": "taskweaver/ces/environment.py", "why": "沙箱核心：kernel 生命周期、local 与 container 两种模式与执行结果解析"},
+    {"path": "taskweaver/memory/plugin.py", "why": "插件注册表与 PluginEntry 定义，理解插件如何被扫描与喂给 LLM"},
+    {"path": "taskweaver/plugin/base.py", "why": "插件基类与注册装饰器，写自定义插件的起点"},
+    {"path": "taskweaver/role/role.py", "why": "角色注册与动态加载机制，扩展新角色先读它"}
+  ],
+  "extension_points": [
+    "想新增一个插件：在 project/plugins 下放一对 <name>.yaml 与 <name>.py，yaml 里写清参数与返回供 LLM 参考，py 里继承 Plugin 实现 __call__ 或用 register_plugin 装饰函数",
+    "想新增一个角色：参考 taskweaver/code_interpreter 或 taskweaver/ext_role 下的目录，新建 <role>/<role>.role.yaml 与实现类，目录名、yaml 文件名与配置里的角色名必须一致",
+    "想换代码执行沙箱：改 taskweaver/ces/manager 下新增 Manager 实现并在 taskweaver/ces/__init__.py 的工厂里选择，或改 taskweaver/module/execution_service.py 的 kernel_mode",
+    "想接入新的 LLM 后端：在 taskweaver/llm 下仿照 openai.py 新增适配器并在配置里切换",
+    "想改代码校验规则：改 taskweaver/code_interpreter/code_verification.py，以及 code_interpreter.py 里的 allowed_modules 与 blocked_functions 配置",
+    "想改插件自动选择：改 taskweaver/code_interpreter/plugin_selection.py 的 TopK 选择策略",
+    "想调整规划行为：改 taskweaver/planner/planner_prompt.yaml 的提示词"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 website/docs/concepts/plugin.md，建立 code-first 与插件概念",
+    "第2步：读 taskweaver/app/app.py 与 taskweaver/session/session.py，看应用如何装配以及消息如何路由",
+    "第3步：读 taskweaver/planner/planner.py，理解规划角色如何分解任务并指定接收者",
+    "第4步：读 taskweaver/code_interpreter/code_interpreter/code_interpreter.py，跟完生成到执行的完整循环",
+    "第5步：读 taskweaver/code_interpreter/code_executor.py 与 taskweaver/ces/environment.py，理解代码如何在沙箱内核里状态化执行",
+    "第6步：读 taskweaver/memory/plugin.py 与 taskweaver/plugin/base.py，掌握插件注册与装载",
+    "第7步：读 taskweaver/role/role.py，理解如何按约定新增角色"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户消息] --> B[Session 创建 Round 与 Post]\n  B --> C[Planner 组 prompt 调 LLM 规划]\n  C --> D[Planner 指定 send_to 发出 Post]\n  D --> E[CodeInterpreter 生成代码]\n  E --> F[CodeGenerator 组插件描述与对话历史]\n  F --> G[LLM 返回代码或文本]\n  G --> H[code_snippet_verification 静态校验]\n  H --> I[CodeExecutor 交给 Environment 执行]\n  I --> J[Jupyter kernel 沙箱运行代码]\n  J --> K[回传 stdout 结果与 artifact]\n  K --> L[执行结果写入 Post 返回 Planner]\n  L --> M[Planner 判断完成或继续]\n  M --> A",
+  "surprises": [
+    "代码不是用一次性子进程执行的，而是每个 session 一个常驻 Jupyter kernel，变量与 DataFrame 跨轮次保留，这才是状态化执行的关键",
+    "默认走 container 模式把 kernel 跑在 Docker 容器里，并通过改写 host.docker.internal 等域名阻断容器逃逸访问宿主机 localhost；而 local 模式下代码校验会被自动强制打开，禁用函数黑名单里有 getattr、setattr、globals 等，是为了堵住绕过校验的反射路径",
+    "插件是给 LLM 的说明书与真实实现的组合：yaml 描述签名与示例供模型理解，真正的 .py 源码在运行时被注册进内核",
+    "注册表带 TTL 热加载，改插件 yaml 或 role yaml 不必重启进程，最长等一个 TTL 周期或强制刷新即可生效",
+    "角色加载依赖目录名、role.yaml 文件名与配置名三者严格一致的约定，任何一处不匹配都会在断言处直接报错"
+  ],
+  "confidence": "高"
+}

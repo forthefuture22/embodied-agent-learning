@@ -1,0 +1,88 @@
+{
+  "repo": "gpt-engineer-org/gpt-engineer",
+  "name": "gpt-engineer",
+  "one_liner": "用自然语言生成整个代码库并自动执行的开源实验平台",
+  "problem": "把一句话需求自动变成一个能跑起来的代码库：AI 先生成全部源码，再生成入口脚本并实际执行，失败时把运行错误回灌模型自我修复；改进模式则用 diff 增量修改既有代码。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "BaseAgent", "role": "Agent 抽象接口：只定义 init 与 improve 两个动作，是生成与改进两种模式的统一契约", "file": "gpt_engineer/core/base_agent.py"},
+    {"name": "CliAgent", "role": "CLI 使用的 Agent 实现：把 code_gen_fn、improve_fn、process_code_fn 三个可插拔函数组装成 init 与 improve 两条流程", "file": "gpt_engineer/applications/cli/cli_agent.py"},
+    {"name": "SimpleAgent", "role": "更精简的 Agent 实现：init 只做生成代码加生成入口，不执行，适合嵌入其他程序", "file": "gpt_engineer/core/default/simple_agent.py"},
+    {"name": "AI", "role": "模型后端抽象：用 langchain 统一 OpenAI、Azure、Anthropic 与剪贴板模式，提供 start 与 next 两个对话原语", "file": "gpt_engineer/core/ai.py"},
+    {"name": "FilesDict", "role": "代码文件容器：以文件路径为键、源码为值的字典，负责在聊天格式与文件系统之间转换", "file": "gpt_engineer/core/files_dict.py"},
+    {"name": "Steps", "role": "流程步骤集合：gen_code 生成代码、gen_entrypoint 生成入口脚本、execute_entrypoint 执行、improve_fn 改进，是编排的原子操作", "file": "gpt_engineer/core/default/steps.py"},
+    {"name": "Diff 与 Hunk", "role": "diff 模型与容错校验：把 unified diff 建模成 Hunk，逐行与真实文件比对并纠正行号与漏行", "file": "gpt_engineer/core/diff.py"},
+    {"name": "chat_to_files", "role": "文本解析层：从模型回复中抽出代码块得到 FilesDict，或解析 unified diff 得到 Diff 并应用", "file": "gpt_engineer/core/chat_to_files.py"},
+    {"name": "BaseExecutionEnv", "role": "执行环境抽象：定义 run、popen、upload、download，让代码可以在本地磁盘或容器里运行", "file": "gpt_engineer/core/base_execution_env.py"},
+    {"name": "DiskExecutionEnv", "role": "本地磁盘执行环境实现：把 FilesDict 落到磁盘并用子进程执行入口脚本", "file": "gpt_engineer/core/default/disk_execution_env.py"},
+    {"name": "BaseMemory 与 DiskMemory", "role": "过程日志记忆：把每一步的 prompt 与回复落盘到 logs 目录，便于调试与复现", "file": "gpt_engineer/core/base_memory.py"},
+    {"name": "PrepromptsHolder", "role": "提示词模板管理：从 preprompts 目录加载 roadmap、generate、file_format 等模板并支持用户自定义覆盖", "file": "gpt_engineer/core/preprompts_holder.py"}
+  ],
+  "layers": [
+    {"name": "CLI 层", "responsibility": "命令行参数解析、环境与提示加载、模式选择与流程装配", "modules": ["gpt_engineer/applications/cli"], "files": ["gpt_engineer/applications/cli/main.py", "gpt_engineer/applications/cli/file_selector.py", "gpt_engineer/applications/cli/collect.py"]},
+    {"name": "Agent 编排层", "responsibility": "把生成、执行、改进等步骤组合成 init 与 improve 两条完整流程", "modules": ["gpt_engineer/core", "gpt_engineer/applications/cli"], "files": ["gpt_engineer/core/base_agent.py", "gpt_engineer/applications/cli/cli_agent.py", "gpt_engineer/core/default/simple_agent.py"]},
+    {"name": "步骤层", "responsibility": "实现单个流程步骤：生成代码、生成入口、执行入口、改进代码与自愈", "modules": ["gpt_engineer/core/default", "gpt_engineer/tools"], "files": ["gpt_engineer/core/default/steps.py", "gpt_engineer/tools/custom_steps.py"]},
+    {"name": "代码解析与 diff 层", "responsibility": "解析模型输出为文件或 diff，并对 diff 做容错校验与套用", "modules": ["gpt_engineer/core"], "files": ["gpt_engineer/core/chat_to_files.py", "gpt_engineer/core/diff.py", "gpt_engineer/core/files_dict.py"]},
+    {"name": "模型接入层", "responsibility": "统一各厂商模型调用、重试退避与 token 用量统计", "modules": ["gpt_engineer/core"], "files": ["gpt_engineer/core/ai.py", "gpt_engineer/core/token_usage.py"]},
+    {"name": "执行环境与存储层", "responsibility": "文件落盘、子进程执行与执行环境抽象", "modules": ["gpt_engineer/core/default", "gpt_engineer/core"], "files": ["gpt_engineer/core/base_execution_env.py", "gpt_engineer/core/default/disk_execution_env.py", "gpt_engineer/core/default/file_store.py", "gpt_engineer/core/default/disk_memory.py"]},
+    {"name": "提示词与配置层", "responsibility": "系统提示模板、项目配置与路径约定", "modules": ["gpt_engineer/preprompts", "gpt_engineer/core"], "files": ["gpt_engineer/core/preprompts_holder.py", "gpt_engineer/core/prompt.py", "gpt_engineer/core/project_config.py"]}
+  ],
+  "data_flow": [
+    "第1步：main 加载 .env 与 API key，构造 AI 对象，读取项目目录下的 prompt 文件得到 Prompt",
+    "第2步：按模式选择 code_gen_fn（gen_code 或 clarified_gen 或 lite_gen）与 execution_fn（execute_entrypoint 或 self_heal）",
+    "第3步：调用 agent.init，先执行 gen_code：setup_sys_prompt 拼接 roadmap 与 generate 模板作为系统提示",
+    "第4步：AI.start 调用模型，模型以 文件名加代码块 的格式返回，chat_to_files_dict 正则解析出 FilesDict",
+    "第5步：gen_entrypoint 把整个代码库喂给模型，让它生成一个 run.sh 入口脚本并加入 FilesDict",
+    "第6步：execute_entrypoint 询问用户是否执行，确认后 upload 落盘并运行入口脚本",
+    "第7步：self_heal 模式下若运行失败，把 stdout 与 stderr 回灌模型走 improve_fn 修复，最多 10 次",
+    "第8步：改进模式下 improve_fn 组装系统提示与文件内容，模型返回 unified diff",
+    "第9步：parse_diffs 用正则解析 diff 块，salvage_correct_hunks 对每个 hunk 做 validate_and_correct 纠正行号与漏行",
+    "第10步：apply_diffs 把修正后的 hunk 应用到 FilesDict，_improve_loop 对失败的 diff 回灌模型重试直到收敛",
+    "第11步：FileStore.push 写盘，stage_uncommitted_to_git 把改动暂存到 git"
+  ],
+  "entry_points": [
+    {"path": "gpt_engineer/applications/cli/main.py", "what": "typer CLI 主入口：解析参数、装配 AI 与 Agent、驱动生成或改进"},
+    {"path": "gpt_engineer/applications/cli/cli_agent.py", "what": "CliAgent.init 与 improve：把各步骤串成完整流程"},
+    {"path": "gpt_engineer/core/default/steps.py", "what": "gen_code 与 improve_fn：生成与改进的核心步骤实现"},
+    {"path": "gpt_engineer/tools/custom_steps.py", "what": "clarified_gen 与 self_heal：澄清式生成与失败自愈流程"},
+    {"path": "gpt_engineer/core/default/simple_agent.py", "what": "SimpleAgent.init：最小生成流程的参考实现"},
+    {"path": "gpte", "what": "安装后的 CLI 命令，指向 main 的 typer app"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立认知：自然语言生成、自动执行、改进三大用法与命令行示例"},
+    {"path": "gpt_engineer/applications/cli/main.py", "why": "理解参数体系与模式选择如何决定流程函数"},
+    {"path": "gpt_engineer/core/default/steps.py", "why": "最核心：生成、入口、执行、改进与 diff 容错修复都在这里"},
+    {"path": "gpt_engineer/core/diff.py", "why": "理解 diff 如何被建模成 Hunk 并逐行校验纠正"},
+    {"path": "gpt_engineer/core/chat_to_files.py", "why": "理解模型输出如何被解析成文件与 diff"},
+    {"path": "gpt_engineer/tools/custom_steps.py", "why": "理解澄清式生成与失败自愈两个特色流程"},
+    {"path": "gpt_engineer/core/ai.py", "why": "理解模型后端如何用 langchain 统一封装"},
+    {"path": "gpt_engineer/core/base_execution_env.py", "why": "理解执行环境抽象，便于换成容器或沙箱"},
+    {"path": "gpt_engineer/core/default/steps.py", "why": "再看 improve_fn 的 _improve_loop 如何做 diff 重试"}
+  ],
+  "extension_points": [
+    "新增 Agent 实现：继承 gpt_engineer/core/base_agent.py 的 BaseAgent，实现 init 与 improve",
+    "更换模型：给 gpt_engineer/core/ai.py 的 AI 传入 model_name 或 azure_endpoint，或扩展 _create_chat_model",
+    "新增生成流程：在 gpt_engineer/tools/custom_steps.py 添加函数，并在 gpt_engineer/applications/cli/main.py 里配置 code_gen_fn",
+    "换执行环境：继承 gpt_engineer/core/base_execution_env.py 的 BaseExecutionEnv，实现 run、popen、upload、download",
+    "自定义提示词身份：用 --use-custom-preprompts 覆盖 gpt_engineer/preprompts 下的模板",
+    "调整 diff 容错策略：修改 gpt_engineer/core/diff.py 的 validate_and_correct 与相似度阈值"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，明确自然语言生成、自动执行、改进三种用法",
+    "第2步：读 gpt_engineer/applications/cli/main.py，理解参数与模式如何选择流程函数",
+    "第3步：读 gpt_engineer/core/base_agent.py 与 applications/cli/cli_agent.py，理解 init 与 improve 两条流程",
+    "第4步：读 gpt_engineer/core/default/steps.py，吃透 gen_code 与 improve_fn 的实现",
+    "第5步：读 gpt_engineer/core/chat_to_files.py 与 core/diff.py，理解输出解析与 diff 容错",
+    "第6步：读 gpt_engineer/tools/custom_steps.py，理解澄清式生成与自愈循环",
+    "第7步：读 gpt_engineer/core/ai.py 与 core/base_execution_env.py，理解模型与执行环境的抽象"
+  ],
+  "diagram_mermaid": "graph TD\n  U[自然语言需求 prompt] --> CLI[CLI 解析参数]\n  CLI --> SEL[选择生成与执行函数]\n  SEL --> AG[CliAgent.init 编排]\n  AG --> GC[gen_code 生成代码]\n  GC --> AI[AI 调模型]\n  AI --> C2F[chat_to_files 解析出 FilesDict]\n  C2F --> EP[gen_entrypoint 生成入口脚本]\n  EP --> EXEC[execute_entrypoint 执行]\n  EXEC -->|失败| HEAL[self_heal 回灌错误]\n  HEAL --> IMP[improve_fn 走 diff 流程]\n  IMP --> PD[parse_diffs 解析 diff]\n  PD --> VC[validate_and_correct 纠正 hunk]\n  VC --> AD[apply_diffs 应用改动]\n  AD --> HEAL\n  AD --> STORE[FileStore 写盘与 git 暂存]\n  EXEC -->|成功| STORE",
+  "surprises": [
+    "流程不是硬编码的流水线，而是通过向 CliAgent 注入 code_gen_fn 与 process_code_fn 来切换模式，澄清模式、精简模式、自愈模式本质是换函数",
+    "diff 校验非常较真：把 diff 的每个 hunk 与真实文件逐行比对，用字符重合率判断相似，还会把模型漏掉的行补回去、把多余的行删掉",
+    "self_heal 会真的反复执行生成的入口脚本，把真实的报错回灌模型，最多尝试 10 次，是一个能自己跑起来并自纠错的闭环",
+    "代码生成与代码改进用了两套不同的提示词与格式：生成模式让模型输出完整文件块，改进模式让模型输出 unified diff",
+    "FilesDict 只是带类型校验的 dict，但它是贯穿生成、执行、改进、写盘全流程的唯一数据载体，理解它就理解了数据怎么流动"
+  ],
+  "confidence": "高"
+}

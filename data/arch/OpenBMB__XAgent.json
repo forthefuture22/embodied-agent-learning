@@ -1,0 +1,92 @@
+{
+  "repo": "OpenBMB/XAgent",
+  "name": "XAgent",
+  "one_liner": "双循环自主任务求解 Agent，规划与执行分离",
+  "problem": "让 LLM Agent 自动求解复杂开放任务：外循环负责规划与反思，内循环用 ReAct 调用隔离在 Docker 中的工具执行，并支持人机协作。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "XAgentCoreComponents", "role": "全局唯一核心组件集，装配 logger、recorder、toolserver 接口、function handler 与 dispatcher", "file": "XAgent/core.py"},
+    {"name": "TaskHandler", "role": "双循环调度核心，outer_loop 规划遍历、inner_loop 逐子任务求解", "file": "XAgent/workflow/task_handler.py"},
+    {"name": "PlanAgent", "role": "外循环规划智能体，生成初始计划并按反馈精炼 Plan", "file": "XAgent/workflow/plan_exec.py"},
+    {"name": "ReACTChainSearch", "role": "内循环搜索算法，以 ReAct 在工具树上逐步搜索并执行动作", "file": "XAgent/inner_loop_search_algorithms/ReACT.py"},
+    {"name": "BaseSearchMethod", "role": "内循环搜索算法基类，定义 run 与 finish_node 协议", "file": "XAgent/inner_loop_search_algorithms/base_search.py"},
+    {"name": "AgentDispatcher", "role": "按 RequiredAbilities 能力枚举把任务分派给对应 Agent", "file": "XAgent/agent/dispatcher.py"},
+    {"name": "BaseAgent", "role": "Agent 抽象基类，声明 abilities 集合与 parse 接口", "file": "XAgent/agent/base_agent.py"},
+    {"name": "FunctionHandler", "role": "管理内建函数与工具调用，桥接 ToolServer 接口", "file": "XAgent/function_handler.py"},
+    {"name": "ToolServerInterface", "role": "主进程与独立 ToolServer 容器之间的 HTTP 调用接口", "file": "XAgent/toolserver_interface.py"},
+    {"name": "Plan", "role": "计划数据结构，保存子任务、里程碑与执行状态", "file": "XAgent/data_structure/plan.py"},
+    {"name": "TaskSearchTree", "role": "工具调用搜索树，记录 ReAct 内循环的动作节点", "file": "XAgent/data_structure/tree.py"},
+    {"name": "ToolRegister", "role": "ToolServer 端工具注册表，扫描带 tool_labels 的函数并加载扩展", "file": "ToolServer/ToolServerNode/core/register/register.py"}
+  ],
+  "layers": [
+    {"name": "入口与配置层", "responsibility": "命令行解析、交互启动与配置加载", "modules": ["."], "files": ["run.py", "command.py", "XAgent/config.py", "assets/config.yml"]},
+    {"name": "核心编排层", "responsibility": "装配全局组件并驱动双循环任务处理", "modules": ["XAgent"], "files": ["XAgent/core.py", "XAgent/workflow/task_handler.py"]},
+    {"name": "规划与外循环层", "responsibility": "计划生成、精炼与任务后反思", "modules": ["XAgent/workflow"], "files": ["XAgent/workflow/plan_exec.py", "XAgent/workflow/reflection.py", "XAgent/workflow/working_memory.py"]},
+    {"name": "智能体层", "responsibility": "提供规划、精炼、工具、反思等专职 Agent 与调度", "modules": ["XAgent/agent"], "files": ["XAgent/agent/base_agent.py", "XAgent/agent/dispatcher.py", "XAgent/agent/tool_agent/agent.py"]},
+    {"name": "内循环搜索层", "responsibility": "实现 ReAct 等内循环搜索算法", "modules": ["XAgent/inner_loop_search_algorithms"], "files": ["XAgent/inner_loop_search_algorithms/ReACT.py", "XAgent/inner_loop_search_algorithms/base_search.py"]},
+    {"name": "函数与工具接口层", "responsibility": "管理 AI 函数与工具调用，转发到工具服务器", "modules": ["XAgent/ai_functions"], "files": ["XAgent/function_handler.py", "XAgent/toolserver_interface.py", "XAgent/ai_functions/function_manager.py"]},
+    {"name": "数据结构与记录层", "responsibility": "计划树、搜索树等结构及运行记录与回放", "modules": ["XAgent/data_structure"], "files": ["XAgent/data_structure/plan.py", "XAgent/data_structure/tree.py", "XAgent/recorder.py"]},
+    {"name": "工具服务器层", "responsibility": "在隔离容器内注册并执行文件、Python、Web、Shell 等工具", "modules": ["ToolServer"], "files": ["ToolServer/ToolServerNode/main.py", "ToolServer/ToolServerNode/core/register/register.py", "ToolServer/ToolServerNode/core/envs/pycoding.py"]},
+    {"name": "服务与前端层", "responsibility": "提供 GUI 服务端与 Web 界面", "modules": ["XAgentServer", "XAgentWeb"], "files": ["XAgentServer/server.py", "XAgentServer/interaction.py"]}
+  ],
+  "data_flow": [
+    "第1步：run.py 解析参数，CommandLine 启动任务并注册 XAgentParam",
+    "第2步：XAgentCoreComponents 装配 logger、recorder、ToolServer 接口、FunctionHandler 与 dispatcher",
+    "第3步：TaskHandler.outer_loop 调 PlanAgent 生成初始 Plan",
+    "第4步：外循环遍历 Plan 的子任务，逐个调用 inner_loop",
+    "第5步：inner_loop 经 dispatcher 取 ToolAgent，构建 ReACTChainSearch",
+    "第6步：ReAct 内循环执行 Thought-Action-Observation，经 FunctionHandler 发起工具调用",
+    "第7步：工具调用经 ToolServerInterface 以 HTTP 转发到独立 ToolServer 容器执行",
+    "第8步：内循环返回 finish_node，写回 plan.process_node",
+    "第9步：posterior_process 做反思与总结，必要时 PlanAgent 精炼 Plan",
+    "第10步：全过程由 RunningRecoder 落盘，XAgentServer 经 websocket 推送 GUI"
+  ],
+  "entry_points": [
+    {"path": "run.py", "what": "命令行主入口，接收 --task 与配置文件执行任务"},
+    {"path": "command.py", "what": "CommandLine 交互式执行与调度封装"},
+    {"path": "XAgent/core.py", "what": "XAgentCoreComponents 核心组件装配"},
+    {"path": "ToolServer/ToolServerNode/main.py", "what": "工具服务器容器内的启动入口"},
+    {"path": "XAgentServer/server.py", "what": "GUI 服务端入口，提供 Web 交互"},
+    {"path": "assets/config.yml", "what": "运行参数与模型 API key 配置"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立 Dispatcher、Planner、Actor 三部分与双循环的总体认知"},
+    {"path": "run.py", "why": "看命令行入口如何启动任务"},
+    {"path": "XAgent/core.py", "why": "理解全局核心组件如何装配与注册"},
+    {"path": "XAgent/workflow/task_handler.py", "why": "双循环调度中枢，最关键的编排文件"},
+    {"path": "XAgent/workflow/plan_exec.py", "why": "理解外循环的规划生成与精炼"},
+    {"path": "XAgent/inner_loop_search_algorithms/ReACT.py", "why": "理解内循环 ReAct 搜索"},
+    {"path": "XAgent/agent/dispatcher.py", "why": "理解按能力调度 Agent 的机制"},
+    {"path": "XAgent/function_handler.py", "why": "理解内建函数与工具调用处理"},
+    {"path": "XAgent/toolserver_interface.py", "why": "理解主进程如何调用隔离的工具服务器"},
+    {"path": "ToolServer/ToolServerNode/core/register/register.py", "why": "理解工具服务器如何注册与加载工具"}
+  ],
+  "extension_points": [
+    "加新工具：在 ToolServer/ToolServerNode/core/envs/ 或 core/tools/ 添加带 tool_labels 的函数，注册表自动扫描加载，参考 core/envs/pycoding.py",
+    "加新 Agent：继承 XAgent/agent/base_agent.py 的 BaseAgent，声明 abilities 并注册到 dispatcher，参考 XAgent/agent/tool_agent/agent.py",
+    "加新内循环搜索算法：继承 XAgent/inner_loop_search_algorithms/base_search.py 的 BaseSearchMethod，参考 ReACT.py",
+    "加新 AI 函数：在 XAgent/ai_functions/functions 或 pure_functions 添加 .yml 定义，参考 reasoning.yml",
+    "加新工具服务器扩展：放到 ToolServer/ToolServerNode/extensions/ 并在配置中启用 enabled_extensions",
+    "调运行参数：改 assets/config.yml 与 .env 中的 CONFIG_FILE"
+  ],
+  "learning_path": [
+    "第1步读 README.md，理解 Dispatcher、Planner、Actor 与双循环概念",
+    "第2步读 run.py 与 command.py，看任务如何被启动",
+    "第3步读 XAgent/core.py，理解核心组件装配",
+    "第4步读 XAgent/workflow/task_handler.py，掌握 outer_loop 与 inner_loop",
+    "第5步读 XAgent/workflow/plan_exec.py，理解外循环规划与精炼",
+    "第6步读 XAgent/inner_loop_search_algorithms/ReACT.py，理解内循环 ReAct",
+    "第7步读 XAgent/function_handler.py 与 toolserver_interface.py，理解工具调用链",
+    "第8步读 ToolServer/ToolServerNode/core/register/register.py，理解工具服务器注册"
+  ],
+  "diagram_mermaid": "graph TD\n  CLI[run.py 命令行] --> CMD[CommandLine]\n  CMD --> CORE[XAgentCoreComponents 组件装配]\n  CORE --> TH[TaskHandler 双循环调度]\n  TH --> OUTER[外循环 PlanAgent 规划]\n  OUTER --> PLAN[Plan 计划与子任务]\n  PLAN --> INNER[内循环 ReACTChainSearch]\n  INNER --> DISP[AgentDispatcher 能力调度]\n  INNER --> FH[FunctionHandler 工具调用]\n  FH --> TSI[ToolServerInterface HTTP 接口]\n  TSI --> TS[ToolServer 容器内工具执行]\n  INNER --> POST[posterior 反思与总结]\n  POST --> OUTER\n  TH --> REC[RunningRecoder 记录]\n  REC --> GUI[XAgentServer 与 Web 界面]",
+  "surprises": [
+    "双循环职责分离：外循环 PlanAgent 只管规划与精炼，内循环 ReAct 只管工具级执行，两者通过 finish_node 与 need_for_plan_refine 回调协作",
+    "所有工具都在独立 Docker 容器 ToolServer 中执行，主进程仅通过 HTTP 接口调用，从而实现安全隔离",
+    "Agent 分派不按名字而按 RequiredAbilities 能力枚举进行，同一能力可注册多个 Agent 实现",
+    "人机协作是内建能力：ask_human_for_help 作为工具会让内循环暂停并等待人类输入",
+    "计划可在执行中动态精炼：内循环若标记需要精炼，会回调外循环修改 Plan 后继续",
+    "配置采用 assets/config.yml 加 .env 中 CONFIG_FILE 的双层定位方式"
+  ],
+  "confidence": "高"
+}

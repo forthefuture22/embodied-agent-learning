@@ -1,0 +1,221 @@
+{
+  "repo": "octo-models/octo",
+  "name": "Octo",
+  "one_liner": "基于Transformer扩散策略的通用机器人操作模型",
+  "problem": "用一套可微调的小模型统一不同机器人的相机观测与动作空间，让研究者用少量数据就能适配新机械臂与新任务。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {
+      "name": "OctoModel",
+      "role": "交互入口，负责加载、保存、创建任务与采样动作，并做形状校验",
+      "file": "octo/model/octo_model.py"
+    },
+    {
+      "name": "OctoModule",
+      "role": "把 OctoTransformer 与各类动作头打包在一起，统一参数管理与初始化",
+      "file": "octo/model/octo_module.py"
+    },
+    {
+      "name": "OctoTransformer",
+      "role": "核心模块，把任务 token 作为前缀、观测 token 按时间步分组、readout token 追加，组成块因果序列",
+      "file": "octo/model/octo_module.py"
+    },
+    {
+      "name": "readout token",
+      "role": "零初始化加位置编码的读出 token，只能读取前面信息不能写入，为动作与价值预测提供专用 embedding",
+      "file": "octo/model/octo_module.py"
+    },
+    {
+      "name": "ImageTokenizer",
+      "role": "把一张或多张图像用视觉编码器编码成 token，支持 token learner 压缩与 FiLM 条件",
+      "file": "octo/model/components/tokenizers.py"
+    },
+    {
+      "name": "LanguageTokenizer",
+      "role": "把语言指令用冻结的 T5 编码器编码成语言 token",
+      "file": "octo/model/components/tokenizers.py"
+    },
+    {
+      "name": "LowdimObsTokenizer",
+      "role": "把本体状态等非空间观测拼接并可选离散化，是接入新机器人 proprio 的关键",
+      "file": "octo/model/components/tokenizers.py"
+    },
+    {
+      "name": "DiffusionActionHead",
+      "role": "扩散动作头，用单次 transformer 嵌入做条件，通过扩散过程预测一段动作块",
+      "file": "octo/model/components/action_heads.py"
+    },
+    {
+      "name": "BlockTransformer",
+      "role": "块因果 transformer，按 AttentionRule 控制 token 组之间的注意力可见性",
+      "file": "octo/model/components/block_transformer.py"
+    },
+    {
+      "name": "ModuleSpec",
+      "role": "配置与代码的桥，用可序列化描述创建模块，使模型结构完全由 config 决定",
+      "file": "octo/utils/spec.py"
+    },
+    {
+      "name": "TokenGroup",
+      "role": "tokens 加 mask 的轻量容器，贯穿所有 tokenizer 与 transformer 输出",
+      "file": "octo/model/components/base.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "交互入口层",
+      "responsibility": "加载检查点、创建任务字典、采样动作、反归一化",
+      "modules": ["octo/model"],
+      "files": ["octo/model/octo_model.py"]
+    },
+    {
+      "name": "模型装配层",
+      "responsibility": "按配置创建 tokenizer、transformer 与动作头并组装成可训练模块",
+      "modules": ["octo/model"],
+      "files": ["octo/model/octo_module.py"]
+    },
+    {
+      "name": "Token 化层",
+      "responsibility": "把图像、语言、低维观测分别编码成统一维度的 token",
+      "modules": ["octo/model/components"],
+      "files": ["octo/model/components/tokenizers.py", "octo/model/components/vit_encoders.py"]
+    },
+    {
+      "name": "Transformer 骨干层",
+      "responsibility": "块因果注意力与前缀、时间步、readout 三种 token 组的融合",
+      "modules": ["octo/model/components"],
+      "files": ["octo/model/components/block_transformer.py", "octo/model/components/transformer.py"]
+    },
+    {
+      "name": "动作头层",
+      "responsibility": "从 readout 嵌入预测动作块，提供扩散、连续回归、离散三类头",
+      "modules": ["octo/model/components"],
+      "files": ["octo/model/components/action_heads.py", "octo/model/components/diffusion.py"]
+    },
+    {
+      "name": "数据层",
+      "responsibility": "Open X-Embodiment 数据集构建、轨迹与帧变换、动作归一化与标准化",
+      "modules": ["octo/data", "octo/data/oxe"],
+      "files": ["octo/data/dataset.py", "octo/data/oxe/oxe_dataset_configs.py"]
+    },
+    {
+      "name": "配置与工具层",
+      "responsibility": "配置定义、模块实例化、参数合并与冻结、检查点与可视化工具",
+      "modules": ["octo/utils", "scripts/configs"],
+      "files": ["octo/utils/spec.py", "octo/utils/train_utils.py", "scripts/configs/config.py"]
+    },
+    {
+      "name": "训练脚本层",
+      "responsibility": "预训练与微调主循环、命令行参数解析",
+      "modules": ["scripts", "examples"],
+      "files": ["scripts/train.py", "scripts/finetune.py", "examples/02_finetune_new_observation_action.py"]
+    }
+  ],
+  "data_flow": [
+    "第1步：构造观测字典，含 image_primary、image_wrist 与 timestep_pad_mask，以及任务字典含 language_instruction",
+    "第2步：ImageTokenizer 用视觉编码器把每个时间步的图像编码成图像 token",
+    "第3步：LanguageTokenizer 用冻结的 T5 把语言指令编码成语言 token",
+    "第4步：每个 tokenizer 输出 TokenGroup，携带 tokens 与 pad mask",
+    "第5步：OctoTransformer 把任务 token 作为前缀，观测 token 按时间步分组，并为每个 readout 生成零初始化 token",
+    "第6步：所有 token 投影到统一 token_embedding_size 并加上各自位置编码",
+    "第7步：BlockTransformer 按 AttentionRule 做块因果注意力，readout 只能读、不能写",
+    "第8步：输出 transformer_outputs，其中 readout_action 是动作头的输入",
+    "第9步：DiffusionActionHead 以该嵌入为条件，通过扩散采样出 action_horizon 乘 action_dim 的动作块",
+    "第10步：sample_actions 用 unnormalization_statistics 把归一化动作还原为真实机器人动作",
+    "第11步：训练时动作头用扩散 MSE 损失，掩码同时考虑时间步 padding 与动作维度 padding"
+  ],
+  "entry_points": [
+    {
+      "path": "octo/model/octo_model.py",
+      "what": "OctoModel.load_pretrained 与 sample_actions，推理侧最核心入口"
+    },
+    {
+      "path": "scripts/train.py",
+      "what": "预训练主循环入口"
+    },
+    {
+      "path": "scripts/finetune.py",
+      "what": "微调主循环入口，支持 head_only、head_mlp_only、full 三种冻结模式"
+    },
+    {
+      "path": "examples/02_finetune_new_observation_action.py",
+      "what": "微调到新观测与新动作空间的最小可运行示例，最贴近换机器人场景"
+    },
+    {
+      "path": "examples/01_inference_pretrained.ipynb",
+      "what": "加载预训练模型并推理的 notebook 示例"
+    },
+    {
+      "path": "README.md",
+      "what": "安装、推理、微调与预训练命令速查"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "README.md",
+      "why": "先了解模型定位、代码结构与三种微调模式"
+    },
+    {
+      "path": "octo/model/octo_model.py",
+      "why": "推理与微调的统一入口，create_tasks 与 sample_actions 是理解数据契约的关键"
+    },
+    {
+      "path": "octo/model/octo_module.py",
+      "why": "架构核心，OctoTransformer 的文档字符串把整个序列组织方式讲得很清楚"
+    },
+    {
+      "path": "octo/model/components/tokenizers.py",
+      "why": "理解不同机器人观测如何被统一成 token，这是泛化的关键"
+    },
+    {
+      "path": "octo/model/components/action_heads.py",
+      "why": "动作空间如何统一，扩散头如何工作"
+    },
+    {
+      "path": "octo/model/components/block_transformer.py",
+      "why": "readout 机制与注意力可见性规则的具体实现"
+    },
+    {
+      "path": "scripts/configs/octo_pretrain_config.py",
+      "why": "预训练的真实配置，看清 tokenizer、readout、动作头的装配"
+    },
+    {
+      "path": "scripts/configs/finetune_config.py",
+      "why": "微调模式与冻结键的定义"
+    },
+    {
+      "path": "examples/02_finetune_new_observation_action.py",
+      "why": "换机器人要改哪些地方的最直接答案"
+    },
+    {
+      "path": "octo/utils/spec.py",
+      "why": "理解为什么模型结构能完全由配置描述"
+    }
+  ],
+  "extension_points": [
+    "想换视觉编码器：在 octo/model/components/vit_encoders.py 里加新编码器，并在 config 的 encoder=ModuleSpec.create 处替换",
+    "想加新观测模态：在 observation_tokenizers 里新增 ImageTokenizer 或 LowdimObsTokenizer，参考示例 02 加 proprio 的写法",
+    "想微调新机器人：改 observation_tokenizers 与动作头的 action_dim、action_horizon，再用 merge_params 复用预训练权重",
+    "想加新动作头：在 octo/model/components/action_heads.py 里继承 ActionHead 实现 loss 与 predict_action",
+    "想加目标图像条件：在 task_tokenizers 里加一个 ImageTokenizer，参考 examples/03_eval_finetuned.py",
+    "想加新数据集：在 octo/data/oxe/oxe_dataset_configs.py 里注册数据集与标准化变换"
+  ],
+  "learning_path": [
+    "第1步读 README.md，了解定位与三种微调模式",
+    "第2步读 octo/model/octo_model.py，理解观测与任务的输入契约",
+    "第3步精读 octo/model/octo_module.py 的 OctoTransformer，理解序列组织与 readout",
+    "第4步读 octo/model/components/tokenizers.py，理解不同机器人如何统一",
+    "第5步读 octo/model/components/action_heads.py，理解动作空间统一与扩散采样",
+    "第6步读 examples/02_finetune_new_observation_action.py，看换机器人的完整改动",
+    "第7步读 scripts/configs/finetune_config.py 与 scripts/finetune.py，理解训练编排"
+  ],
+  "diagram_mermaid": "graph TD\n  A[观测字典 图像与本体] --> B[ImageTokenizer]\n  C[语言指令] --> D[LanguageTokenizer]\n  B --> E[TokenGroup 汇总]\n  D --> E\n  E --> F[任务前缀 token]\n  E --> G[观测 token 按时间步分组]\n  H[readout token 零初始化] --> I[OctoTransformer]\n  F --> I\n  G --> I\n  I --> J[BlockTransformer 块因果注意力]\n  J --> K[readout_action 输出]\n  K --> L[DiffusionActionHead 预测动作块]\n  L --> M[反归一化得到机器人动作]",
+  "surprises": [
+    "统一不同机器人不是靠改结构，而是靠 pad_mask_dict 掩码缺失输入、按最大 action_dim 补零、再用反归一化统计还原真实动作",
+    "readout token 是零向量加位置编码，且被设计成只读不写，不同 readout 之间完全独立可分别运行",
+    "repeat_task_tokens 为 True 时语言 token 会在每个时间步重复一遍，1.5 版本用它改善视觉与语言的跨模态注意力",
+    "微调新机器人时不需要改任何模型代码，只需换 tokenizer 与动作头的超参，再用 merge_params 把能对上的预训练权重合并进来",
+    "整个项目用 JAX 与 Flax 实现，检查点是 orbax 格式，和 PyTorch 生态不通用"
+  ],
+  "confidence": "高"
+}

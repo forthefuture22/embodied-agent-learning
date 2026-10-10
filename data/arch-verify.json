@@ -19,6 +19,25 @@
   "warnings": []
  },
  {
+  "file": "ARISE-Initiative__robosuite.json",
+  "repo": "ARISE-Initiative/robosuite",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 45,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "AgentOps-AI__agentops.json",
   "repo": "AgentOps-AI/agentops",
   "confidence": "高",
@@ -33,6 +52,25 @@
   "skipped": {
    "symbol": 0,
    "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "Aider-AI__aider.json",
+  "repo": "Aider-AI/aider",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 7,
+  "flow": 10,
+  "key_files": 9,
+  "paths_checked": 44,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
   },
   "errors": [],
   "warnings": []
@@ -133,6 +171,25 @@
   "warnings": []
  },
  {
+  "file": "OpenBMB__ChatDev.json",
+  "repo": "OpenBMB/ChatDev",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 7,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "OpenBMB__MiniCPM-V.json",
   "repo": "OpenBMB/MiniCPM-V",
   "confidence": "高",
@@ -160,6 +217,44 @@
   "flow": 7,
   "key_files": 8,
   "paths_checked": 32,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "OpenBMB__XAgent.json",
+  "repo": "OpenBMB/XAgent",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 9,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 53,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "OpenGVLab__InternVL.json",
+  "repo": "OpenGVLab/InternVL",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 40,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -304,6 +399,25 @@
   "warnings": []
  },
  {
+  "file": "docling-project__docling.json",
+  "repo": "docling-project/docling",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 7,
+  "flow": 10,
+  "key_files": 9,
+  "paths_checked": 50,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "facebookresearch__habitat-lab.json",
   "repo": "facebookresearch/habitat-lab",
   "confidence": "高",
@@ -375,6 +489,63 @@
   "skipped": {
    "symbol": 0,
    "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "google-gemini__gemini-cli.json",
+  "repo": "google-gemini/gemini-cli",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 9,
+  "paths_checked": 53,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "google__adk-python.json",
+  "repo": "google/adk-python",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 50,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "gpt-engineer-org__gpt-engineer.json",
+  "repo": "gpt-engineer-org/gpt-engineer",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 7,
+  "flow": 11,
+  "key_files": 9,
+  "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
   },
   "errors": [],
   "warnings": []
@@ -532,6 +703,25 @@
   "warnings": []
  },
  {
+  "file": "microsoft__TaskWeaver.json",
+  "repo": "microsoft/TaskWeaver",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 7,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 58,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "microsoft__agent-lightning.json",
   "repo": "microsoft/agent-lightning",
   "confidence": "高",
@@ -540,6 +730,44 @@
   "flow": 12,
   "key_files": 10,
   "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "microsoft__markitdown.json",
+  "repo": "microsoft/markitdown",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 6,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 39,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "microsoft__playwright.json",
+  "repo": "microsoft/playwright",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 7,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 54,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -589,6 +817,25 @@
   "warnings": []
  },
  {
+  "file": "octo-models__octo.json",
+  "repo": "octo-models/octo",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 43,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "openai__openai-agents-python.json",
   "repo": "openai/openai-agents-python",
   "confidence": "高",
@@ -616,6 +863,25 @@
   "flow": 12,
   "key_files": 9,
   "paths_checked": 58,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "princeton-nlp__SWE-bench.json",
+  "repo": "princeton-nlp/SWE-bench",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 51,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -730,6 +996,25 @@
   "flow": 11,
   "key_files": 10,
   "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "vllm-project__vllm.json",
+  "repo": "vllm-project/vllm",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 10,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 61,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],

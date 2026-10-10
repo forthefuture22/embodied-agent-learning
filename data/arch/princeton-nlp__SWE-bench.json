@@ -1,0 +1,92 @@
+{
+  "repo": "princeton-nlp/SWE-bench",
+  "name": "SWE-bench",
+  "one_liner": "用真实 GitHub issue 评测编码 Agent 能否产出正确补丁的基准",
+  "problem": "评测编码 Agent 需要一个可复现、防作弊的环境：同一份代码库、同一份 issue、同一组测试。SWE-bench 把真实 PR 拆成 gold patch 与 test patch，用 Docker 隔离每个实例，靠 fail-to-pass 与 pass-to-pass 判定补丁是否真正修复问题。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "SWEbenchInstance", "role": "数据集单条记录的类型契约：repo、base_commit、patch、test_patch、problem_statement、FAIL_TO_PASS、PASS_TO_PASS 等字段", "file": "swebench/types.py"},
+    {"name": "TestSpec", "role": "单个实例的评测规格 dataclass，聚合镜像名、eval 脚本、f2p/p2p 测试列表与 log_parser，是 harness 的执行输入", "file": "swebench/types.py"},
+    {"name": "run_instance", "role": "单实例评测主流程：建容器、打补丁、跑测试、判分、写报告、清理", "file": "swebench/harness/run_evaluation.py"},
+    {"name": "get_eval_report", "role": "判分入口：解析测试日志得到状态映射，计算 f2p/p2p 并输出 resolved 结论", "file": "swebench/harness/grading.py"},
+    {"name": "PARSER_REGISTRY", "role": "测试框架日志解析器注册表，按实例的 log_parser 字段选用 pytest/jest/cargo 等解析器", "file": "swebench/harness/log_parsers/__init__.py"},
+    {"name": "load_task_repo", "role": "从 task repo 目录结构读取实例：每个 tasks/<id>/ 含 task.yaml、gold.patch、test.patch、eval.sh、Dockerfile", "file": "swebench/task/repo.py"},
+    {"name": "build_instance_images", "role": "按实例 Dockerfile 并行构建评测镜像，是环境隔离的构建侧", "file": "swebench/image_builder/docker_build.py"},
+    {"name": "create_container", "role": "从镜像创建评测容器并常驻，是环境隔离的运行侧", "file": "swebench/harness/run_evaluation.py"},
+    {"name": "get_predictions_from_file", "role": "加载 json/jsonl 预测文件或 gold 补丁，产出 instance_id 到 patch 的映射", "file": "swebench/harness/utils.py"},
+    {"name": "make_run_report", "role": "汇总整次 run 的 resolved 结果与统计，写出最终结果文件", "file": "swebench/harness/reporting.py"},
+    {"name": "classify_logs", "role": "对无解析结果的日志做基础设施故障分类，区分环境问题与真实失败", "file": "swebench/harness/infra_failure.py"}
+  ],
+  "layers": [
+    {"name": "数据集构建层", "role": "从 GitHub PR 采集候选任务、抽取补丁与问题描述、生成 instance 并筛选出 Lite/Verified 子集", "modules": ["swebench/collect"], "files": ["swebench/collect/get_tasks_pipeline.py", "swebench/collect/build_dataset.py", "swebench/collect/utils.py", "swebench/collect/make_lite/make_lite.py"]},
+    {"name": "任务仓库层", "role": "task repo 作为实例的事实来源，用目录结构组织任务并支持本地重建数据集，不依赖 HuggingFace", "modules": ["swebench/task"], "files": ["swebench/task/repo.py", "swebench/task/checks.py"]},
+    {"name": "评测规格层", "role": "把数据集或 task repo 的实例标准化为 TestSpec，并定义实例字段契约", "modules": ["swebench/harness"], "files": ["swebench/types.py", "swebench/harness/utils.py"]},
+    {"name": "环境隔离层", "role": "构建实例镜像、创建容器、拷入文件、限时执行命令并清理，保证评测可复现", "modules": ["swebench/image_builder", "swebench/harness"], "files": ["swebench/image_builder/docker_build.py", "swebench/image_builder/image_spec.py", "swebench/harness/docker_utils.py"]},
+    {"name": "评测执行层", "role": "编排打补丁、跑 eval 脚本与并行调度，是 harness 的主干", "modules": ["swebench/harness"], "files": ["swebench/harness/run_evaluation.py", "swebench/harness/remove_containers.py"]},
+    {"name": "判分层", "role": "解析各语言测试日志、比对 f2p/p2p 状态、判定 resolved 并识别基础设施故障", "modules": ["swebench/harness/log_parsers"], "files": ["swebench/harness/grading.py", "swebench/harness/log_parsers/__init__.py", "swebench/harness/log_parsers/python.py", "swebench/harness/infra_failure.py"]},
+    {"name": "报告与入口层", "role": "汇总结果、提供 CLI 子命令与模型推理接入", "modules": ["swebench/cli", "swebench/inference"], "files": ["swebench/cli/cli.py", "swebench/cli/evaluate.py", "swebench/harness/reporting.py", "swebench/inference/run_api.py"]},
+    {"name": "云端评测层", "role": "把评测搬到 Modal 上远程执行，绕开本地 Docker 资源限制", "modules": ["swebench/harness/modal_eval"], "files": ["swebench/harness/modal_eval/run_evaluation_modal.py", "swebench/harness/modal_eval/__init__.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户执行 swebench eval verified -p preds.jsonl，typer CLI 解析数据集别名与预测路径",
+    "第2步：resolve_dataset 把别名解析为 HuggingFace 数据集 id，load_instances 从数据集或 task repo 载入实例",
+    "第3步：get_predictions_from_file 载入预测，构建 instance_id 到 model_patch 的映射，并跳过已完成或空补丁的实例",
+    "第4步：make_test_spec 把每条实例转为 TestSpec，解析 eval_script 并插入退出码记录逻辑",
+    "第5步：run_instances 用线程池并行调度，每个实例 create_container 创建常驻容器",
+    "第6步：把模型补丁写入 patch.diff 拷入容器，依次尝试 git apply 的多种策略，失败则从干净树重试",
+    "第7步：拷贝 eval.sh 到容器并执行，测试输出被 START_TEST_OUTPUT 与 END_TEST_OUTPUT 标记包裹",
+    "第8步：get_logs_eval 按实例的 log_parser 把标记内日志解析成测试用例到状态的结果映射",
+    "第9步：get_eval_tests_report 对比 FAIL_TO_PASS 与 PASS_TO_PASS，分别统计成功与失败用例",
+    "第10步：get_resolution_status 按 f2p 与 p2p 通过率判定 resolved 为 FULL、PARTIAL 或 NO",
+    "第11步：每个实例写出 report.json，make_run_report 汇总整个 run 的统计",
+    "第12步：cleanup_container 停止并删除容器，释放资源"
+  ],
+  "entry_points": [
+    {"path": "swebench/cli/cli.py", "what": "swebench 命令总入口，typer 应用装配 eval、infer、images、dataset、submit 等子命令"},
+    {"path": "swebench/cli/evaluate.py", "what": "eval 与 report 子命令，把参数转成 run_evaluation.main 调用"},
+    {"path": "swebench/harness/run_evaluation.py", "what": "评测主干，含 main 函数与可直接 python -m 运行的命令行"},
+    {"path": "swebench/collect/get_tasks_pipeline.py", "what": "数据采集管线入口，从仓库批量抓 PR 并生成候选实例"},
+    {"path": "swebench/inference/run_api.py", "what": "推理入口，用 API 模型对实例生成补丁预测"},
+    {"path": "swebench/image_builder/docker_build.py", "what": "镜像构建入口，按实例 Dockerfile 并行构建评测环境"},
+    {"path": "swebench/task/checks.py", "what": "task repo 校验入口，检查每个任务目录是否结构完整可评测"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：数据集、Docker 评测、v5 CLI 命令与资源要求"},
+    {"path": "swebench/types.py", "why": "SWEbenchInstance 与 TestSpec 两个核心契约，理解评测输入的最小定义"},
+    {"path": "swebench/harness/run_evaluation.py", "why": "评测主干，打补丁、跑测试、判分、清理的完整闭环都在这里"},
+    {"path": "swebench/harness/utils.py", "why": "make_test_spec 与数据集加载，看实例如何变成可执行规格"},
+    {"path": "swebench/harness/grading.py", "why": "判分核心，f2p/p2p 语义与 resolved 判定规则的权威实现"},
+    {"path": "swebench/harness/log_parsers/__init__.py", "why": "PARSER_REGISTRY 注册表，看多语言测试框架如何被统一解析"},
+    {"path": "swebench/task/repo.py", "why": "task repo 目录结构与读取逻辑，理解新版数据组织方式"},
+    {"path": "swebench/harness/docker_utils.py", "why": "容器拷贝、限时执行与清理，环境隔离的实现细节"},
+    {"path": "swebench/image_builder/docker_build.py", "why": "镜像构建流程，理解评测环境从哪来"},
+    {"path": "swebench/cli/evaluate.py", "why": "最贴近使用者的入口，看命令参数如何映射到 harness"}
+  ],
+  "extension_points": [
+    "想接入一个新 Agent 做评测：只需产出符合格式的预测文件，每条含 instance_id、model_name_or_path、model_patch，然后 swebench eval 传入即可，无需改 harness",
+    "想新增测试框架的日志解析：在 swebench/harness/log_parsers 下对应语言文件实现解析函数，并在 __init__.py 的 PARSER_REGISTRY 注册",
+    "想支持新的编程语言或仓库：在 swebench/collect 扩展采集逻辑，在 image_builder 提供对应 Dockerfile 与基础镜像",
+    "想新增一个数据集子集：改 swebench/collect/make_lite/make_lite.py 与 criteria.py 的筛选条件",
+    "想改判分口径：改 swebench/harness/grading.py 的 get_eval_tests_report 与 get_resolution_status",
+    "想换评测执行环境：参考 swebench/harness/modal_eval 新增一种远程执行后端，或改 docker_utils 的执行封装",
+    "想自定义任务组织方式：按 swebench/task/repo.py 约定的目录结构放置 tasks/<instance_id>，harness 即可直接读取"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，弄清数据集、预测文件与 Docker 评测三者的关系",
+    "第2步：读 swebench/types.py，掌握 SWEbenchInstance 与 TestSpec 的字段含义",
+    "第3步：读 swebench/cli/evaluate.py，看一条命令如何进入 harness",
+    "第4步：读 swebench/harness/utils.py 的 make_test_spec，理解实例到规格的转换",
+    "第5步：读 swebench/harness/run_evaluation.py 的 run_instance，跟完打补丁到判分的完整链路",
+    "第6步：读 swebench/harness/grading.py，吃透 fail-to-pass 与 pass-to-pass 的判定语义",
+    "第7步：读 swebench/task/repo.py 与 swebench/image_builder/docker_build.py，理解数据与环境如何被组织"
+  ],
+  "diagram_mermaid": "graph TD\n  A[CLI swebench eval 解析参数] --> B[解析数据集别名或 task repo]\n  B --> C[加载预测 建立 instance_id 到 patch 映射]\n  C --> D[make_test_spec 生成评测规格]\n  D --> E[按实例创建 Docker 容器]\n  E --> F[拷贝并 git apply 模型补丁]\n  F --> G[拷贝 eval.sh 并在容器内执行测试]\n  G --> H[log_parser 把测试输出解析为用例状态映射]\n  H --> I[对比 FAIL_TO_PASS 与 PASS_TO_PASS]\n  I --> J[get_resolution_status 判定 resolved]\n  J --> K[写 report.json]\n  K --> L[make_run_report 汇总并清理容器]",
+  "surprises": [
+    "判分不是看测试是否通过，而是看相对 gold 的差分：FAIL_TO_PASS 必须由失败转通过，PASS_TO_PASS 必须保持通过，二者都为 1 才算 FULL resolved",
+    "结果按 run_id 加 instance_id 缓存，同一 run_id 重复跑会直接复用旧结果，换了补丁却不换 run_id 就会拿到过期结论",
+    "日志解析有防作弊设计：补丁可以自己打印 PASSED，所以 harness 会交叉校验 eval 脚本记录的测试退出码；而 eval 脚本末尾有 git checkout 重置测试文件、用 set -uxo pipefail 但无 -e，脚本退出码并非测试的退出码，必须单独 echo 记录；测试套件若从未真正运行也会被判为无效而非通过",
+    "multimodal 的二进制基线文件不能放进文本 patch，数据集用 image_assets 的 url 声明并在评测时临时 stage 进容器，刻意不烘进镜像以防泄漏给被测 Agent",
+    "Modal 云端评测与 task repo 互斥：因为 Modal 远端自建镜像会忽略仓库的 Dockerfile，两者同用会导致用 A 的测试评 B 的树，代码里直接报错拒绝"
+  ],
+  "confidence": "高"
+}

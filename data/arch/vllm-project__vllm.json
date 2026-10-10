@@ -1,0 +1,92 @@
+{
+  "repo": "vllm-project/vllm",
+  "name": "vLLM",
+  "one_liner": "用 PagedAttention 做高吞吐 LLM 推理与服务的引擎",
+  "problem": "解决 LLM 在线服务吞吐低的问题：KV cache 显存碎片化、请求长度不一导致 GPU 利用率低。它用分页式 KV cache 与连续批处理把显存利用率和并发吞吐做到接近最优。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "EngineCore", "role": "引擎核心循环：串起 Scheduler 与 Executor，step 内完成调度、执行模型、更新输出，是 v1 的心脏", "file": "vllm/v1/engine/core.py"},
+    {"name": "Scheduler", "role": "调度器：每步在 token/显存预算内把 running 与 waiting 请求分配 token，支持 chunked prefill、前缀缓存与抢占", "file": "vllm/v1/core/sched/scheduler.py"},
+    {"name": "KVCacheManager", "role": "KV cache 管理器：把请求的 token 映射到逻辑块，负责分配 allocate_slots、复用与前缀命中、释放", "file": "vllm/v1/core/kv_cache_manager.py"},
+    {"name": "BlockPool", "role": "全局物理块池：维护空闲块队列与 哈希到块 的缓存表，是所有请求共享 KV 块与做前缀缓存的底座", "file": "vllm/v1/core/block_pool.py"},
+    {"name": "KVCacheBlock", "role": "单个 KV cache 块：记录 block_id、引用计数与块哈希，是分页管理的最小单元", "file": "vllm/v1/core/kv_cache_utils.py"},
+    {"name": "SingleTypeKVCacheManager", "role": "按注意力类型分派的块管理策略基类，派生 FullAttention/SlidingWindow/Mamba 等管理器", "file": "vllm/v1/core/single_type_kv_cache_manager.py"},
+    {"name": "Executor", "role": "执行器抽象：负责在单机或分布式设备上运行模型，派生 uni/mp/ray 三种后端", "file": "vllm/v1/executor/abstract.py"},
+    {"name": "WorkerBase", "role": "单设备工作进程抽象：持有模型与 KV cache，暴露 execute_model/load_model 供 Executor 调用", "file": "vllm/v1/worker/worker_base.py"},
+    {"name": "GPUModelRunner", "role": "GPU 上的模型运行器：把调度输出转成张量输入、维护 block table、执行前向与采样", "file": "vllm/v1/worker/gpu_model_runner.py"},
+    {"name": "ModelRegistry", "role": "模型架构注册表：按 HF 的 architectures 字段解析到具体模型类，支持外部注册与懒加载", "file": "vllm/model_executor/models/registry.py"},
+    {"name": "AttentionBackend 注册", "role": "注意力后端注册与选择机制：用 register_backend 覆盖或新增后端，按硬件与配置挑选", "file": "vllm/v1/attention/backends/registry.py"},
+    {"name": "VllmConfig", "role": "全局配置聚合根：组合模型、缓存、并行、调度等子配置，贯穿引擎与 worker", "file": "vllm/config/vllm.py"}
+  ],
+  "layers": [
+    {"name": "接口层", "responsibility": "对外暴露 LLM 类、OpenAI 兼容 HTTP 服务、CLI 与离线批处理入口", "modules": ["vllm/entrypoints"], "files": ["vllm/entrypoints/llm.py", "vllm/entrypoints/openai/api_server.py"]},
+    {"name": "引擎编排层", "responsibility": "引擎循环与客户端抽象：LLMEngine/AsyncLLM 驱动 step，core_client 负责进程间通信", "modules": ["vllm/v1/engine"], "files": ["vllm/v1/engine/core.py", "vllm/v1/engine/llm_engine.py", "vllm/v1/engine/async_llm.py", "vllm/v1/engine/core_client.py"]},
+    {"name": "调度层", "responsibility": "决定每步跑哪些请求、各分配多少 token，管理请求队列与抢占", "modules": ["vllm/v1/core/sched"], "files": ["vllm/v1/core/sched/scheduler.py", "vllm/v1/core/sched/request_queue.py", "vllm/v1/core/sched/output.py"]},
+    {"name": "KV cache 管理层", "responsibility": "分页式 KV cache 的块池、块分配、前缀缓存与按注意力类型的块管理策略", "modules": ["vllm/v1/core"], "files": ["vllm/v1/core/kv_cache_manager.py", "vllm/v1/core/block_pool.py", "vllm/v1/core/kv_cache_utils.py", "vllm/v1/core/single_type_kv_cache_manager.py", "vllm/v1/core/kv_cache_coordinator.py"]},
+    {"name": "执行器层", "responsibility": "把模型执行分发到单进程、多进程或 Ray 集群", "modules": ["vllm/v1/executor"], "files": ["vllm/v1/executor/abstract.py", "vllm/v1/executor/uniproc_executor.py", "vllm/v1/executor/multiproc_executor.py", "vllm/v1/executor/ray_executor.py"]},
+    {"name": "Worker 与模型运行层", "responsibility": "在设备上加载模型、初始化 KV cache、把输入组织成张量并跑前向采样", "modules": ["vllm/v1/worker"], "files": ["vllm/v1/worker/worker_base.py", "vllm/v1/worker/gpu_worker.py", "vllm/v1/worker/gpu_model_runner.py", "vllm/v1/worker/block_table.py"]},
+    {"name": "注意力后端层", "responsibility": "定义注意力后端契约与各实现，按硬件与配置选择最优内核", "modules": ["vllm/v1/attention"], "files": ["vllm/v1/attention/backend.py", "vllm/v1/attention/selector.py", "vllm/v1/attention/backends/registry.py", "vllm/v1/attention/backends/flash_attn.py"]},
+    {"name": "模型与权重加载层", "responsibility": "模型注册解析、权重加载器与各模型实现", "modules": ["vllm/model_executor"], "files": ["vllm/model_executor/models/registry.py", "vllm/model_executor/model_loader/default_loader.py", "vllm/model_executor/model_loader/base_loader.py"]},
+    {"name": "配置层", "responsibility": "聚合模型/缓存/调度/并行等配置，校验并生成运行期配置对象", "modules": ["vllm/config"], "files": ["vllm/config/vllm.py", "vllm/config/scheduler.py", "vllm/config/cache.py"]},
+    {"name": "内核层", "responsibility": "CUDA/C++ 实现的分页注意力、GEMM、MoE 等底层算子", "modules": ["csrc"], "files": ["csrc/attention/attention_generic.cuh", "csrc/attention/dtype_float16.cuh"]}
+  ],
+  "data_flow": [
+    "第1步：用户经 LLM.generate 或 OpenAI 服务提交请求，EngineCore.add_request 把 Request 交给 Scheduler",
+    "第2步：EngineCore.step 调用 Scheduler.schedule，在 token 预算与显存预算内决定本步调度哪些请求及各自新增 token 数",
+    "第3步：Scheduler 通过 KVCacheManager.allocate_slots 为每个被调度请求分配逻辑块，底层由 BlockPool 从空闲队列取物理块并做前缀缓存匹配",
+    "第4步：schedule 产出 SchedulerOutput，包含新请求数据、已缓存请求数据、block 映射与总 token 数",
+    "第5步：EngineCore 调用 model_executor.execute_model，Executor 把调度输出广播给各 Worker",
+    "第6步：GPUModelRunner 把 SchedulerOutput 转成输入张量，依据 block table 定位 KV 块，跑模型前向",
+    "第7步：注意力内核按 block table 做 PagedAttention，读取分页存储的 KV cache 完成注意力计算",
+    "第8步：采样得到新 token，model_executor.sample_tokens 返回 ModelRunnerOutput",
+    "第9步：Scheduler.update_from_output 把新 token 追加到请求、处理停止条件、回收或释放块，产出 EngineCoreOutputs",
+    "第10步：输出经 detokenizer 转为文本，返回给调用方；未完成请求留在 running 队列，下一步与新请求一起组成新的连续批"
+  ],
+  "entry_points": [
+    {"path": "vllm/entrypoints/llm.py:LLM.generate", "what": "离线推理主入口，构造引擎并生成文本"},
+    {"path": "vllm/entrypoints/openai/api_server.py", "what": "OpenAI 兼容 HTTP 服务入口，线上部署常用"},
+    {"path": "vllm/v1/engine/core.py:EngineCore.step", "what": "引擎单步循环，调度-执行-更新的枢纽，理解 vLLM 的最佳起点"},
+    {"path": "vllm/v1/engine/llm_engine.py", "what": "同步 LLMEngine 门面，封装 add_request 与 step"},
+    {"path": "vllm/v1/core/sched/scheduler.py:Scheduler.schedule", "what": "调度算法实现，连续批处理与 chunked prefill 都在这里"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立定位：PagedAttention、连续批处理、量化与多硬件支持"},
+    {"path": "vllm/v1/engine/core.py", "why": "EngineCore.step 把调度与执行串起来，是理解整体运行的主线"},
+    {"path": "vllm/v1/core/sched/scheduler.py", "why": "调度器核心，看 schedule 如何在预算内分配 token 并处理抢占"},
+    {"path": "vllm/v1/core/kv_cache_manager.py", "why": "KV cache 分配逻辑，allocate_slots 的块布局注释极关键"},
+    {"path": "vllm/v1/core/block_pool.py", "why": "物理块池与前缀缓存哈希表，理解分页复用与淘汰"},
+    {"path": "vllm/v1/core/kv_cache_utils.py", "why": "KVCacheBlock 与块哈希定义，是分页管理的最小单元"},
+    {"path": "vllm/v1/executor/abstract.py", "why": "执行器抽象与后端选择，理解调度与执行如何分离"},
+    {"path": "vllm/v1/worker/gpu_model_runner.py", "why": "设备侧执行细节，调度输出如何变成张量与 block table"},
+    {"path": "vllm/model_executor/models/registry.py", "why": "模型架构注册与解析，扩展新模型必读"},
+    {"path": "vllm/v1/attention/backends/registry.py", "why": "注意力后端注册机制，理解内核如何按硬件选择"}
+  ],
+  "extension_points": [
+    "加一个新模型：在 vllm/model_executor/models 下实现模型类，通过 ModelRegistry.register_model 注册架构名，或加入 registry.py 的 _VLLM_MODELS 映射",
+    "加一个新注意力后端：用 vllm/v1/attention/backends/registry.py 的 register_backend 装饰器注册类，并在 selector.py 的选择逻辑里纳入条件",
+    "加一个新执行器：继承 vllm/v1/executor/abstract.py 的 Executor 实现 execute_model，在 Executor.get_class 增加后端分支",
+    "加一种 KV cache 管理策略：继承 vllm/v1/core/single_type_kv_cache_manager.py 的 SingleTypeKVCacheManager 并在 kv_cache_coordinator 装配",
+    "自定义调度策略：实现 vllm/v1/core/sched/interface.py 的 SchedulerInterface，或扩展 request_queue 的调度策略",
+    "新增硬件平台：在 vllm/platforms 与 vllm/v1/worker 增加对应 worker 与 model_runner",
+    "自定义权重加载：继承 vllm/model_executor/model_loader/base_loader.py 的 BaseModelLoader 实现 load_model"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解 PagedAttention 与连续批处理解决什么问题",
+    "第2步：读 vllm/v1/engine/core.py 的 EngineCore.step，建立调度-执行-更新三步主线",
+    "第3步：读 vllm/v1/core/sched/scheduler.py 的 schedule，理解预算内 token 分配与抢占",
+    "第4步：读 vllm/v1/core/kv_cache_utils.py 的 KVCacheBlock 与 block_pool.py，吃透分页块与前缀缓存",
+    "第5步：读 vllm/v1/core/kv_cache_manager.py 的 allocate_slots，理解块如何按请求分配与复用",
+    "第6步：读 vllm/v1/executor/abstract.py 与 worker_base.py，理解调度与执行如何解耦",
+    "第7步：读 vllm/v1/worker/gpu_model_runner.py 的 execute_model，看调度输出如何变成张量与 block table",
+    "第8步：读 model_executor/models/registry.py 与 attention/backends/registry.py，掌握模型与内核的扩展方式"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户请求 LLM.generate 或 OpenAI 服务] --> B[EngineCore.add_request 入队]\n  B --> C[EngineCore.step 循环]\n  C --> D[Scheduler.schedule 按预算选请求与分配 token]\n  D --> E[KVCacheManager.allocate_slots 分配逻辑块]\n  E --> F[BlockPool 取物理块并做前缀缓存匹配]\n  D --> G[产出 SchedulerOutput]\n  G --> H[Executor.execute_model 下发到 Worker]\n  H --> I[GPUModelRunner 组装张量与 block table]\n  I --> J[注意力内核按 block table 做 PagedAttention]\n  J --> K[采样新 token 得到 ModelRunnerOutput]\n  K --> L[Scheduler.update_from_output 追加 token 并释放块]\n  L --> M[产出 EngineCoreOutputs 经 detokenizer 返回]\n  L --> C\n  D -.-> N[RequestQueue 管理 waiting 与 running]",
+  "surprises": [
+    "调度器里没有显式的 prefill 阶段与 decode 阶段之分：它只让每个请求的 num_computed_tokens 追赶 num_tokens_with_spec，chunked prefill、前缀缓存、投机解码因此能被同一套逻辑统一处理",
+    "PagedAttention 的关键不在 CUDA 内核本身，而在块表 block table 与块哈希：前缀缓存让相同前缀的请求共享物理块，块一旦写满就按哈希缓存并可被后续请求命中复用",
+    "调度与执行被刻意分离：Scheduler 只产出描述性 SchedulerOutput，真正的模型执行由 Executor 分发给 Worker，这使得单机、多进程、Ray 集群可以复用同一套调度逻辑",
+    "连续批处理不是把请求攒成固定 batch，而是每一步重新组成 running 集合，新请求随时插入、结束请求随时退出，超显存时还会抢占运行中请求的块",
+    "同一份 vllm 目录下存在 v0 与 v1 两代引擎，真正生效的是 v1 目录下的实现，vllm/engine 下多为旧实现，阅读时容易走错目录"
+  ],
+  "confidence": "高"
+}

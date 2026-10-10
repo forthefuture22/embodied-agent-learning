@@ -1,0 +1,214 @@
+{
+  "repo": "ARISE-Initiative/robosuite",
+  "name": "robosuite",
+  "one_liner": "基于MuJoCo的模块化机械臂操作仿真框架",
+  "problem": "为机器人学习提供可复现的标准操作任务、可插拔的机器人模型与控制器，让研究者无需真实硬件就能做强化学习与模仿学习实验。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {
+      "name": "MujocoEnv",
+      "role": "所有环境的基类，负责加载模型、初始化仿真、reset、step 与渲染，并带注册元类",
+      "file": "robosuite/environments/base.py"
+    },
+    {
+      "name": "RobotEnv",
+      "role": "机器人环境基类，管理 robots 列表与控制器配置，把动作分发给各机器人",
+      "file": "robosuite/environments/robot_env.py"
+    },
+    {
+      "name": "ManipulationEnv",
+      "role": "操作任务环境基类，定义机械臂抓取类任务的公共接口与夹爪校验",
+      "file": "robosuite/environments/manipulation/manipulation_env.py"
+    },
+    {
+      "name": "Task",
+      "role": "把 arena、robot、objects 合并成单一 MJCF，是模型层的组合器",
+      "file": "robosuite/models/tasks/task.py"
+    },
+    {
+      "name": "Arena",
+      "role": "工作空间 MJCF 模型基类，如桌面、料箱，定义场景与相机",
+      "file": "robosuite/models/arenas/arena.py"
+    },
+    {
+      "name": "RobotModel",
+      "role": "机器人静态 MJCF 模型基类，通过元类自动注册，子类需实现默认基座、夹爪与控制器配置",
+      "file": "robosuite/models/robots/robot_model.py"
+    },
+    {
+      "name": "Robot",
+      "role": "运行时机器人对象，持有 robot_model、gripper 与 composite_controller，负责加载模型与执行控制",
+      "file": "robosuite/robots/robot.py"
+    },
+    {
+      "name": "控制器工厂",
+      "role": "按名字实例化 OSC、IK、Joint 等部件级控制器，并按 body part 分发",
+      "file": "robosuite/controllers/parts/controller_factory.py"
+    },
+    {
+      "name": "CompositeController",
+      "role": "复合控制器，把手臂、夹爪、躯干、底盘等部位控制器组合起来，含全身控制",
+      "file": "robosuite/controllers/composite/composite_controller.py"
+    },
+    {
+      "name": "MujocoObject",
+      "role": "可被放置与操作的物体基类，提供视觉与接触几何、放置采样接口",
+      "file": "robosuite/models/objects/objects.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "环境层",
+      "responsibility": "环境生命周期、仿真步进、观测与奖励，含注册与工厂 make",
+      "modules": ["robosuite/environments"],
+      "files": ["robosuite/environments/base.py", "robosuite/environments/robot_env.py", "robosuite/environments/manipulation/manipulation_env.py"]
+    },
+    {
+      "name": "任务环境层",
+      "responsibility": "具体任务实现，如 Lift、Stack、Door，定义物体、奖励与成功判定",
+      "modules": ["robosuite/environments/manipulation"],
+      "files": ["robosuite/environments/manipulation/lift.py", "robosuite/environments/manipulation/two_arm_env.py"]
+    },
+    {
+      "name": "模型组合层",
+      "responsibility": "把 arena、robot、objects 合并为一个 MJCF 世界",
+      "modules": ["robosuite/models/tasks"],
+      "files": ["robosuite/models/tasks/task.py", "robosuite/models/tasks/manipulation_task.py"]
+    },
+    {
+      "name": "机器人模型层",
+      "responsibility": "各机器人臂的 MJCF 定义、基座与夹爪装配、注册表",
+      "modules": ["robosuite/models/robots"],
+      "files": ["robosuite/models/robots/robot_model.py", "robosuite/models/robots/manipulators/panda_robot.py", "robosuite/models/robots/manipulators/manipulator_model.py"]
+    },
+    {
+      "name": "场景与物体层",
+      "responsibility": "Arena 工作空间与可操作物体模型",
+      "modules": ["robosuite/models/arenas", "robosuite/models/objects"],
+      "files": ["robosuite/models/arenas/table_arena.py", "robosuite/models/objects/objects.py"]
+    },
+    {
+      "name": "运行时机器人层",
+      "responsibility": "机器人运行时封装、基座类型、控制器加载与观测采集",
+      "modules": ["robosuite/robots"],
+      "files": ["robosuite/robots/robot.py", "robosuite/robots/fixed_base_robot.py"]
+    },
+    {
+      "name": "控制器层",
+      "responsibility": "部件级与复合控制器，OSC、IK、Joint 及全身控制",
+      "modules": ["robosuite/controllers"],
+      "files": ["robosuite/controllers/parts/controller_factory.py", "robosuite/controllers/parts/arm/osc.py", "robosuite/controllers/composite/composite_controller.py"]
+    },
+    {
+      "name": "工具与脚本层",
+      "responsibility": "MJCF 工具、放置采样、观测定义、演示采集脚本与示例",
+      "modules": ["robosuite/utils", "robosuite/scripts", "robosuite/demos"],
+      "files": ["robosuite/utils/mjcf_utils.py", "robosuite/utils/placement_samplers.py", "robosuite/scripts/collect_human_demonstrations.py"]
+    }
+  ],
+  "data_flow": [
+    "第1步：robosuite.make 用环境名在 REGISTERED_ENVS 注册表里查到对应环境类并实例化",
+    "第2步：Lift._load_model 创建 TableArena 与 BoxObject，并调用父类加载机器人模型",
+    "第3步：RobotEnv._load_robots 通过 ROBOT_CLASS_MAPPING 实例化 Robot 并 load_model",
+    "第4步：Robot.load_model 用 create_robot 创建 RobotModel，装配基座与夹爪",
+    "第5步：ManipulationTask 调用 merge_arena、merge_robot、merge_objects 把三者合成单一 MJCF",
+    "第6步：_initialize_sim 用合并后的 XML 创建 MuJoCo 仿真对象 sim",
+    "第7步：Robot.reset 调用 _load_controller，controller_factory 按配置名创建控制器",
+    "第8步：观测通过 observables 的 sensor 装饰器按需计算并缓存",
+    "第9步：step 调用 _pre_action，把动作按维度切分给各机器人的 composite_controller",
+    "第10步：控制器在每个控制周期内多次写入 sim 的 ctrl 并前向仿真",
+    "第11步：计算 reward 与 _check_success，返回观测、奖励、done 与 info"
+  ],
+  "entry_points": [
+    {
+      "path": "robosuite/__init__.py",
+      "what": "顶层 API，导出 make 与所有环境、控制器、机器人清单"
+    },
+    {
+      "path": "robosuite/environments/base.py",
+      "what": "make 函数与 MujocoEnv 基类，环境注册与生命周期核心"
+    },
+    {
+      "path": "robosuite/demos/demo_control.py",
+      "what": "用 OSC 控制器控制 Panda 完成任务的最小可运行示例"
+    },
+    {
+      "path": "robosuite/demos/demo_random_action.py",
+      "what": "随机动作驱动环境的示例，理解 step 循环最简单"
+    },
+    {
+      "path": "robosuite/scripts/collect_human_demonstrations.py",
+      "what": "采集人类演示数据的脚本入口"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "README.md",
+      "why": "先了解模块化设计理念与 v1.5 的机器人、控制器扩展"
+    },
+    {
+      "path": "robosuite/environments/manipulation/lift.py",
+      "why": "最简单的完整任务，一次看清 arena、物体、任务、奖励与成功判定如何组装"
+    },
+    {
+      "path": "robosuite/environments/manipulation/manipulation_env.py",
+      "why": "操作环境的公共接口与夹爪相关工具"
+    },
+    {
+      "path": "robosuite/environments/robot_env.py",
+      "why": "机器人列表管理与动作分发，是 Env 与 Robot 的接缝"
+    },
+    {
+      "path": "robosuite/models/tasks/task.py",
+      "why": "四者组合的关键，看清 MJCF 如何合并"
+    },
+    {
+      "path": "robosuite/models/robots/robot_model.py",
+      "why": "机器人模型基类与注册机制，加新机器人必读"
+    },
+    {
+      "path": "robosuite/robots/robot.py",
+      "why": "运行时机器人如何加载模型与控制器"
+    },
+    {
+      "path": "robosuite/controllers/parts/controller_factory.py",
+      "why": "控制器插拔机制的核心，理解 OSC、IK、Joint 如何被创建"
+    },
+    {
+      "path": "robosuite/models/arenas/table_arena.py",
+      "why": "桌面场景的定义方式，加新场景的模板"
+    },
+    {
+      "path": "robosuite/utils/observables.py",
+      "why": "理解观测如何通过 sensor 装饰器声明与缓存"
+    }
+  ],
+  "extension_points": [
+    "想加新机器人：在 robosuite/models/robots/manipulators 下新建子类继承 ManipulatorModel，实现 default_base、default_gripper、default_controller_config、init_qpos、base_xpos_offset、top_offset、_horizontal_radius，并在该目录 __init__.py 导出，元类会自动注册",
+    "想给新机器人配默认控制器：在 robosuite/controllers/config/robots 下加对应的默认控制器配置文件",
+    "想换控制器：实例化环境时传 controller_configs，或在机器人配置里改 composite_controller_config，工厂支持 OSC_POSE、OSC_POSITION、IK_POSE、JOINT_VELOCITY、JOINT_POSITION、JOINT_TORQUE",
+    "想加新任务：在 robosuite/environments/manipulation 下新建子类继承 ManipulationEnv，实现 _load_model、reward、_check_success",
+    "想加新场景：在 robosuite/models/arenas 下新建子类继承 Arena",
+    "想加新物体：在 robosuite/models/objects 下新建 MujocoObject 子类，并用 placement_samplers 放置",
+    "想换复合控制器：在 robosuite/controllers/composite 下注册新的 CompositeController 子类"
+  ],
+  "learning_path": [
+    "第1步读 README.md，理解模块化四要素与 v1.5 的扩展方向",
+    "第2步读 robosuite/environments/manipulation/lift.py，看一个完整任务怎么搭起来",
+    "第3步读 robosuite/environments/manipulation/manipulation_env.py 与 robot_env.py，理解环境继承链与动作分发",
+    "第4步读 robosuite/models/tasks/task.py，理解 arena、robot、object 如何合并成 MJCF",
+    "第5步读 robosuite/models/robots/robot_model.py 与 manipulators/panda_robot.py，理解机器人模型与注册",
+    "第6步读 robosuite/robots/robot.py，理解运行时机器人与控制器加载",
+    "第7步读 robosuite/controllers/parts/controller_factory.py 与 composite/composite_controller.py，理解控制器插拔",
+    "第8步读 robosuite/demos/demo_control.py 跑一遍，把抽象和运行打通"
+  ],
+  "diagram_mermaid": "graph TD\n  A[robosuite.make 环境名] --> B[EnvMeta 注册表查找类]\n  B --> C[Lift 环境实例化]\n  C --> D[RobotEnv 加载机器人]\n  C --> E[创建 Arena 与物体]\n  D --> F[RobotModel 静态 MJCF]\n  E --> G[ManipulationTask 合并三要素]\n  F --> G\n  G --> H[生成单一 MJCF XML]\n  H --> I[MuJoCo 仿真 sim]\n  I --> J[Robot 加载控制器]\n  J --> K[CompositeController 组合各部位]\n  K --> L[step 分发动作并仿真]\n  L --> M[计算 reward 与 success]",
+  "surprises": [
+    "环境本身不直接持有 arena、robot、object，而是必须先经 Task 合并成单一 MJCF 才能创建仿真，模型组合与仿真初始化是分离的两步",
+    "机器人有两层抽象：RobotModel 是静态 MJCF 模型，Robot 是运行时对象并持有控制器与夹爪，改机器人形态和改控制逻辑要分别去两处",
+    "注册是自动的，EnvMeta 与 RobotModelMeta 元类会把任何新子类自动登记，只要类名不在排除列表里",
+    "v1.5 引入 CompositeController 后控制器变成部件级的，手臂、夹爪、躯干、底盘各自独立配置再组合，支持人形与移动操作",
+    "观测不是硬编码在环境里，而是通过 observables 的 sensor 装饰器声明，按需计算并缓存，可自定义任意观测键"
+  ],
+  "confidence": "高"
+}

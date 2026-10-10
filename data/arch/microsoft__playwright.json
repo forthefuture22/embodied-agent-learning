@@ -1,0 +1,90 @@
+{
+  "repo": "microsoft/playwright",
+  "name": "Playwright",
+  "one_liner": "用一套 API 驱动 Chromium、Firefox、WebKit 的浏览器自动化框架",
+  "problem": "跨浏览器自动化长期被各家私有协议割裂：CDP 只覆盖 Chromium，Firefox 与 WebKit 各有实现。Playwright 用一层自有 RPC 协议把三个引擎统一成同一套对象模型，并让客户端与服务端可跨进程、跨语言复用。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Connection", "role": "客户端 RPC 连接：把方法调用与事件封装成带 guid 的协议消息，并维护 callId 到 Promise 的映射", "file": "packages/playwright-core/src/client/connection.ts"},
+    {"name": "ChannelOwner", "role": "所有客户端对象 Browser/Page/Locator 的基类，持有由协议自动生成的 _channel 代理，方法调用即发 RPC", "file": "packages/playwright-core/src/client/channelOwner.ts"},
+    {"name": "Dispatcher", "role": "服务端对象基类，接收 RPC、调用真实实现对象 SdkObject 并回传结果，是协议的服务端镜像", "file": "packages/playwright-core/src/server/dispatchers/dispatcher.ts"},
+    {"name": "BrowserType", "role": "服务端浏览器引擎抽象基类：校验启动参数、定位可执行文件、拉起进程并建立协议传输", "file": "packages/playwright-core/src/server/browserType.ts"},
+    {"name": "CRConnection", "role": "Chromium 后端：与浏览器交换 CDP 消息，按 sessionId 分发事件与命令", "file": "packages/playwright-core/src/server/chromium/crConnection.ts"},
+    {"name": "Playwright", "role": "服务端根对象，在构造时实例化 chromium/firefox/webkit/electron/android 五个后端", "file": "packages/playwright-core/src/server/playwright.ts"},
+    {"name": "registry", "role": "浏览器可执行文件与版本的注册表，负责解析路径、下载与依赖校验", "file": "packages/playwright-core/src/server/registry/index.ts"},
+    {"name": "protocol validator", "role": "由 spec/*.yml 生成的运行时校验器，保证跨语言实现的消息结构与类型一致", "file": "packages/protocol/src/validator.ts"},
+    {"name": "Browser", "role": "服务端浏览器实例，管理 contexts、进程生命周期与浏览器级事件", "file": "packages/playwright-core/src/server/browser.ts"},
+    {"name": "BrowserContext", "role": "隔离的浏览器上下文，等价于独立 profile，承载权限、cookie、路由与页面集合", "file": "packages/playwright-core/src/server/browserContext.ts"},
+    {"name": "Page", "role": "页面对象，聚合 frame、网络、输入、截图与 tracing 等能力", "file": "packages/playwright-core/src/server/page.ts"},
+    {"name": "Frame", "role": "框架/页面内导航与 DOM 操作的核心，locator 解析与自动等待都在这一层落地", "file": "packages/playwright-core/src/server/frames.ts"}
+  ],
+  "layers": [
+    {"name": "协议定义层", "responsibility": "以 YAML 声明通道、方法与类型，作为客户端、服务端与各语言绑定唯一的事实来源", "modules": ["packages/protocol/spec", "packages/protocol/src"], "files": ["packages/protocol/spec/api.yml", "packages/protocol/spec/browserType.yml", "packages/protocol/src/validator.ts", "packages/protocol/src/serializers.ts"]},
+    {"name": "客户端层", "responsibility": "面向用户的 API 与跨进程 RPC 客户端：把方法调用转成协议消息、把事件订阅转成 updateSubscription", "modules": ["packages/playwright-core/src/client"], "files": ["packages/playwright-core/src/client/connection.ts", "packages/playwright-core/src/client/channelOwner.ts", "packages/playwright-core/src/client/browserType.ts", "packages/playwright-core/src/client/page.ts", "packages/playwright-core/src/client/locator.ts"]},
+    {"name": "服务端分发层", "responsibility": "Dispatcher 层把协议调用路由到真实实现，并管理对象生命周期与垃圾回收", "modules": ["packages/playwright-core/src/server/dispatchers"], "files": ["packages/playwright-core/src/server/dispatchers/dispatcher.ts", "packages/playwright-core/src/server/dispatchers/playwrightDispatcher.ts", "packages/playwright-core/src/server/dispatchers/browserTypeDispatcher.ts"]},
+    {"name": "浏览器后端层", "responsibility": "每个引擎一份实现，把统一对象模型翻译成该引擎的私有协议", "modules": ["packages/playwright-core/src/server/chromium", "packages/playwright-core/src/server/firefox", "packages/playwright-core/src/server/webkit", "packages/playwright-core/src/server/bidi"], "files": ["packages/playwright-core/src/server/chromium/chromium.ts", "packages/playwright-core/src/server/firefox/firefox.ts", "packages/playwright-core/src/server/webkit/webkit.ts", "packages/playwright-core/src/server/bidi/bidiChromium.ts"]},
+    {"name": "传输与进程层", "responsibility": "抽象跨进程通信与浏览器进程启动：管道、WebSocket 或 CDP 复用", "modules": ["packages/playwright-core/src/server"], "files": ["packages/playwright-core/src/server/transport.ts", "packages/playwright-core/src/server/pipeTransport.ts", "packages/playwright-core/src/server/registry/index.ts"]},
+    {"name": "进程编排入口层", "responsibility": "决定客户端与服务端同进程还是分进程运行，并提供 CLI/MCP 等外部入口", "modules": ["packages/playwright-core/src/entry"], "files": ["packages/playwright-core/src/inprocess.ts", "packages/playwright-core/src/outofprocess.ts", "packages/playwright-core/src/entry/mcp.ts", "packages/playwright-core/src/cli/program.ts"]},
+    {"name": "工具链层", "responsibility": "从协议与文档生成 channel 类型、校验器与各语言绑定，并强制包间依赖边界", "modules": ["utils", "packages/playwright-core/src/tools"], "files": ["utils/generate_channels.js", "packages/playwright-core/src/serverRegistry.ts", "packages/playwright-core/src/server/index.ts"]}
+  ],
+  "data_flow": [
+    "第1步：用户调用 chromium.launch()，客户端 BrowserType 通过 _channel 发起 launch 调用",
+    "第2步：Connection 把调用包装为带 guid 与 callId 的协议消息，并登记一个待决 Promise",
+    "第3步：消息经 PipeTransport 或 WebSocketTransport 序列化后跨进程传输到服务端",
+    "第4步：服务端 DispatcherConnection 收到消息，按 guid 找到 BrowserTypeDispatcher 并校验参数",
+    "第5步：BrowserTypeDispatcher 调用服务端 BrowserType.launch，从 registry 解析浏览器可执行文件路径",
+    "第6步：launchProcess 拉起浏览器进程，并按引擎建立对应传输：Chromium 走 CDP，Firefox 走 Juggler，WebKit 走自有协议",
+    "第7步：服务端构造 Browser 对象与 BrowserDispatcher，向客户端回传 create 消息与 initializer",
+    "第8步：客户端根据 create 消息构造 Browser 客户端对象，resolve 第1步的 Promise",
+    "第9步：后续 page.goto、locator.click 等操作重复第1到4步的往返，只是 guid 换成对应的 Page/Frame 对象",
+    "第10步：客户端 on 订阅事件时，ChannelOwner 自动发送 updateSubscription 让服务端开始推送该事件",
+    "第11步：服务端事件到达后由 DispatcherConnection 转发到对应客户端对象的 EventEmitter，触发用户回调",
+    "第12步：对象析构时 Dispatcher 的 GC 桶机制会回收长时间未使用的远端对象"
+  ],
+  "entry_points": [
+    {"path": "packages/playwright-core/src/cli/program.ts", "what": "playwright CLI 主入口，解析 run-driver、install、codegen 等子命令"},
+    {"path": "packages/playwright-core/src/inprocess.ts", "what": "同进程模式：客户端与服务端用两个 Connection 直接互连，无序列化开销"},
+    {"path": "packages/playwright-core/src/outofprocess.ts", "what": "跨进程模式：fork 一个 driver 子进程，用 PipeTransport 连接客户端"},
+    {"path": "packages/playwright-core/src/entry/mcp.ts", "what": "Playwright MCP server 入口，把浏览器能力暴露给 AI Agent"},
+    {"path": "packages/playwright-core/src/server/playwright.ts", "what": "服务端根对象构造处，看五个浏览器后端如何被实例化注册"},
+    {"path": "packages/playwright-core/src/serverRegistry.ts", "what": "跨会话共享的浏览器服务注册表，描述如何按 guid 发现并连接已运行的浏览器"}
+  ],
+  "key_files": [
+    {"path": "AGENTS.md", "why": "一页讲清 monorepo 分包、DEPS 依赖边界与测试布局，先读它建立全局"},
+    {"path": "packages/protocol/spec/api.yml", "why": "协议总纲，看通道、方法与类型如何声明，理解客户端与服务端的唯一契约"},
+    {"path": "packages/playwright-core/src/client/connection.ts", "why": "客户端 RPC 心脏：callId、guid、事件分发与 initialize 全在这"},
+    {"path": "packages/playwright-core/src/client/channelOwner.ts", "why": "理解 _channel 代理与事件订阅映射，是所有客户端对象的基类"},
+    {"path": "packages/playwright-core/src/server/dispatchers/dispatcher.ts", "why": "服务端镜像：RPC 路由、对象创建与 GC 桶，跨语言复用的关键"},
+    {"path": "packages/playwright-core/src/server/browserType.ts", "why": "启动链主干：参数校验、进程启动、传输建立与重试都在这里"},
+    {"path": "packages/playwright-core/src/server/chromium/crConnection.ts", "why": "看 CDP 会话如何被封装成通用 ConnectionTransport，理解协议层"},
+    {"path": "packages/playwright-core/src/server/playwright.ts", "why": "后端注册清单，新增浏览器后端时必改的入口"},
+    {"path": "packages/playwright-core/src/inprocess.ts", "why": "最短的一条端到端调用链，几十行看懂 client-server 如何互连"},
+    {"path": "utils/generate_channels.js", "why": "协议到 TypeScript channel 的代码生成器，理解生成物从哪来"}
+  ],
+  "extension_points": [
+    "想新增一个浏览器后端：在 packages/protocol/spec 增加通道声明，实现 BrowserType 子类参考 packages/playwright-core/src/server/firefox/firefox.ts，并在 packages/playwright-core/src/server/playwright.ts 注册",
+    "想新增浏览器可执行文件来源或下载逻辑：改 packages/playwright-core/src/server/registry/index.ts",
+    "想复用现有协议做新语言绑定：以 packages/protocol/spec 为契约，参照客户端 connection.ts 与 channelOwner.ts 的模式实现 Connection 与对象工厂",
+    "想改启动参数体系：改 packages/playwright-core/src/server/browserType.ts 的 _validateLaunchOptions",
+    "想新增网络拦截或 mock 能力：改 packages/playwright-core/src/server/network.ts 与各后端的 network manager",
+    "想接入新的跨进程传输：实现 ConnectionTransport 接口，参考 packages/playwright-core/src/server/transport.ts"
+  ],
+  "learning_path": [
+    "第1步：读 AGENTS.md 与 packages/protocol/spec/api.yml，建立协议优先的心智模型",
+    "第2步：读 packages/playwright-core/src/inprocess.ts，用最短路径看清客户端与服务端如何互连",
+    "第3步：读 packages/playwright-core/src/client/connection.ts 与 channelOwner.ts，理解 RPC 与代理对象",
+    "第4步：读 packages/playwright-core/src/server/dispatchers/dispatcher.ts 与 browserTypeDispatcher.ts，理解服务端镜像",
+    "第5步：顺 packages/playwright-core/src/server/browserType.ts 的 launch 链读到 chromium/chromium.ts，看进程如何被拉起",
+    "第6步：读 packages/playwright-core/src/server/chromium/crConnection.ts，理解 CDP 如何被抽象成通用传输",
+    "第7步：读 packages/playwright-core/src/outofprocess.ts，对比同进程与跨进程两种编排"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户代码 调用 chromium.launch] --> B[客户端 BrowserType 经 channel 发起 RPC]\n  B --> C[Connection 包装为带 guid 的协议消息]\n  C --> D[PipeTransport 或 WebSocketTransport 跨进程传输]\n  D --> E[服务端 DispatcherConnection 按 guid 路由]\n  E --> F[BrowserTypeDispatcher 调用服务端实现]\n  F --> G[registry 解析浏览器可执行文件]\n  G --> H[launchProcess 启动浏览器进程]\n  H --> I[建立协议连接 CDP 或 Juggler 或 WebKit]\n  I --> J[服务端创建 Browser 与 BrowserDispatcher]\n  J --> K[回传 create 消息 客户端构造 Browser 对象]\n  K --> L[后续 Page 与 Locator 操作重复同样的往返]",
+  "surprises": [
+    "客户端与服务端完全不能互相 import，DEPS.list 强制隔离，二者只能通过 protocol 通信；但同一套代码既能同进程运行也能跨进程运行，只是换了个 Connection 对端",
+    "Chromium 后端同时支持 CDP 与 WebDriver BiDi 两条路径，用 channel 前缀 bidi- 切换，见 chromium.ts 里把调用转发给 bidiChromium",
+    "协议不是运行时解析的 JSON schema，而是先由 generate_channels.js 生成 TypeScript channel 类型，再配 validator 做运行时校验，改协议必须重跑 codegen",
+    "事件订阅是按需开启的：客户端首次 on 某事件时才会向服务端发 updateSubscription，避免无用事件跨进程传输",
+    "跨进程时用的是 driver 子进程加管道而不是 HTTP，且子进程被 unref 和 detached，父进程退出不会自动带走它"
+  ],
+  "confidence": "高"
+}

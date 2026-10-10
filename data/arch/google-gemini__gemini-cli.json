@@ -1,0 +1,89 @@
+{
+  "repo": "google-gemini/gemini-cli",
+  "name": "Gemini CLI",
+  "one_liner": "Google 开源的终端 AI Agent，内置工具与 MCP 扩展",
+  "problem": "把 Gemini 模型能力直接带进终端：通过一组内置工具读写文件、执行命令、联网搜索，用 MCP 协议接入任意外部能力，并在 1M 上下文窗口内自主多轮完成编码与运维任务。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Config", "role": "全局配置与依赖装配中心：持有模型、工具注册表、MCP 管理器、审批策略与上下文配置，是核心运行时的单例容器", "file": "packages/core/src/config/config.ts"},
+    {"name": "ToolRegistry", "role": "工具注册与调度表：登记内置、发现式与 MCP 工具，按排除规则计算激活工具并导出给模型的 FunctionDeclaration", "file": "packages/core/src/tools/tool-registry.ts"},
+    {"name": "BaseDeclarativeTool", "role": "声明式工具基类：把参数校验与执行分离，build 先校验再创建 ToolInvocation，是所有内置工具的父类", "file": "packages/core/src/tools/tools.ts"},
+    {"name": "Scheduler", "role": "工具执行的编排器：事件驱动地串起校验、策略检查、用户确认、并行执行与状态更新", "file": "packages/core/src/scheduler/scheduler.ts"},
+    {"name": "GeminiClient", "role": "Agent 主循环：管理会话、压缩上下文、选择模型、流式对话并在有工具调用时循环推进直到收敛", "file": "packages/core/src/core/client.ts"},
+    {"name": "Turn", "role": "单轮流式响应：把模型事件流解析为文本、函数调用与用量统计等结构化事件", "file": "packages/core/src/core/turn.ts"},
+    {"name": "GeminiChat", "role": "对话历史与 API 调用的封装：维护 Content 历史并负责实际的 generateContentStream 调用", "file": "packages/core/src/core/geminiChat.ts"},
+    {"name": "ContextManager", "role": "上下文管理管线：把对话历史建模成图节点，经处理器做蒸馏、掩码与裁剪，在 token 预算内渲染出发给模型的 apiHistory", "file": "packages/core/src/context/contextManager.ts"},
+    {"name": "ChatCompressionService", "role": "历史压缩：当历史超过阈值时用模型把旧对话总结成摘要，保护最近若干轮工具输出不被压缩", "file": "packages/core/src/context/chatCompressionService.ts"},
+    {"name": "McpClientManager", "role": "MCP 生命周期管理：启动各 MCP 服务器子进程、发现其工具与资源并注册进工具注册表", "file": "packages/core/src/tools/mcp-client-manager.ts"},
+    {"name": "DiscoveredMCPTool", "role": "MCP 工具的声明式封装：把远端 MCP 工具包装成本地工具，名字用 服务器__工具 前缀限定", "file": "packages/core/src/tools/mcp-tool.ts"},
+    {"name": "App", "role": "终端 UI 根组件：用 React 与 Ink 渲染交互界面，订阅 Agent 事件流并处理工具确认", "file": "packages/cli/src/ui/App.tsx"}
+  ],
+  "layers": [
+    {"name": "CLI 启动层", "responsibility": "命令行入口、进程重启动优化、参数解析与主函数引导", "modules": ["packages/cli"], "files": ["packages/cli/index.ts", "packages/cli/src/gemini.tsx"]},
+    {"name": "交互 UI 层", "responsibility": "Ink 终端界面、事件流订阅、斜杠命令、工具确认与主题渲染", "modules": ["packages/cli/src/ui"], "files": ["packages/cli/src/ui/App.tsx", "packages/cli/src/interactiveCli.tsx", "packages/cli/src/ui/hooks/useAgentStream.ts"]},
+    {"name": "Agent 核心层", "responsibility": "会话主循环、模型路由、流式对话与压缩触发", "modules": ["packages/core/src/core"], "files": ["packages/core/src/core/client.ts", "packages/core/src/core/turn.ts", "packages/core/src/core/geminiChat.ts", "packages/core/src/core/prompts.ts"]},
+    {"name": "上下文管理层", "responsibility": "历史图建模、上下文蒸馏与掩码、token 预算与压缩", "modules": ["packages/core/src/context"], "files": ["packages/core/src/context/contextManager.ts", "packages/core/src/context/chatCompressionService.ts", "packages/core/src/context/toolOutputMaskingService.ts"]},
+    {"name": "工具层", "responsibility": "内置工具实现、工具注册表、工具基类与 diff 应用", "modules": ["packages/core/src/tools"], "files": ["packages/core/src/tools/tool-registry.ts", "packages/core/src/tools/tools.ts", "packages/core/src/tools/edit.ts", "packages/core/src/tools/shell.ts", "packages/core/src/tools/read-file.ts"]},
+    {"name": "工具调度层", "responsibility": "策略与审批检查、用户确认、并行执行与状态机", "modules": ["packages/core/src/scheduler"], "files": ["packages/core/src/scheduler/scheduler.ts", "packages/core/src/scheduler/tool-executor.ts", "packages/core/src/scheduler/policy.ts"]},
+    {"name": "MCP 集成层", "responsibility": "MCP 服务器连接、工具与资源发现、OAuth 认证", "modules": ["packages/core/src/mcp", "packages/core/src/tools"], "files": ["packages/core/src/tools/mcp-client-manager.ts", "packages/core/src/tools/mcp-client.ts", "packages/core/src/tools/mcp-tool.ts", "packages/core/src/mcp/oauth-provider.ts"]},
+    {"name": "配置与模型层", "responsibility": "全局配置、模型常量与选择、默认模型参数", "modules": ["packages/core/src/config"], "files": ["packages/core/src/config/config.ts", "packages/core/src/config/models.ts", "packages/core/src/config/defaultModelConfigs.ts"]}
+  ],
+  "data_flow": [
+    "第1步：packages/cli/index.ts 启动轻量父进程并重启动出子进程，动态导入 gemini.tsx 的 main",
+    "第2步：main 解析参数、构造 Config，Config 创建 ToolRegistry 并触发 McpClientManager 发现 MCP 工具",
+    "第3步：UI 收集用户输入，调用 GeminiClient.sendMessageStream 进入 Agent 主循环",
+    "第4步：processTurn 先做上下文管理或压缩，检查 token 是否溢出并决定本轮使用的模型",
+    "第5步：Turn.run 经 GeminiChat 调用 generateContentStream，流式返回文本与函数调用事件",
+    "第6步：若响应含待执行工具调用，交给 Scheduler.schedule 统一编排",
+    "第7步：Scheduler 对每个工具调用做参数校验、策略检查与用户确认，再并行或串行执行",
+    "第8步：工具执行结果被包装成 functionResponse 追加回对话历史",
+    "第9步：带着工具结果再次调用模型，形成 思考-调用工具-观察结果 的循环，直到模型不再请求工具",
+    "第10步：回合结束触发 AfterAgent 钩子与 nextSpeaker 检查，事件流回传 UI 渲染"
+  ],
+  "entry_points": [
+    {"path": "packages/cli/index.ts", "what": "npm bin 入口，负责内存参数与子进程重启后引导 main"},
+    {"path": "packages/cli/src/gemini.tsx", "what": "main 函数：装配 Config、认证与 UI 并启动会话"},
+    {"path": "packages/core/src/core/client.ts", "what": "GeminiClient.sendMessageStream 与 processTurn：Agent 主循环"},
+    {"path": "packages/core/src/scheduler/scheduler.ts", "what": "Scheduler.schedule：工具调用的统一调度入口"},
+    {"path": "packages/core/src/config/config.ts", "what": "createToolRegistry：内置工具的注册清单"},
+    {"path": "gemini", "what": "安装后的 CLI 命令，直接在终端启动 Agent"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立认知：免费额度、1M 上下文、内置工具与 MCP 四大卖点"},
+    {"path": "packages/core/src/config/config.ts", "why": "理解全局装配与 createToolRegistry 如何登记所有内置工具"},
+    {"path": "packages/core/src/core/client.ts", "why": "最核心：Agent 主循环、上下文压缩与模型路由都在这里"},
+    {"path": "packages/core/src/tools/tool-registry.ts", "why": "理解工具如何注册、过滤与导出为模型可调用的 schema"},
+    {"path": "packages/core/src/tools/tools.ts", "why": "理解声明式工具基类与校验执行分离的设计"},
+    {"path": "packages/core/src/scheduler/scheduler.ts", "why": "理解工具调用如何被编排、确认与执行"},
+    {"path": "packages/core/src/context/chatCompressionService.ts", "why": "理解上下文压缩策略与哪些工具输出被保护"},
+    {"path": "packages/core/src/tools/mcp-client-manager.ts", "why": "理解 MCP 服务器如何被发现并接入工具表"},
+    {"path": "packages/cli/src/ui/App.tsx", "why": "理解 UI 与核心逻辑如何通过事件流分层"}
+  ],
+  "extension_points": [
+    "新增内置工具：在 packages/core/src/tools 下继承 BaseDeclarativeTool 实现 createInvocation，再在 packages/core/src/config/config.ts 的 createToolRegistry 里 registerTool",
+    "接入 MCP 服务器：在用户或项目 settings.json 里配置 mcpServers，McpClientManager 会自动发现其工具并注册",
+    "更换或新增模型：在 packages/core/src/config/models.ts 与 defaultModelConfigs.ts 添加模型常量与默认参数",
+    "自定义上下文处理：在 packages/core/src/context/processors 下新增处理器并接入 contextManager 的管线",
+    "新增斜杠命令：在 packages/cli/src/ui/commands 下添加命令实现并注册",
+    "调整工具审批策略：修改 packages/core/src/scheduler/policy.ts 与 config 的审批模式"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 packages/cli/index.ts，明确终端 Agent 的定位与进程启动方式",
+    "第2步：读 packages/core/src/config/config.ts，看全局装配与工具注册清单",
+    "第3步：读 packages/core/src/core/client.ts，吃透 sendMessageStream 与 processTurn 的主循环",
+    "第4步：读 packages/core/src/tools/tools.ts 与 tool-registry.ts，理解工具抽象与注册机制",
+    "第5步：读 packages/core/src/scheduler/scheduler.ts，理解工具调用如何被校验、确认与执行",
+    "第6步：读 packages/core/src/context/contextManager.ts 与 chatCompressionService.ts，理解上下文压缩",
+    "第7步：读 packages/core/src/tools/mcp-client-manager.ts 与 mcp-tool.ts，理解 MCP 集成",
+    "第8步：读 packages/cli/src/ui/App.tsx，理解 UI 如何订阅核心事件流"
+  ],
+  "diagram_mermaid": "graph TD\n  CLI[CLI 启动 index.ts] --> MAIN[gemini.tsx main]\n  MAIN --> CFG[Config 装配]\n  CFG --> REG[ToolRegistry 注册工具]\n  CFG --> MCP[McpClientManager 发现 MCP 工具]\n  MCP --> REG\n  MAIN --> GC[GeminiClient 主循环]\n  GC --> CTX[上下文管理与压缩]\n  CTX --> CHAT[GeminiChat 调用模型]\n  CHAT --> TURN[Turn 解析事件流]\n  TURN -->|有工具调用| SCH[Scheduler 调度]\n  SCH --> CONF[策略检查与用户确认]\n  CONF --> EXEC[执行工具]\n  EXEC --> RESP[functionResponse 回灌历史]\n  RESP --> CHAT\n  TURN -->|无工具调用| UI[事件流渲染到 UI]\n  SCH --> UI",
+  "surprises": [
+    "CLI 入口 index.ts 故意先跑一个轻量父进程再 spawn 子进程，只为省下约 1.5 秒的启动时间并支持重启",
+    "工具不是简单地被调用，而是经过一个事件驱动的 Scheduler，内含策略引擎、确认总线与并行执行，工具执行的编排复杂度接近一个工作流引擎",
+    "上下文压缩不是一刀切，最近几轮工具输出和检索类工具的输出会被豁免折叠，避免丢失关键推理依据",
+    "同一个 Agent 循环既支持旧版 GeminiChat 直连，也支持新的 ContextManager 图管线，通过 config 开关切换两套上下文实现",
+    "工具注册表会保留被排除的工具以便会话中途重新启用，且内置工具的名字与类名都要参与排除匹配"
+  ],
+  "confidence": "高"
+}

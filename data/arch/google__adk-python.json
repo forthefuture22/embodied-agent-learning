@@ -1,0 +1,90 @@
+{
+  "repo": "google/adk-python",
+  "name": "Google ADK",
+  "one_liner": "Google 官方代码优先的 AI Agent 开发框架",
+  "problem": "让开发者用 Python 代码定义 Agent、工具与图化工作流，统一模型接入、会话状态与部署，免去从零搭建多智能体编排与运行时。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "BaseNode", "role": "工作流图节点基类，定义 name、输入输出 schema、重试与超时", "file": "src/google/adk/workflow/_base_node.py"},
+    {"name": "BaseAgent", "role": "所有 Agent 的抽象基类，本身继承 BaseNode，实现 run_async 模板与状态/回调", "file": "src/google/adk/agents/base_agent.py"},
+    {"name": "LlmAgent", "role": "LLM 驱动智能体，聚合 instruction、tools、sub_agents、planners 与各类回调", "file": "src/google/adk/agents/llm_agent.py"},
+    {"name": "Workflow", "role": "基于图的编排引擎，按 edges 调度节点并支持并行扇出、循环与恢复", "file": "src/google/adk/workflow/_workflow.py"},
+    {"name": "Runner", "role": "运行时执行器，串联 Session、Event、Artifact、Memory 服务并流式产出事件", "file": "src/google/adk/runners.py"},
+    {"name": "Session", "role": "会话实体，保存 state 与有序 event 历史，由 SessionService 持久化", "file": "src/google/adk/sessions/session.py"},
+    {"name": "Event", "role": "事件流的基本单位，承载模型/工具/用户的 content 与 actions", "file": "src/google/adk/events/event.py"},
+    {"name": "InvocationContext", "role": "单次调用上下文，携带 session、agent、用户输入与运行配置", "file": "src/google/adk/agents/invocation_context.py"},
+    {"name": "BaseTool", "role": "工具抽象基类，统一 run_async 与声明生成；FunctionTool 包装普通函数", "file": "src/google/adk/tools/base_tool.py"},
+    {"name": "BaseLlm", "role": "模型抽象基类，屏蔽 Gemini/Anthropic/LiteLLM 等差异", "file": "src/google/adk/models/base_llm.py"},
+    {"name": "BasePlugin", "role": "插件钩子基类，可在模型/工具/Agent 前后插入横切逻辑", "file": "src/google/adk/plugins/base_plugin.py"},
+    {"name": "to_a2a", "role": "把 Agent 或 Workflow 暴露成 A2A 协议服务的转换入口", "file": "src/google/adk/a2a/utils/agent_to_a2a.py"}
+  ],
+  "layers": [
+    {"name": "抽象基座层", "responsibility": "定义图节点与 Agent 的统一基类、状态与回调协议", "modules": ["src/google/adk/workflow", "src/google/adk/agents"], "files": ["src/google/adk/workflow/_base_node.py", "src/google/adk/agents/base_agent.py"]},
+    {"name": "智能体层", "responsibility": "提供 LLM Agent 及顺序/并行/循环等组合型 Agent", "modules": ["src/google/adk/agents"], "files": ["src/google/adk/agents/llm_agent.py", "src/google/adk/agents/sequential_agent.py", "src/google/adk/agents/parallel_agent.py", "src/google/adk/agents/loop_agent.py"]},
+    {"name": "编排执行层", "responsibility": "图编译与调度、节点触发、动态节点与中断恢复", "modules": ["src/google/adk/workflow", "src/google/adk/flows"], "files": ["src/google/adk/workflow/_workflow.py", "src/google/adk/workflow/_graph.py", "src/google/adk/flows/llm_flows/base_llm_flow.py"]},
+    {"name": "运行时层", "responsibility": "Runner 驱动单次调用，管理会话、事件流与持久化服务", "modules": ["src/google/adk/sessions", "src/google/adk/events"], "files": ["src/google/adk/runners.py", "src/google/adk/sessions/session.py", "src/google/adk/events/event.py"]},
+    {"name": "模型与规划层", "responsibility": "模型接入注册表与规划器（如 PlanReAct）", "modules": ["src/google/adk/models", "src/google/adk/planners"], "files": ["src/google/adk/models/base_llm.py", "src/google/adk/models/registry.py", "src/google/adk/planners/plan_re_act_planner.py"]},
+    {"name": "工具层", "responsibility": "内置工具、函数工具、MCP/OpenAPI 工具与代码执行器", "modules": ["src/google/adk/tools", "src/google/adk/code_executors"], "files": ["src/google/adk/tools/base_tool.py", "src/google/adk/tools/function_tool.py", "src/google/adk/tools/agent_tool.py"]},
+    {"name": "协议与集成层", "responsibility": "A2A 协议互操作及第三方生态适配", "modules": ["src/google/adk/a2a", "src/google/adk/integrations"], "files": ["src/google/adk/a2a/utils/agent_to_a2a.py", "src/google/adk/a2a/executor/a2a_agent_executor.py"]},
+    {"name": "接口与部署层", "responsibility": "CLI、Web 开发 UI、App 封装与云部署", "modules": ["src/google/adk/cli", "src/google/adk/apps"], "files": ["src/google/adk/cli/cli.py", "src/google/adk/apps/app.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户经 adk run/web 或编程调用 Runner.run_async 传入用户消息",
+    "第2步：Runner 通过 SessionService 加载或创建 Session，构建 InvocationContext",
+    "第3步：Runner 调用根节点 Agent 或 Workflow 的 run_async",
+    "第4步：LlmAgent 经 flows/llm_flows 组装 LlmRequest，交给 BaseLlm 调用模型",
+    "第5步：模型返回 LlmResponse，可能包含 function_call 或 transfer_to_agent",
+    "第6步：FunctionTool/AgentTool 执行工具并回填 function_response，循环直到无工具调用",
+    "第7步：Workflow 引擎按 edges 触发下游节点，并行/循环节点由调度器管理",
+    "第8步：每一步产生 Event，追加到 Session 并由 SessionService 持久化",
+    "第9步：Runner 以 AsyncGenerator 流式 yield Event 给调用方或 Web 层",
+    "第10步：如启用 A2A，事件经 converters 转成 A2A 消息对外暴露"
+  ],
+  "entry_points": [
+    {"path": "pyproject.toml", "what": "scripts.adk = google.adk.cli:main 定义 adk 命令行入口"},
+    {"path": "src/google/adk/cli/cli.py", "what": "CLI 主入口，实现 adk run / web / eval / deploy 子命令"},
+    {"path": "src/google/adk/runners.py", "what": "Runner.run_async 是编程式执行 Agent 的主入口"},
+    {"path": "src/google/adk/__init__.py", "what": "顶层惰性导出 Agent、Context、Event、Runner、Workflow"},
+    {"path": "src/google/adk/a2a/utils/agent_to_a2a.py", "what": "to_a2a() 将 Agent/Workflow 发布为 A2A 服务"},
+    {"path": "src/google/adk/cli/fast_api.py", "what": "get_fast_api_app 生成可部署的 FastAPI 应用"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立 Agent 与 Workflow 两大概念的总体认知"},
+    {"path": "src/google/adk/__init__.py", "why": "看框架对外只暴露哪 5 个顶层符号，界定公共 API"},
+    {"path": "src/google/adk/workflow/_base_node.py", "why": "理解 BaseNode 是所有 Agent 与工作流节点的统一基座"},
+    {"path": "src/google/adk/agents/base_agent.py", "why": "看 Agent 抽象、状态管理与回调流水线如何实现"},
+    {"path": "src/google/adk/agents/llm_agent.py", "why": "看 LLM Agent 如何组织工具、指令与各类回调"},
+    {"path": "src/google/adk/workflow/_workflow.py", "why": "理解图编排循环：建图、调度、触发与恢复"},
+    {"path": "src/google/adk/runners.py", "why": "理解运行时如何串联会话、事件与各服务"},
+    {"path": "src/google/adk/sessions/session.py", "why": "理解会话状态与事件历史的数据结构"},
+    {"path": "src/google/adk/tools/base_tool.py", "why": "理解工具抽象与函数工具声明生成"},
+    {"path": "src/google/adk/a2a/utils/agent_to_a2a.py", "why": "理解如何把本地 Agent 接入 A2A 协议"}
+  ],
+  "extension_points": [
+    "加新 Agent 类型：继承 src/google/adk/agents/base_agent.py 的 BaseAgent 并实现 _run_async_impl",
+    "加新工具：继承 src/google/adk/tools/base_tool.py 的 BaseTool，或用 FunctionTool 包装普通函数",
+    "加新模型：继承 src/google/adk/models/base_llm.py 的 BaseLlm 并注册到 src/google/adk/models/registry.py",
+    "加新工作流节点类型：继承 src/google/adk/workflow/_base_node.py 的 BaseNode",
+    "换会话/记忆后端：实现 src/google/adk/sessions/base_session_service.py 的 BaseSessionService",
+    "加横切逻辑：继承 src/google/adk/plugins/base_plugin.py 的 BasePlugin 注册到 PluginManager",
+    "对外暴露服务：调用 src/google/adk/a2a/utils/agent_to_a2a.py 的 to_a2a 或 cli/fast_api.py"
+  ],
+  "learning_path": [
+    "第1步读 README.md，记住 Agent 与 Workflow 两个入口类",
+    "第2步读 src/google/adk/__init__.py，明确顶层公共 API",
+    "第3步读 workflow/_base_node.py 与 agents/base_agent.py，理解统一节点基类",
+    "第4步读 agents/llm_agent.py，理解 LLM Agent、工具与回调机制",
+    "第5步读 workflow/_workflow.py，理解图编排与调度循环",
+    "第6步读 runners.py 与 sessions/session.py，理解运行时与会话状态",
+    "第7步读 a2a/utils/agent_to_a2a.py，理解 A2A 协议对接"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户输入] --> R[Runner 运行时]\n  R --> S[Session 会话状态]\n  R --> W[Workflow 图编排]\n  W --> A[LlmAgent]\n  W --> B[其他 Agent 节点]\n  A --> M[BaseLlm 模型]\n  A --> T[BaseTool 工具]\n  T --> A\n  A --> E[Event 事件]\n  W --> E\n  E --> S\n  E --> O[流式输出]\n  A --> P[A2A 协议服务]",
+  "surprises": [
+    "ADK 2.0 中 SequentialAgent 与 ParallelAgent 已被标记 deprecated，官方推荐改用 Workflow 图编排，两套 API 并存易混淆",
+    "BaseAgent 直接继承自 workflow 的 BaseNode，Agent 本身就是一个图节点，Agent 与 Workflow 在类型系统里被统一",
+    "顶层 __init__.py 只导出 5 个符号且采用惰性加载，其余能力需从子模块导入",
+    "内置工具如 google_search 无法与其它工具共存，代码里有把它包装成 AgentTool 的 workaround",
+    "Workflow 的 edges 支持 (START, agentA, agentB) 三元组写法，一个元组即表达扇出与串联"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,80 @@
+{
+  "repo": "microsoft/markitdown",
+  "name": "MarkItDown",
+  "one_liner": "把 PDF/Office/图片/音频等万物转成 LLM 友好 Markdown 的轻量转换器",
+  "problem": "面向 LLM 的文档预处理：不同格式各有一套解析库，输出结构不一。它统一成单一入口、按 MIME/扩展名自动分派到对应转换器，产出保留标题列表表格链接的 Markdown。",
+  "difficulty": "入门",
+  "core_abstractions": [
+    {"name": "MarkItDown", "role": "总控门面：构造时注册所有转换器，convert/convert_local/convert_stream/convert_uri 等入口负责探测类型并驱动分派", "file": "packages/markitdown/src/markitdown/_markitdown.py"},
+    {"name": "DocumentConverter", "role": "所有转换器的抽象基类，定义 accepts 判定能否处理 + convert 产出 Markdown 两个契约方法", "file": "packages/markitdown/src/markitdown/_base_converter.py"},
+    {"name": "DocumentConverterResult", "role": "转换结果载体，核心字段 markdown 与 title，text_content 为软废弃别名", "file": "packages/markitdown/src/markitdown/_base_converter.py"},
+    {"name": "StreamInfo", "role": "不可变 dataclass，描述输入的 mimetype/extension/charset/filename/url 等线索，是 accepts 判定与猜测的基础", "file": "packages/markitdown/src/markitdown/_stream_info.py"},
+    {"name": "ConverterRegistration", "role": "转换器注册项，绑定 converter 与 priority，决定候选尝试顺序", "file": "packages/markitdown/src/markitdown/_markitdown.py"},
+    {"name": "PdfConverter", "role": "PDF 转换实现，用 pdfplumber 做无边框表格/表单抽取，失败回退 pdfminer", "file": "packages/markitdown/src/markitdown/converters/_pdf_converter.py"},
+    {"name": "ZipConverter", "role": "递归转换器：解压 ZIP 并对每个成员再次调用 markitdown 转换，是组合式分派的范例", "file": "packages/markitdown/src/markitdown/converters/_zip_converter.py"},
+    {"name": "StreamInfo 猜测链", "role": "_get_stream_info_guesses 用 magika 内容探测 + 扩展名/mimetype 互推，产出多个候选 StreamInfo 依次尝试", "file": "packages/markitdown/src/markitdown/_markitdown.py"}
+  ],
+  "layers": [
+    {"name": "门面与调度层", "responsibility": "对外统一入口、转换器注册表、按优先级与类型猜测依次尝试候选转换器", "modules": ["packages/markitdown/src/markitdown"], "files": ["packages/markitdown/src/markitdown/_markitdown.py", "packages/markitdown/src/markitdown/_base_converter.py", "packages/markitdown/src/markitdown/_stream_info.py"]},
+    {"name": "类型探测层", "responsibility": "结合扩展名、mimetype、magika 内容识别与 charset 归一化，生成候选 StreamInfo 列表", "modules": ["packages/markitdown/src/markitdown"], "files": ["packages/markitdown/src/markitdown/_markitdown.py", "packages/markitdown/src/markitdown/_stream_info.py"]},
+    {"name": "内置转换器层", "responsibility": "各格式的具体转换实现：PDF/Office/HTML/图片/音频/CSV 等", "modules": ["packages/markitdown/src/markitdown/converters"], "files": ["packages/markitdown/src/markitdown/converters/__init__.py", "packages/markitdown/src/markitdown/converters/_pdf_converter.py", "packages/markitdown/src/markitdown/converters/_docx_converter.py", "packages/markitdown/src/markitdown/converters/_xlsx_converter.py", "packages/markitdown/src/markitdown/converters/_pptx_converter.py", "packages/markitdown/src/markitdown/converters/_html_converter.py"]},
+    {"name": "格式工具层", "responsibility": "为转换器提供 docx 数学公式、xlsx 内嵌图片等细粒度辅助解析", "modules": ["packages/markitdown/src/markitdown/converter_utils"], "files": ["packages/markitdown/src/markitdown/converter_utils/docx/math/omml.py", "packages/markitdown/src/markitdown/converter_utils/_xlsx_images.py", "packages/markitdown/src/markitdown/converter_utils/_image.py"]},
+    {"name": "插件扩展层", "responsibility": "通过 entry_points(markitdown.plugin) 发现第三方插件并注册其转换器", "modules": ["packages/markitdown-sample-plugin", "packages/markitdown-ocr"], "files": ["packages/markitdown-sample-plugin/src/markitdown_sample_plugin/_plugin.py", "packages/markitdown-sample-plugin/pyproject.toml"]},
+    {"name": "接口层", "responsibility": "CLI 命令行与 MCP 服务器两种对外使用方式", "modules": ["packages/markitdown/src/markitdown", "packages/markitdown-mcp"], "files": ["packages/markitdown/src/markitdown/__main__.py", "packages/markitdown-mcp/src/markitdown_mcp/__main__.py"]}
+  ],
+  "data_flow": [
+    "第1步：调用方通过 MarkItDown().convert(source) 或 convert_stream/convert_local/convert_uri 传入输入",
+    "第2步：convert 按 source 类型分派：str 且 scheme 为 http/file/data 走 convert_uri，否则 convert_local；Path 走本地，Response 走 convert_response，二进制流走 convert_stream",
+    "第3步：各入口构造 base_guess 的 StreamInfo，从扩展名、filename、Content-Type、url 收集线索",
+    "第4步：_get_stream_info_guesses 调用 magika.identify_stream 做内容识别，并与 base_guess 比对兼容性，产出若干候选 StreamInfo",
+    "第5步：_convert 将注册表按 priority 稳定排序，外层遍历候选 StreamInfo、内层遍历转换器",
+    "第6步：对每个转换器调用 accepts(file_stream, stream_info)，并断言其未改变流位置",
+    "第7步：accepts 为真则调用 convert，异常记入 failed_attempts 并 seek 复位流位置",
+    "第8步：任一转换器返回结果即归一化空白并立即返回；全部失败则抛 FileConversionException 或 UnsupportedFormatException",
+    "第9步：嵌套场景如 ZipConverter 会对每个成员重新调用 convert_stream 递归走同一分派链",
+    "第10步：CLI 的 __main__ 拿到 result.markdown 写入 stdout 或 -o 指定文件"
+  ],
+  "entry_points": [
+    {"path": "packages/markitdown/src/markitdown/_markitdown.py:MarkItDown.convert", "what": "对外总入口，按输入类型分派到具体 convert_* 方法"},
+    {"path": "packages/markitdown/src/markitdown/_markitdown.py:_convert", "what": "核心分派循环：候选 StreamInfo × 转换器，accepts 判定后尝试 convert"},
+    {"path": "packages/markitdown/src/markitdown/_markitdown.py:register_converter", "what": "转换器注册接口，是内置与插件接入的统一挂载点"},
+    {"path": "packages/markitdown/src/markitdown/__main__.py:main", "what": "CLI 入口 markitdown 命令，解析参数并调用 MarkItDown"},
+    {"path": "packages/markitdown-mcp/src/markitdown_mcp/__main__.py", "what": "MCP 服务器入口，把转换能力暴露给 Agent"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立定位：面向 LLM 的 Markdown 转换，重点在结构保留而非排版保真"},
+    {"path": "packages/markitdown/src/markitdown/_markitdown.py", "why": "全部门面与分派逻辑所在，理解注册表与 _convert 尝试链是核心"},
+    {"path": "packages/markitdown/src/markitdown/_base_converter.py", "why": "DocumentConverter 与 Result 契约，决定如何写一个新转换器"},
+    {"path": "packages/markitdown/src/markitdown/_stream_info.py", "why": "StreamInfo 与 copy_and_update，是类型猜测与 accepts 判定的数据基础"},
+    {"path": "packages/markitdown/src/markitdown/converters/_pdf_converter.py", "why": "最复杂的内置转换器，展示表格抽取与多库回退策略"},
+    {"path": "packages/markitdown/src/markitdown/converters/_zip_converter.py", "why": "组合式递归转换范例，理解嵌套分派"},
+    {"path": "packages/markitdown-sample-plugin/src/markitdown_sample_plugin/_plugin.py", "why": "官方插件模板，最直观的扩展范例"},
+    {"path": "packages/markitdown/src/markitdown/__main__.py", "why": "CLI 参数与云服务开关，理解实际使用路径"}
+  ],
+  "extension_points": [
+    "加一个新文件格式：新建 converters/_xxx_converter.py 继承 DocumentConverter 实现 accepts/convert，再在 _markitdown.py 的 enable_builtins 里 register_converter",
+    "不改主仓库加格式：做成 3rd-party 插件，暴露 register_converters 并在 pyproject.toml 声明 entry-points markitdown.plugin，参考 packages/markitdown-sample-plugin",
+    "调整候选顺序：register_converter(priority=...) 用 PRIORITY_SPECIFIC_FILE_FORMAT 与 PRIORITY_GENERIC_FILE_FORMAT 控制先后",
+    "新增云解析后端：参考 converters/_cu_converter.py 与 _doc_intel_converter.py，在 __init__ 传入 endpoint 时条件注册到栈顶",
+    "让某转换器支持 LLM 图像描述：读取 kwargs 中的 llm_client/llm_model，参考 converters/_llm_caption.py",
+    "扩展 CLI 选项：在 packages/markitdown/src/markitdown/__main__.py 增加 argparse 参数"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解「万物转 Markdown、面向 LLM」的定位与支持的格式清单",
+    "第2步：读 _base_converter.py，掌握 DocumentConverter 的 accepts/convert 两个契约",
+    "第3步：读 _stream_info.py，理解类型线索如何被携带与合并",
+    "第4步：读 _markitdown.py 的 __init__ 与 enable_builtins，看转换器如何注册与排序",
+    "第5步：精读 _markitdown.py 的 _convert 与 _get_stream_info_guesses，吃透分派与猜测链",
+    "第6步：挑一个简单转换器如 _plain_text_converter.py 或 _zip_converter.py 对照理解",
+    "第7步：读 sample-plugin 的 _plugin.py，理解如何独立扩展"
+  ],
+  "diagram_mermaid": "graph TD\n  A[输入 路径或URL或流] --> B[convert 按类型分派]\n  B --> C[构造 base_guess StreamInfo]\n  C --> D[magika 内容识别与兼容性比对]\n  D --> E[产出候选 StreamInfo 列表]\n  E --> F[按 priority 排序转换器注册表]\n  F --> G[遍历候选与转换器]\n  G --> H{accepts 返回真}\n  H -->|否| G\n  H -->|是| I[调用 convert 转换]\n  I --> J{是否成功产出结果}\n  J -->|否 记入失败| G\n  J -->|是| K[归一化空白并返回 Result]\n  K --> L[CLI 输出或写入文件]\n  I -.-> M[ZipConverter 递归调用 convert_stream]\n  G -.-> N[插件经 entry_points 注册]",
+  "surprises": [
+    "分派不是简单按 MIME 查表，而是「候选 StreamInfo 列表 × 按优先级排序的转换器列表」双重循环，谁先 accepts 成功谁胜出，未命中还会落到空 StreamInfo 兜底",
+    "accepts 被强约束不能移动文件流位置，代码用 assert 强制校验；需要预读的转换器必须自己 seek 复位",
+    "注册顺序与尝试顺序相反：register_converter 是 insert(0)，后注册的先试，同类优先级靠稳定排序保持，所以内置里最通用的 PlainText/HTML/Zip 用 priority=10 排到最后",
+    "同一个文件可能被多个转换器接受，先失败者不阻断后续，只有全部失败才抛 FileConversionException，这让 pdfplumber 失败回退 pdfminer 这类多策略很自然",
+    "convert() 按 URL scheme 猜测语义：字符串默认当本地路径，只有 http/https/file/data 才走网络或 URI 分支，误传 URL 会被当路径处理"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,204 @@
+{
+  "repo": "OpenGVLab/InternVL",
+  "name": "InternVL",
+  "one_liner": "视觉编码器加LLM的开源多模态大模型家族",
+  "problem": "把高分辨率图像编码成与语言模型对齐的视觉 token，实现图文对话、检测与分割，机器人可拿它做感知底座。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "InternVLChatModel",
+      "role": "顶层多模态模型，组合视觉塔、MLP 投影和语言模型，负责把图像 embedding 塞进文本序列",
+      "file": "internvl_chat/internvl/model/internvl_chat/modeling_internvl_chat.py"
+    },
+    {
+      "name": "InternVisionModel",
+      "role": "InternViT 视觉编码器，把 448x448 图像块编码成 patch token 序列",
+      "file": "internvl_chat/internvl/model/internvl_chat/modeling_intern_vit.py"
+    },
+    {
+      "name": "mlp1",
+      "role": "两层 MLP 加 LayerNorm 的投影器，把像素重排后的视觉特征映射到 LLM 隐藏维度",
+      "file": "internvl_chat/internvl/model/internvl_chat/modeling_internvl_chat.py"
+    },
+    {
+      "name": "pixel_shuffle",
+      "role": "把相邻 patch token 在空间上折叠、通道上展开，实现 0.5 倍 token 降采样",
+      "file": "internvl_chat/internvl/model/internvl_chat/modeling_internvl_chat.py"
+    },
+    {
+      "name": "dynamic_preprocess",
+      "role": "按原图宽高比选择最接近的瓦片布局，把任意分辨率图切成 1 到 max_num 个 448x448 块",
+      "file": "internvl_chat/internvl/train/dataset.py"
+    },
+    {
+      "name": "InternVLChatConfig",
+      "role": "组合式配置，同时持有 vision_config 与 llm_config，并暴露 downsample_ratio、max_dynamic_patch 等对齐参数",
+      "file": "internvl_chat/internvl/model/internvl_chat/configuration_internvl_chat.py"
+    },
+    {
+      "name": "IMG_CONTEXT_TOKEN",
+      "role": "图像占位符常量，tokenizer 把每个图像展开成若干个该 token，前向时再替换成视觉 embedding",
+      "file": "internvl_chat/internvl/train/constants.py"
+    },
+    {
+      "name": "Conversation 模板",
+      "role": "定义各模型族的对话角色与分隔符，决定 prompt 的拼装格式",
+      "file": "internvl_chat/internvl/conversation.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "视觉编码层",
+      "responsibility": "InternViT 主干、注意力、位置编码，输出 patch token",
+      "modules": ["internvl_chat/internvl/model/internvl_chat"],
+      "files": ["internvl_chat/internvl/model/internvl_chat/modeling_intern_vit.py", "internvl_chat/internvl/model/internvl_chat/configuration_intern_vit.py"]
+    },
+    {
+      "name": "跨模态对齐层",
+      "responsibility": "pixel shuffle 降采样加 MLP 投影，把视觉 token 对齐到语言模型维度",
+      "modules": ["internvl_chat/internvl/model/internvl_chat"],
+      "files": ["internvl_chat/internvl/model/internvl_chat/modeling_internvl_chat.py"]
+    },
+    {
+      "name": "语言模型层",
+      "responsibility": "InternLM2、Phi3、Qwen2、Llama 等因果语言模型，接收融合后的 embedding 并生成文本",
+      "modules": ["internvl_chat/internvl/model/internlm2", "internvl_chat/internvl/model/phi3"],
+      "files": ["internvl_chat/internvl/model/internlm2/modeling_internlm2.py", "internvl_chat/internvl/model/phi3/modeling_phi3.py"]
+    },
+    {
+      "name": "数据与预处理层",
+      "responsibility": "动态分辨率切图、图像变换、对话拼接与标签掩码",
+      "modules": ["internvl_chat/internvl/train"],
+      "files": ["internvl_chat/internvl/train/dataset.py", "internvl_chat/internvl/train/dataset_packed.py"]
+    },
+    {
+      "name": "训练编排层",
+      "responsibility": "预训练、微调、MPO 偏好优化脚本，管理冻结策略与 DeepSpeed 配置",
+      "modules": ["internvl_chat/internvl/train"],
+      "files": ["internvl_chat/internvl/train/internvl_chat_pretrain.py", "internvl_chat/internvl/train/internvl_chat_finetune.py", "internvl_chat/internvl/train/internvl_chat_mpo.py"]
+    },
+    {
+      "name": "对话模板层",
+      "responsibility": "为不同 LLM 提供角色与分隔符模板，供推理与数据构建复用",
+      "modules": ["internvl_chat/internvl"],
+      "files": ["internvl_chat/internvl/conversation.py"]
+    },
+    {
+      "name": "工具与部署层",
+      "responsibility": "权重格式转换、视觉塔与 MLP 抽取、LLM 替换、位置编码缩放",
+      "modules": ["internvl_chat/tools"],
+      "files": ["internvl_chat/tools/replace_llm.py", "internvl_chat/tools/extract_vit.py", "internvl_chat/tools/internvl_custom2hf.py"]
+    },
+    {
+      "name": "评测层",
+      "responsibility": "覆盖 MMBench、MMMU、MathVista 等数十个多模态基准的评测脚本",
+      "modules": ["internvl_chat/eval"],
+      "files": ["internvl_chat/eval/mmbench/evaluate_mmbench.py", "internvl_chat/eval/mmmu"]
+    }
+  ],
+  "data_flow": [
+    "第1步：图像经 dynamic_preprocess 按宽高比切成若干 448x448 瓦片，可选附加一张缩略图",
+    "第2步：所有瓦片堆叠成 pixel_values 张量，同时得到每张图的瓦片数 num_patches",
+    "第3步：InternVisionModel 编码每个瓦片，取指定层的 hidden_states 并丢弃 cls token",
+    "第4步：token 序列 reshape 成 HxW 网格",
+    "第5步：pixel_shuffle 以 downsample_ratio 折叠空间、扩展通道，token 数降为四分之一",
+    "第6步：mlp1 将视觉特征投影到 LLM 隐藏维度，得到 vit_embeds",
+    "第7步：tokenizer 把每个 image 占位符展开成 num_image_token 乘以 num_patches 个 IMG_CONTEXT token",
+    "第8步：forward 中把 vit_embeds 写入 input_embeds 里等于 IMG_CONTEXT_TOKEN 的位置",
+    "第9步：language_model 以融合后的 inputs_embeds 前向传播或自回归生成",
+    "第10步：训练时只对 assistant 回复段计算交叉熵损失，图像与提问段被掩码忽略"
+  ],
+  "entry_points": [
+    {
+      "path": "internvl_chat/internvl/train/internvl_chat_pretrain.py",
+      "what": "预训练入口，用于 stage1 只训 MLP 的模态对齐和 stage1.5 的全参数预训练"
+    },
+    {
+      "path": "internvl_chat/internvl/train/internvl_chat_finetune.py",
+      "what": "监督微调入口，支持冻结 LLM 或 ViT、只训 MLP 或全量微调"
+    },
+    {
+      "path": "internvl_chat/internvl/train/internvl_chat_mpo.py",
+      "what": "混合偏好优化入口，在 SFT 之后做偏好对齐"
+    },
+    {
+      "path": "internvl_chat/README.md",
+      "what": "推理用法示例，演示 AutoModel.from_pretrained 加载与 chat 调用"
+    },
+    {
+      "path": "internvl_chat/shell/internvl2.5/stage1/internvl2_5_8b_internlm2_5_7b_dynamic_res_stage1.sh",
+      "what": "8B 模型 stage1 训练脚本，展示冻结与动态分辨率参数"
+    },
+    {
+      "path": "internvl_chat/shell/internvl2.5/stage2/internvl2_5_8b_internlm2_5_7b_dynamic_res_stage2.sh",
+      "what": "8B 模型 stage2 全参数微调脚本"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "README.md",
+      "why": "先建立模型家族、模型清单与各版本差异的整体认知"
+    },
+    {
+      "path": "internvl_chat/README.md",
+      "why": "推理侧最直接的用法，包含动态分辨率切图的完整可复制代码"
+    },
+    {
+      "path": "internvl_chat/internvl/model/internvl_chat/modeling_internvl_chat.py",
+      "why": "整个架构的核心，forward 里能看清图像 embedding 如何替换进文本序列"
+    },
+    {
+      "path": "internvl_chat/internvl/model/internvl_chat/modeling_intern_vit.py",
+      "why": "理解视觉编码器内部结构与位置编码缩放"
+    },
+    {
+      "path": "internvl_chat/internvl/model/internvl_chat/configuration_internvl_chat.py",
+      "why": "参数体系入口，downsample_ratio、max_dynamic_patch、ps_version 都在这"
+    },
+    {
+      "path": "internvl_chat/internvl/train/dataset.py",
+      "why": "动态分辨率与标签掩码的实现，含 dynamic_preprocess 与 find_closest_aspect_ratio"
+    },
+    {
+      "path": "internvl_chat/internvl/train/internvl_chat_finetune.py",
+      "why": "看清冻结策略与模型装配流程"
+    },
+    {
+      "path": "internvl_chat/internvl/train/internvl_chat_pretrain.py",
+      "why": "预训练阶段与打包数据、图像瓦片阈值的处理"
+    },
+    {
+      "path": "internvl_chat/internvl/conversation.py",
+      "why": "各模型族的 prompt 模板，改 prompt 格式从这里入手"
+    },
+    {
+      "path": "internvl_chat/tools/replace_llm.py",
+      "why": "换语言模型的实际参考，理解权重映射与维度对齐"
+    }
+  ],
+  "extension_points": [
+    "想换视觉塔：改 modeling_intern_vit.py 与 configuration_intern_vit.py，并参考 tools/extract_vit.py 做权重抽取",
+    "想换语言模型：在 modeling_internvl_chat.py 的架构分发里加分支，配合 tools/replace_llm.py 与 configuration_internvl_chat.py 的 llm_config 分支",
+    "想改对齐压缩率：调 configuration_internvl_chat.py 的 downsample_ratio，mlp1 输入维度会随之变化",
+    "想改动态分辨率上限：改 dataset.py 中 dynamic_preprocess 的 max_num 与 config 的 max_dynamic_patch",
+    "想加新数据集：在 dataset.py 里新增 preprocess 函数并接入 build_datasets",
+    "想加 LoRA 支持：参考 modeling_internvl_chat.py 的 wrap_backbone_lora 与 wrap_llm_lora"
+  ],
+  "learning_path": [
+    "第1步读 README.md 与 internvl_chat/README.md，了解家族构成与最小推理示例",
+    "第2步读 configuration_internvl_chat.py，建立参数体系认知",
+    "第3步精读 modeling_internvl_chat.py，重点看 forward 与 extract_feature、pixel_shuffle、mlp1",
+    "第4步读 dataset.py 的 dynamic_preprocess 与 find_closest_aspect_ratio，理解动态分辨率",
+    "第5步读 internvl_chat_pretrain.py 与 finetune.py，理解冻结与三阶段训练",
+    "第6步读 conversation.py 与 tools/replace_llm.py，理解 prompt 与换模型机制"
+  ],
+  "diagram_mermaid": "graph TD\n  A[图像输入] --> B[动态切图 dynamic_preprocess]\n  B --> C[pixel_values 张量]\n  C --> D[InternVisionModel 视觉编码]\n  D --> E[丢弃 cls token]\n  E --> F[pixel_shuffle 空间降采样]\n  F --> G[mlp1 投影到 LLM 维度]\n  I[文本 tokenizer] --> H[替换 IMG_CONTEXT 占位 embedding]\n  G --> H\n  H --> J[language_model 前向]\n  J --> K[生成回答或计算损失]",
+  "surprises": [
+    "图像不是作为特殊 token id 喂入，而是先用 IMG_CONTEXT 字符串占位、tokenizer 展开、前向时再按位置替换 embedding，长度必须与 num_image_token 精确对齐否则报错",
+    "pixel_shuffle 的 ps_version 为 v1 时高宽没有交换回来，代码里明确警告会导致图像转置，新模型都应使用 v2",
+    "动态分辨率的本质是切瓦片再拼成一维序列，max_dynamic_patch 决定最多切几块，thumbnail 是可选的全局缩略图",
+    "stage1 只训练 MLP、同时冻结 ViT 和 LLM，真正教会模型把视觉 token 翻译成语言模型能懂的空间",
+    "vision_model 默认取最后一层 hidden_states，但 select_layer 可指定中间层，说明不同层特征质量差异明显"
+  ],
+  "confidence": "高"
+}
