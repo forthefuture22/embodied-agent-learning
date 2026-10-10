@@ -1,0 +1,91 @@
+{
+  "repo": "agno-agi/agno",
+  "name": "Agno",
+  "one_liner": "轻量高性能 Agent 框架与运行时，支持多智能体团队",
+  "problem": "用统一干净的 API 让开发者快速构建 Agent 与多智能体团队，并提供生产级运行时，把 Agent 作为服务对外部署。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Agent", "role": "统一单智能体抽象，聚合 model、tools、memory、knowledge、session、filesystem 等能力", "file": "libs/agno/agno/agent/agent.py"},
+    {"name": "Team", "role": "多智能体协作抽象，由 leader 协调多个 member Agent 完成任务", "file": "libs/agno/agno/team/team.py"},
+    {"name": "TeamMode", "role": "团队协作模式枚举，定义 coordinate、route、broadcast、tasks 四种编排策略", "file": "libs/agno/agno/team/mode.py"},
+    {"name": "Model", "role": "模型统一抽象基类，屏蔽各家 provider 差异，统一产出 ModelResponse", "file": "libs/agno/agno/models/base.py"},
+    {"name": "Toolkit", "role": "工具抽象，把函数或工具集暴露给模型调用", "file": "libs/agno/agno/tools/toolkit.py"},
+    {"name": "MemoryManager", "role": "用户长期记忆的管理器，负责增删改查与语义检索", "file": "libs/agno/agno/memory/manager.py"},
+    {"name": "Knowledge", "role": "知识库与 RAG 抽象，负责文档检索、查询改写与重排", "file": "libs/agno/agno/knowledge/knowledge.py"},
+    {"name": "BaseDb", "role": "存储抽象，统一持久化 session、memory、knowledge 与 trace", "file": "libs/agno/agno/db/base.py"},
+    {"name": "RunOutput", "role": "一次运行的输出与事件模型，贯穿流式与非流式调用", "file": "libs/agno/agno/run/agent.py"},
+    {"name": "AgentOS", "role": "把 Agent 与 Team 作为服务暴露的运行时，生成 FastAPI 应用", "file": "libs/agno/agno/os/app.py"},
+    {"name": "Workflow", "role": "确定性编排抽象，组合 step、agent、condition、loop 等节点", "file": "libs/agno/agno/workflow/workflow.py"},
+    {"name": "AgentProtocol", "role": "Agent 协议接口，统一本地 Agent 与远程 Agent 的调用契约", "file": "libs/agno/agno/agent/protocol.py"}
+  ],
+  "layers": [
+    {"name": "智能体抽象层", "responsibility": "Agent、Team、Workflow 三大统一抽象，定义能力与编排方式", "modules": ["libs/agno/agno/agent", "libs/agno/agno/team", "libs/agno/agno/workflow"], "files": ["libs/agno/agno/agent/agent.py", "libs/agno/agno/team/team.py"]},
+    {"name": "运行与事件层", "responsibility": "运行循环、事件模型、审批、暂停恢复与取消", "modules": ["libs/agno/agno/run"], "files": ["libs/agno/agno/run/base.py", "libs/agno/agno/run/agent.py"]},
+    {"name": "模型接入层", "responsibility": "各 provider 适配与统一模型调用接口", "modules": ["libs/agno/agno/models"], "files": ["libs/agno/agno/models/base.py", "libs/agno/agno/models/message.py"]},
+    {"name": "工具层", "responsibility": "内置工具集与 Toolkit 抽象，连接外部系统", "modules": ["libs/agno/agno/tools"], "files": ["libs/agno/agno/tools/toolkit.py", "libs/agno/agno/tools/function.py"]},
+    {"name": "记忆与知识层", "responsibility": "长期记忆管理与知识库 RAG 检索", "modules": ["libs/agno/agno/memory", "libs/agno/agno/knowledge"], "files": ["libs/agno/agno/memory/manager.py", "libs/agno/agno/knowledge/knowledge.py"]},
+    {"name": "存储层", "responsibility": "数据库与向量库适配，持久化运行数据", "modules": ["libs/agno/agno/db", "libs/agno/agno/vectordb"], "files": ["libs/agno/agno/db/base.py"]},
+    {"name": "服务运行时层", "responsibility": "AgentOS 与 REST API，把智能体作为服务部署", "modules": ["libs/agno/agno/os", "libs/agno/agno/api"], "files": ["libs/agno/agno/os/app.py"]},
+    {"name": "示例与测试层", "responsibility": "官方 cookbook 示例与单元测试", "modules": ["cookbook", "libs/agno/tests"], "files": ["CLAUDE.md"]}
+  ],
+  "data_flow": [
+    "第1步：用户调用 agent.run 或 agent.arun 并传入消息",
+    "第2步：初始化会话与运行上下文，解析本次运行的 run options",
+    "第3步：构建系统提示词，注入记忆、知识、历史消息与依赖",
+    "第4步：通过 Model 统一接口调用模型，模型返回 ModelResponse",
+    "第5步：若模型请求工具调用，则解析并执行对应工具",
+    "第6步：工具结果回填消息列表，再次调用模型，形成工具调用循环",
+    "第7步：生成 RunOutput，并通过事件流按增量输出内容",
+    "第8步：运行结束把 session、memory、metrics 写回 BaseDb",
+    "第9步：Team 运行时由 leader 按 TeamMode 拆解并委派任务给 member",
+    "第10步：member Agent 执行并返回结果，leader 汇总为最终输出",
+    "第11步：AgentOS 把 Agent 与 Team 挂到 FastAPI 路由，通过 SSE 或 WebSocket 流式返回"
+  ],
+  "entry_points": [
+    {"path": "libs/agno/agno/agent/agent.py", "what": "Agent 主类，run 与 arun 是核心执行入口"},
+    {"path": "libs/agno/agno/team/team.py", "what": "Team 主类，多智能体协作执行入口"},
+    {"path": "libs/agno/agno/os/app.py", "what": "AgentOS 运行时，生成 FastAPI 应用并挂载各路由"},
+    {"path": "libs/agno/agno/api/os.py", "what": "服务端 API 装配与设置"},
+    {"path": "libs/agno/agno/workflow/workflow.py", "what": "工作流编排入口，组合步骤与 Agent"},
+    {"path": "cookbook", "what": "官方示例目录，覆盖各类能力的可运行样例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立框架与运行时整体定位"},
+    {"path": "CLAUDE.md", "why": "官方代码地图与约定，快速定位各模块"},
+    {"path": "libs/agno/agno/agent/agent.py", "why": "Agent 的全部字段与能力，理解统一抽象"},
+    {"path": "libs/agno/agno/agent/_run.py", "why": "运行循环核心，理解同步与异步执行"},
+    {"path": "libs/agno/agno/models/base.py", "why": "模型统一抽象，理解多 provider 如何抹平"},
+    {"path": "libs/agno/agno/team/team.py", "why": "多智能体协作的入口"},
+    {"path": "libs/agno/agno/team/mode.py", "why": "四种团队编排模式的定义"},
+    {"path": "libs/agno/agno/tools/toolkit.py", "why": "工具抽象，理解如何给 Agent 加能力"},
+    {"path": "libs/agno/agno/memory/manager.py", "why": "记忆管理，理解长期记忆如何工作"},
+    {"path": "libs/agno/agno/os/app.py", "why": "理解如何把 Agent 部署为服务"}
+  ],
+  "extension_points": [
+    "新增模型 provider：在 libs/agno/agno/models 下新增适配目录并继承 Model",
+    "新增工具：继承 Toolkit 或直接编写可被识别的函数",
+    "新增向量库：在 libs/agno/agno/vectordb 下新增适配",
+    "新增存储后端：在 libs/agno/agno/db 下新增适配",
+    "自定义团队协作：扩展 TeamMode 枚举与 team/_run.py",
+    "新增接口渠道：在 libs/agno/agno/os/interfaces 下接入 Slack、Telegram 等"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 CLAUDE.md，建立整体与模块地图",
+    "第2步：跑通 cookbook 里的第一个 Agent 示例",
+    "第3步：读 libs/agno/agno/agent/agent.py，理解 Agent 能力字段",
+    "第4步：读 libs/agno/agno/agent/_run.py，理解运行循环",
+    "第5步：读 libs/agno/agno/models/base.py，理解模型抽象",
+    "第6步：读 libs/agno/agno/team/team.py 与 team/mode.py，理解多智能体",
+    "第7步：读 libs/agno/agno/tools/toolkit.py 与 memory/manager.py，理解工具与记忆",
+    "第8步：读 libs/agno/agno/os/app.py，理解如何部署为服务"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户调用 run 或 arun] --> B[初始化会话与运行上下文]\n  B --> C[构建系统提示词并注入记忆知识历史]\n  C --> D[调用模型统一接口]\n  D --> E{模型是否请求工具}\n  E -->|是| F[执行工具并回填结果]\n  F --> D\n  E -->|否| G[生成 RunOutput]\n  G --> H[事件流输出增量内容]\n  H --> I[写回 session memory 与指标]",
+  "surprises": [
+    "Agent 同时内置 tools、memory、knowledge、session、filesystem 等大量能力，构造参数极多，初学者容易被淹没",
+    "Team 的协作行为完全由 TeamMode 枚举决定，coordinate、route、broadcast、tasks 是四种差异很大的编排策略",
+    "框架强制所有公共方法都提供同步与异步两个版本，是一致性约定而非可选项",
+    "AgentOS 把 SDK 与运行时绑定在一起，同一个库既用于构建也用于部署为服务",
+    "除 Agent 与 Team 外还提供确定性的 Workflow 编排与内置知识库 RAG，覆盖面超出典型 Agent 框架"
+  ],
+  "confidence": "高"
+}

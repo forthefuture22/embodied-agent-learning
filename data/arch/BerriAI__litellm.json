@@ -1,0 +1,231 @@
+{
+  "repo": "BerriAI/litellm",
+  "name": "LiteLLM",
+  "one_liner": "用 OpenAI 格式统一调用 100+ 大模型的开源 AI 网关与 SDK",
+  "problem": "解决多家 LLM 提供商的 SDK、鉴权、请求与错误格式各不相同的问题：用一层统一接口把请求归一化后分发到任意 provider，并集中提供路由、回退、成本追踪、限流与虚拟密钥管理。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "Router",
+      "role": "负载均衡与容错核心，按模型组管理多个部署，负责选部署、重试与多级回退，是代理场景的调度中枢",
+      "file": "litellm/router.py"
+    },
+    {
+      "name": "BaseRoutingStrategy",
+      "role": "路由策略基类，抽象 Redis 批量计数与内存/Redis 双写，simple-shuffle、latency、tpm 等策略都继承它",
+      "file": "litellm/router_strategy/base_routing_strategy.py"
+    },
+    {
+      "name": "ProviderConfigManager",
+      "role": "provider 配置总注册表，按 custom_llm_provider 返回对应的 chat/embedding 配置对象，是 provider 归一化的分发中心",
+      "file": "litellm/utils.py"
+    },
+    {
+      "name": "BaseConfig",
+      "role": "provider 请求/响应转换基类，定义 transform_request、transform_response、map_openai_params 与鉴权校验，是新增 provider 的落点",
+      "file": "litellm/llms/base_llm/chat/transformation.py"
+    },
+    {
+      "name": "CustomLLM",
+      "role": "自定义模型接入基类，允许用户把任意自有服务包装成 OpenAI 兼容接口接入 LiteLLM",
+      "file": "litellm/llms/custom_llm.py"
+    },
+    {
+      "name": "get_llm_provider",
+      "role": "模型名到 provider 的解析函数，从 model 前缀、api_base 与参数推断出 provider、api_key 与 api_base",
+      "file": "litellm/litellm_core_utils/get_llm_provider_logic.py"
+    },
+    {
+      "name": "cost_calculator",
+      "role": "成本计算模块，按 token 数、模型价格表与响应 usage 计算每次调用的花费，支撑预算与支出追踪",
+      "file": "litellm/cost_calculator.py"
+    },
+    {
+      "name": "Logging",
+      "role": "统一日志与回调对象，记录请求、响应、成本、错误并触发用户配置的成功/失败回调",
+      "file": "litellm/litellm_core_utils/litellm_logging.py"
+    },
+    {
+      "name": "ParallelRequestLimiter",
+      "role": "代理的并发与 TPM/RPM 限流器，基于 Redis 原子操作按 key/team/model 维度控制请求速率",
+      "file": "litellm/proxy/hooks/parallel_request_limiter_v3.py"
+    },
+    {
+      "name": "auth_checks",
+      "role": "代理鉴权与授权核心，校验虚拟密钥、模型访问权限、预算与团队配额",
+      "file": "litellm/proxy/auth/auth_checks.py"
+    },
+    {
+      "name": "PrismaClient",
+      "role": "代理的数据库客户端封装，通过 Prisma 管理密钥、团队、用户、支出等持久化数据",
+      "file": "litellm/proxy/db/prisma_client.py"
+    },
+    {
+      "name": "BudgetManager",
+      "role": "预算管理器，维护用户与团队的花费上限并在超限时拒绝请求",
+      "file": "litellm/budget_manager.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "SDK 核心层",
+      "responsibility": "暴露 completion/acompletion/embedding 等统一入口，编排参数校验、provider 解析与响应归一化",
+      "modules": ["litellm/main.py"],
+      "files": ["litellm/main.py", "litellm/__init__.py"]
+    },
+    {
+      "name": "Provider 适配层",
+      "responsibility": "为每个 provider 实现请求/响应转换与调用 handler，把差异收敛到各自目录",
+      "modules": ["litellm/llms"],
+      "files": ["litellm/llms/base_llm/chat/transformation.py", "litellm/llms/anthropic/chat/transformation.py", "litellm/llms/anthropic/chat/handler.py"]
+    },
+    {
+      "name": "路由与负载均衡层",
+      "responsibility": "按策略选择部署、健康检查、冷却、重试与多级回退",
+      "modules": ["litellm/router.py", "litellm/router_strategy"],
+      "files": ["litellm/router.py", "litellm/router_strategy/base_routing_strategy.py", "litellm/router_strategy/lowest_latency.py", "litellm/router_strategy/simple_shuffle.py"]
+    },
+    {
+      "name": "成本与可观测层",
+      "responsibility": "计算调用成本、记录日志与指标、触发回调与集成",
+      "modules": ["litellm/cost_calculator.py", "litellm/litellm_core_utils", "litellm/integrations"],
+      "files": ["litellm/cost_calculator.py", "litellm/litellm_core_utils/litellm_logging.py", "litellm/litellm_core_utils/get_model_cost_map.py"]
+    },
+    {
+      "name": "缓存层",
+      "responsibility": "提供内存与 Redis 双级缓存、语义缓存与路由计数存储",
+      "modules": ["litellm/caching"],
+      "files": ["litellm/caching/caching.py", "litellm/caching/base_cache.py"]
+    },
+    {
+      "name": "代理服务层",
+      "responsibility": "FastAPI 应用与全部 REST 端点，装配 Router、鉴权、限流与后台任务",
+      "modules": ["litellm/proxy"],
+      "files": ["litellm/proxy/proxy_server.py"]
+    },
+    {
+      "name": "鉴权与限流层",
+      "responsibility": "虚拟密钥校验、模型访问控制、预算检查与并发/TPM/RPM 限流",
+      "modules": ["litellm/proxy/auth", "litellm/proxy/hooks"],
+      "files": ["litellm/proxy/auth/auth_checks.py", "litellm/proxy/hooks/parallel_request_limiter_v3.py"]
+    },
+    {
+      "name": "持久化层",
+      "responsibility": "通过 Prisma 与数据库迁移持久化密钥、团队、用户与支出数据",
+      "modules": ["litellm/proxy/db", "migrations"],
+      "files": ["litellm/proxy/db/prisma_client.py", "litellm/budget_manager.py"]
+    },
+    {
+      "name": "价格数据层",
+      "responsibility": "维护模型上下文窗口与每 token 价格表，供成本计算与参数校验使用",
+      "modules": ["litellm"],
+      "files": ["model_prices_and_context_window.json"]
+    }
+  ],
+  "data_flow": [
+    "第1步：用户调用 litellm.completion 或 acompletion，传入 OpenAI 格式的 model 与 messages",
+    "第2步：get_llm_provider 从模型名前缀或显式参数解析出 custom_llm_provider、api_key 与 api_base",
+    "第3步：ProviderConfigManager 依据 provider 返回对应的 BaseConfig 配置对象",
+    "第4步：配置对象用 map_openai_params 把 OpenAI 参数映射为 provider 私有参数，并用 transform_request 生成原生请求体",
+    "第5步：provider 的 handler 用 httpx 或官方 SDK 发起真实 API 调用",
+    "第6步：transform_response 把 provider 原始响应归一化成统一的 ModelResponse 结构",
+    "第7步：cost_calculator 按 usage 与价格表计算成本，Logging 对象记录日志并触发成功回调",
+    "第8步：代理场景下请求先经 auth_checks 校验密钥与权限，再由 ParallelRequestLimiter 做限流",
+    "第9步：Router 按 routing_strategy 选出可用部署；失败时按 num_retries 重试并逐级走 fallbacks",
+    "第10步：最终响应返回客户端，成本与支出异步写回数据库并更新预算"
+  ],
+  "entry_points": [
+    {
+      "path": "litellm/main.py",
+      "what": "SDK 核心入口，定义 completion/acompletion/embedding 等全部统一调用函数"
+    },
+    {
+      "path": "litellm/proxy/proxy_server.py",
+      "what": "代理服务器入口，定义 FastAPI app、启动逻辑与全部 REST 端点"
+    },
+    {
+      "path": "litellm/router.py",
+      "what": "Router 类定义，编程式使用负载均衡与回退的入口"
+    },
+    {
+      "path": "litellm/__init__.py",
+      "what": "包门面，导出 completion、Router、embedding 等公共 API"
+    },
+    {
+      "path": "litellm/litellm_core_utils/get_llm_provider_logic.py",
+      "what": "get_llm_provider 定义，模型名到 provider 的解析入口"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "README.md",
+      "why": "先建立「统一接口 + 网关」的整体定位与核心卖点"
+    },
+    {
+      "path": "litellm/main.py",
+      "why": "统一调用主流程所在，看请求如何被校验、解析 provider 并分发"
+    },
+    {
+      "path": "litellm/litellm_core_utils/get_llm_provider_logic.py",
+      "why": "get_llm_provider 是 provider 解析核心，理解模型名如何映射到 provider"
+    },
+    {
+      "path": "litellm/utils.py",
+      "why": "ProviderConfigManager 定义了 provider 到配置的分发表，是归一化机制的中枢"
+    },
+    {
+      "path": "litellm/llms/base_llm/chat/transformation.py",
+      "why": "BaseConfig 抽象展示了 provider 适配必须实现哪些方法，是新增 provider 的模板"
+    },
+    {
+      "path": "litellm/llms/anthropic/chat/transformation.py",
+      "why": "一个完整 provider 的转换实现，对照它理解参数映射与响应归一化"
+    },
+    {
+      "path": "litellm/router.py",
+      "why": "Router 的选部署、重试与回退逻辑，是容错能力的核心"
+    },
+    {
+      "path": "litellm/cost_calculator.py",
+      "why": "成本追踪的实现，理解价格表如何被用于每次调用计费"
+    },
+    {
+      "path": "litellm/proxy/proxy_server.py",
+      "why": "代理服务器装配全貌，看 Router、鉴权、限流如何被接起来"
+    },
+    {
+      "path": "litellm/proxy/auth/auth_checks.py",
+      "why": "虚拟密钥与预算校验逻辑，理解网关的访问控制"
+    }
+  ],
+  "extension_points": [
+    "想新增 provider：在 litellm/llms 下新建目录实现 BaseConfig 子类与 handler，并在 litellm/utils.py 的 ProviderConfigManager 注册；参考 litellm/llms/anthropic/chat/transformation.py",
+    "想新增路由策略：在 litellm/router_strategy 下继承 BaseRoutingStrategy 实现选部署逻辑，并在 Router 中按名字接入",
+    "想自定义成本计算：修改 litellm/cost_calculator.py 并更新根目录 model_prices_and_context_window.json 价格表",
+    "想接入自定义模型服务：继承 litellm/llms/custom_llm.py 的 CustomLLM 实现自己的调用",
+    "想新增可观测回调：在 litellm/integrations 下实现 CustomLogger 并注册",
+    "想扩展代理限流：在 litellm/proxy/hooks 下新增 hook，参考 parallel_request_limiter_v3.py",
+    "想改鉴权与预算规则：修改 litellm/proxy/auth/auth_checks.py 与 litellm/budget_manager.py",
+    "想新增代理端点：在 litellm/proxy 下新增 endpoints 模块并挂到 proxy_server 的 app"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，建立「OpenAI 格式统一调用 + 可自托管网关」的整体定位",
+    "第2步：读 litellm/main.py 的 acompletion，理清统一入口的编排流程",
+    "第3步：读 litellm/litellm_core_utils/get_llm_provider_logic.py，理解模型名如何解析为 provider",
+    "第4步：读 litellm/utils.py 的 ProviderConfigManager，理解 provider 配置如何被分发",
+    "第5步：读 litellm/llms/base_llm/chat/transformation.py 与 anthropic 实现，理解请求与响应的归一化",
+    "第6步：读 litellm/router.py，理解选部署、重试与回退机制",
+    "第7步：读 litellm/cost_calculator.py 与 litellm_core_utils/litellm_logging.py，理解成本与日志",
+    "第8步：读 litellm/proxy/proxy_server.py 与 proxy/auth/auth_checks.py，理解网关的鉴权与限流"
+  ],
+  "diagram_mermaid": "graph TD\n  Client[客户端] --> SDK[litellm.completion 统一入口]\n  Client --> Proxy[Proxy Server 网关]\n  SDK --> Resolver[get_llm_provider 解析 provider]\n  Proxy --> Auth[auth_checks 鉴权与预算]\n  Proxy --> Limiter[ParallelRequestLimiter 限流]\n  Proxy --> Router[Router 路由与回退]\n  Router --> Resolver\n  Resolver --> ConfigMgr[ProviderConfigManager 配置分发]\n  ConfigMgr --> BaseConfig[BaseConfig 请求响应转换]\n  BaseConfig --> Handler[Provider Handler 实际调用]\n  Handler --> Transform[transform_response 归一化]\n  Transform --> Cost[cost_calculator 成本计算]\n  Cost --> Logging[litellm_logging 日志与回调]\n  Logging --> DB[PrismaClient 数据库]\n  DB --> Budget[BudgetManager 预算更新]\n  ConfigMgr --> PriceMap[model_prices 价格表]\n  Router --> Strategy[路由策略 simple-shuffle 与 latency]\n  ConfigMgr --> Cache[缓存层]",
+  "surprises": [
+    "litellm.completion 是同步函数但内部用 run_in_executor 转调异步实现，真正原生的异步入口是 acompletion，混用易在事件循环里踩坑",
+    "100+ provider 的归一化靠两件事：一个巨大的 ProviderConfigManager 分发方法加每个 provider 各自的 BaseConfig 子类，而非插件自动发现",
+    "成本价格表是仓库根目录下一个约 2.8MB 的巨型 JSON，模型上下文窗口与价格都从它读取，可被本地文件或远程覆盖",
+    "Router 是可选层：直接用 litellm.completion 不需要它，只有代理或需要负载均衡与回退时才引入",
+    "代码库大量使用延迟导入与动态导入来缩短启动时间，很多模块的顶层 import 其实被刻意延后",
+    "代理与 SDK 是同一仓库两套用法，proxy_server.py 体积巨大且承担了大量端点与后台任务逻辑"
+  ],
+  "confidence": "高"
+}

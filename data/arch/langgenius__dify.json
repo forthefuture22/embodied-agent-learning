@@ -1,0 +1,91 @@
+{
+  "repo": "langgenius/dify",
+  "name": "Dify",
+  "one_liner": "开源 LLM 应用开发平台，可视化编排工作流、RAG 与 Agent",
+  "problem": "让非算法团队用可视化画布把提示词、知识库检索、工具与多家模型组装成可上线的 LLM 应用，并统一提供 API、日志与可观测性。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "App", "role": "应用实体，用 mode 区分 chat/completion/workflow/agent 等应用类型，是租户内一切资源的根", "file": "api/models/model.py"},
+    {"name": "Workflow", "role": "工作流定义，持久化 nodes/edges 图配置、环境变量与运行状态，是编排的数据载体", "file": "api/models/workflow.py"},
+    {"name": "DifyNodeFactory", "role": "按节点 type 与 version 解析节点实现类，并注入模型、代码执行器、文件等运行时依赖", "file": "api/core/workflow/node_factory.py"},
+    {"name": "WorkflowEntry", "role": "把 Workflow 图、变量池与图执行引擎组装起来，负责驱动一次工作流运行并产出事件流", "file": "api/core/workflow/workflow_entry.py"},
+    {"name": "WorkflowAppRunner", "role": "工作流应用的运行时，加载图、初始化变量池、挂载持久化与可观测层并调用 WorkflowEntry", "file": "api/core/app/apps/workflow/app_runner.py"},
+    {"name": "AppGenerator", "role": "所有应用的统一入口，负责参数校验、配额计费、创建消息/任务记录并触发实际运行", "file": "api/core/app/apps/base_app_generator.py"},
+    {"name": "ModelManager", "role": "模型调用统一抽象，屏蔽 provider 差异，输出 LLMResult、Embedding、Rerank 等标准结果", "file": "api/core/model_manager.py"},
+    {"name": "ProviderManager", "role": "管理模型 provider 的安装、凭据、负载均衡与默认模型配置", "file": "api/core/provider_manager.py"},
+    {"name": "PluginService", "role": "插件运行时，统一加载与调用模型、工具、Agent 策略等插件能力", "file": "api/core/plugin/plugin_service.py"},
+    {"name": "RetrievalService", "role": "知识库检索统一入口，串联向量检索、关键词检索、元数据过滤与重排", "file": "api/core/rag/datasource/retrieval_service.py"},
+    {"name": "IndexProcessorFactory", "role": "按索引结构选择文档索引处理器，抽象段落/QA/父子分段等索引策略", "file": "api/core/rag/index_processor/index_processor.py"},
+    {"name": "Vector", "role": "向量库后端抽象与工厂，屏蔽不同向量数据库的读写差异", "file": "api/core/rag/datasource/vdb/vector_factory.py"}
+  ],
+  "layers": [
+    {"name": "Web 前端层", "responsibility": "Next.js 控制台与可视化工作流画布，负责编排编辑、调试与运行结果渲染", "modules": ["web/app", "web/features", "web/service"], "files": ["web/app/layout.tsx", "web/service/apps.ts"]},
+    {"name": "API 控制器层", "responsibility": "暴露控制台 API 与对外 Service API，做鉴权、参数绑定与响应封装", "modules": ["api/controllers"], "files": ["api/controllers/service_api/index.py", "api/controllers/console/app"]},
+    {"name": "应用运行时层", "responsibility": "应用生成器与运行器，按应用类型组织对话、工作流、Agent 的运行流程", "modules": ["api/core/app"], "files": ["api/core/app/apps/base_app_generator.py", "api/core/app/apps/workflow/app_runner.py"]},
+    {"name": "工作流引擎层", "responsibility": "节点注册与解析、图执行编排、变量池与暂停恢复", "modules": ["api/core/workflow"], "files": ["api/core/workflow/workflow_entry.py", "api/core/workflow/node_factory.py"]},
+    {"name": "RAG 层", "responsibility": "文档解析切分、索引构建、向量/关键词检索与重排", "modules": ["api/core/rag"], "files": ["api/core/rag/datasource/retrieval_service.py", "api/core/rag/index_processor/index_processor.py"]},
+    {"name": "模型与插件层", "responsibility": "模型 provider 配置与调用、插件加载与第三方工具接入", "modules": ["api/core/plugin", "api/providers"], "files": ["api/core/model_manager.py", "api/core/provider_manager.py"]},
+    {"name": "服务与仓储层", "responsibility": "业务服务、数据仓储与 ORM 模型，连接控制器与核心逻辑", "modules": ["api/services", "api/repositories", "api/models"], "files": ["api/models/workflow.py", "api/models/model.py"]},
+    {"name": "扩展与基础设施层", "responsibility": "Flask 应用工厂、Celery 异步任务、存储/缓存/OTel 等扩展", "modules": ["api/extensions", "api/configs", "api/tasks"], "files": ["api/app_factory.py"]}
+  ],
+  "data_flow": [
+    "第1步：前端画布把 nodes/edges 图保存到工作流控制台 API，落库为 Workflow 记录",
+    "第2步：用户在控制台或通过 Service API 触发应用，请求进入 AppGenerator",
+    "第3步：AppGenerator 校验输入、计算配额计费、写入消息与任务记录",
+    "第4步：按配置派发到 Celery 异步任务或同步执行",
+    "第5步：WorkflowAppRunner 从数据库加载 Workflow 图，构建 VariablePool 与系统变量",
+    "第6步：DifyNodeFactory 按节点 type/version 解析节点类并注入模型、代码执行器等依赖",
+    "第7步：WorkflowEntry 组装图执行引擎，从 Start 节点按拓扑顺序执行节点",
+    "第8步：节点执行时读写变量池，LLM 节点经 ModelManager 调模型，检索节点经 RAG 层取上下文",
+    "第9步：执行事件经 ResponseStreamFilter 过滤为对外响应流",
+    "第10步：持久化层写入工作流与节点执行记录，队列管理器把事件推给前端",
+    "第11步：前端按事件流渲染各节点的运行状态与最终输出"
+  ],
+  "entry_points": [
+    {"path": "api/app.py", "what": "后端 Flask 应用主入口，含 gevent monkey patch 与启动逻辑"},
+    {"path": "api/app_factory.py", "what": "创建并配置 Flask 应用的工厂函数"},
+    {"path": "api/celery_entrypoint.py", "what": "Celery worker 入口，消费工作流与索引等异步任务"},
+    {"path": "docker/docker-compose.yaml", "what": "一键启动 api、worker、web、数据库等全套服务"},
+    {"path": "web/app", "what": "Next.js 前端应用入口目录"},
+    {"path": "api/controllers/service_api/app", "what": "对外 Service API，供第三方系统调用应用"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立平台整体定位与核心能力认知"},
+    {"path": "api/core/app/apps/base_app_generator.py", "why": "所有应用类型的统一入口，理解校验、计费、触发链路"},
+    {"path": "api/core/app/apps/workflow/app_generator.py", "why": "工作流应用如何被生成与派发，是运行链路的起点"},
+    {"path": "api/core/app/apps/workflow/app_runner.py", "why": "工作流运行时的装配过程，串起图、变量池与持久化"},
+    {"path": "api/core/workflow/workflow_entry.py", "why": "工作流执行的真正核心，理解事件流与图执行"},
+    {"path": "api/core/workflow/node_factory.py", "why": "节点注册与解析机制，是扩展节点的关键"},
+    {"path": "api/models/workflow.py", "why": "工作流数据结构与图配置的持久化形态"},
+    {"path": "api/core/rag/datasource/retrieval_service.py", "why": "RAG 检索主流程，理解知识库如何被工作流调用"},
+    {"path": "api/core/model_manager.py", "why": "模型调用统一抽象，理解多 provider 如何被抹平"},
+    {"path": "api/core/plugin/plugin_service.py", "why": "插件运行时，理解模型与工具如何以插件形式扩展"}
+  ],
+  "extension_points": [
+    "新增工作流节点：在 api/core/workflow/nodes 下实现 Node 子类并自注册，工厂按 type/version 解析",
+    "新增模型 provider：通过插件机制接入，见 api/core/plugin 与 api/providers",
+    "新增向量库后端：扩展 api/core/rag/datasource/vdb/vector_factory.py",
+    "新增文档索引策略：在 api/core/rag/index_processor/processor 下新增处理器",
+    "新增应用类型：在 api/core/app/apps 下新增应用生成器与运行器",
+    "新增工具：通过插件与工具 provider 注册到工具市场"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 docker/docker-compose.yaml，了解部署形态与组件",
+    "第2步：读 api/core/app/apps/base_app_generator.py 与 workflow/app_generator.py，理清应用入口",
+    "第3步：读 api/core/app/apps/workflow/app_runner.py，理解运行时装配",
+    "第4步：读 api/core/workflow/workflow_entry.py 与 node_factory.py，掌握图执行与节点机制",
+    "第5步：读 api/models/workflow.py，理解工作流数据模型",
+    "第6步：读 api/core/rag/datasource/retrieval_service.py，理解 RAG 集成",
+    "第7步：读 api/core/model_manager.py 与 provider_manager.py，理解模型抽象",
+    "第8步：对照 web/app/components/workflow 看前端画布如何驱动后端"
+  ],
+  "diagram_mermaid": "graph TD\n  A[前端画布保存工作流图] --> B[控制台或Service API触发应用]\n  B --> C[AppGenerator校验与计费]\n  C --> D[Celery异步任务]\n  D --> E[WorkflowAppRunner加载工作流图]\n  E --> F[DifyNodeFactory解析并构造节点]\n  F --> G[图执行引擎按拓扑执行]\n  G --> H[节点读写变量池]\n  H --> I[检索节点调用RAG层]\n  H --> J[LLM节点调用模型层]\n  G --> K[事件流过滤]\n  K --> L[持久化与前端渲染]",
+  "surprises": [
+    "工作流的图执行引擎 graphon 是独立的外部依赖包，Dify 本地主要做节点扩展与运行时装配，而不是引擎本体",
+    "节点按 version 选择实现，且 Agent 节点历史上用 version=2 表示工具参数格式，需靠 kind 标记区分新旧节点",
+    "模型 provider 已从内置迁移为插件机制，看代码时容易在 api/providers 与 api/core/plugin 之间迷路",
+    "应用虽有 chat/completion/workflow/agent 多种类型，但都收敛到 AppGenerator/AppRunner 同一套骨架",
+    "前后端是各自独立的工程，通过 console 与 service API 解耦，不存在共享代码的强耦合"
+  ],
+  "confidence": "高"
+}

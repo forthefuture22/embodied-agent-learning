@@ -1,0 +1,86 @@
+{
+  "repo": "dzhng/deep-research",
+  "name": "deep-research",
+  "one_liner": "极简深度研究 Agent：递归检索并产出带来源报告",
+  "problem": "人工调研要反复搜索、阅读并归纳再写成报告。本项目用不到五百行代码把生成查询、搜索、提取要点、生成后续方向、写报告串成可递归的研究循环，便于理解和二次开发。",
+  "difficulty": "入门",
+  "core_abstractions": [
+    {"name": "deepResearch", "role": "递归研究核心：生成查询、并行搜索、提取学习点并按深度递归", "file": "src/deep-research.ts"},
+    {"name": "generateSerpQueries", "role": "查询生成：把用户问题转成一组互不重复的搜索查询", "file": "src/deep-research.ts"},
+    {"name": "processSerpResult", "role": "结果处理：把网页正文压成学习点并生成后续问题", "file": "src/deep-research.ts"},
+    {"name": "writeFinalReport", "role": "报告生成：汇总全部学习点写成 Markdown 并追加来源", "file": "src/deep-research.ts"},
+    {"name": "writeFinalAnswer", "role": "短答生成：面向选择题等只需简短答案的场景", "file": "src/deep-research.ts"},
+    {"name": "generateFeedback", "role": "需求澄清：先向用户追问以明确研究方向", "file": "src/feedback.ts"},
+    {"name": "systemPrompt", "role": "系统提示：统一注入研究者人设与当日日期", "file": "src/prompt.ts"},
+    {"name": "getModel", "role": "模型选择：按环境变量在自定义模型、DeepSeek R1 与 o3-mini 间切换", "file": "src/ai/providers.ts"},
+    {"name": "trimPrompt", "role": "上下文裁剪：按 token 数递归裁剪过长提示词", "file": "src/ai/providers.ts"},
+    {"name": "RecursiveCharacterTextSplitter", "role": "文本切分：按分隔符优先级递归切分文本", "file": "src/ai/text-splitter.ts"},
+    {"name": "CLI run", "role": "命令行编排：交互收集查询与广度深度并驱动全流程", "file": "src/run.ts"},
+    {"name": "Express API", "role": "HTTP 接口：暴露 research 与 generate-report 两个端点", "file": "src/api.ts"}
+  ],
+  "layers": [
+    {"name": "入口层", "responsibility": "提供 CLI 与 HTTP 两种调用方式", "modules": ["src"], "files": ["src/run.ts", "src/api.ts"]},
+    {"name": "研究循环层", "responsibility": "实现查询、搜索、提取、递归、报告的主循环", "modules": ["src"], "files": ["src/deep-research.ts"]},
+    {"name": "提示与交互层", "responsibility": "系统提示与需求澄清追问", "modules": ["src"], "files": ["src/prompt.ts", "src/feedback.ts"]},
+    {"name": "模型与上下文层", "responsibility": "多模型选择、上下文裁剪与文本切分", "modules": ["src/ai"], "files": ["src/ai/providers.ts", "src/ai/text-splitter.ts"]},
+    {"name": "外部服务集成层", "responsibility": "通过 SDK 调用 Firecrawl 搜索抓取与 LLM 提供方", "modules": ["src/ai"], "files": ["src/ai/providers.ts"]}
+  ],
+  "data_flow": [
+    "第1步：run.ts 交互式询问研究问题、广度 breadth 与深度 depth",
+    "第2步：报告模式下先调 generateFeedback 生成追问，用户作答后拼成 combinedQuery",
+    "第3步：deepResearch 调 generateSerpQueries，让 LLM 依据问题与已有学习点生成搜索查询",
+    "第4步：用 p-limit 按 ConcurrencyLimit 并发地对每个查询调用 firecrawl.search",
+    "第5步：搜索结果取 markdown 正文，用 trimPrompt 裁到约两万五千 token",
+    "第6步：processSerpResult 让 LLM 从正文提取学习点与后续问题",
+    "第7步：若 newDepth 大于 0，用研究目标与后续问题拼出 nextQuery，递归调用 deepResearch",
+    "第8步：递归中广度减半、深度减一，直到 depth 归零",
+    "第9步：合并各分支学习点与访问 URL 并去重",
+    "第10步：writeFinalReport 汇总学习点生成 Markdown 并追加 Sources",
+    "第11步：结果写入 report.md 或 answer.md，API 模式则直接返回 JSON"
+  ],
+  "entry_points": [
+    {"path": "src/run.ts", "what": "CLI 入口：交互式收集参数并驱动研究到写报告"},
+    {"path": "src/api.ts", "what": "HTTP 入口：Express 暴露 research 与 generate-report 端点"},
+    {"path": "src/deep-research.ts", "what": "核心入口：导出 deepResearch、writeFinalReport、writeFinalAnswer"},
+    {"path": "src/feedback.ts", "what": "澄清入口：生成追问以明确研究方向"},
+    {"path": "package.json", "what": "命令入口：npm start 跑 run.ts，npm run api 起服务"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先看它了解目标与流程图"},
+    {"path": "src/deep-research.ts", "why": "核心：完整研究循环与报告生成"},
+    {"path": "src/run.ts", "why": "CLI 编排，理解参数如何进入研究"},
+    {"path": "src/ai/providers.ts", "why": "模型选择与上下文裁剪"},
+    {"path": "src/prompt.ts", "why": "系统提示"},
+    {"path": "src/feedback.ts", "why": "追问澄清逻辑"},
+    {"path": "src/ai/text-splitter.ts", "why": "文本切分实现"},
+    {"path": "src/api.ts", "why": "HTTP 服务封装"},
+    {"path": ".env.example", "why": "环境变量与可切换的模型配置"}
+  ],
+  "extension_points": [
+    "换搜索源：src/deep-research.ts 里 firecrawl 是模块级单例，需把 firecrawl.search 调用替换或抽象成接口，目前没有内置的搜索源抽象层",
+    "换搜索服务地址：设置 FIRECRAWL_BASE_URL 指向自托管 Firecrawl",
+    "换 LLM：设置 OPENAI_ENDPOINT 与 CUSTOM_MODEL，或设置 FIREWORKS_KEY 自动切到 DeepSeek R1",
+    "调并发：设置 FIRECRAWL_CONCURRENCY 环境变量改变 ConcurrencyLimit",
+    "调上下文预算：设置 CONTEXT_SIZE 改变 trimPrompt 的默认上限",
+    "改提示词人设：编辑 src/prompt.ts 的 systemPrompt",
+    "新增输出格式：在 src/deep-research.ts 里新增 writeFinal 系列函数并在 src/run.ts 接线"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解递归研究与广度、深度两个旋钮",
+    "第2步：读 src/run.ts，看一次研究的参数与调用顺序",
+    "第3步：读 src/deep-research.ts，掌握查询生成、搜索、提取与递归",
+    "第4步：读 src/ai/providers.ts，理解模型选择与上下文裁剪",
+    "第5步：读 src/prompt.ts 与 src/feedback.ts，理解提示与追问",
+    "第6步：读 src/api.ts，理解如何服务化",
+    "第7步：读 src/ai/text-splitter.ts，理解长文如何被切分裁剪"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户提问] --> B[run.ts 收集广度与深度]\n  B --> C[generateFeedback 追问澄清]\n  C --> D[deepResearch 递归研究]\n  D --> E[generateSerpQueries 生成查询]\n  E --> F[firecrawl.search 并发搜索]\n  F --> G[processSerpResult 提取学习点]\n  G --> H{newDepth 是否大于 0}\n  H -->|是| I[拼 nextQuery 递归]\n  I --> D\n  H -->|否| J[汇总学习点与来源]\n  J --> K[writeFinalReport 写报告]\n  K --> L[输出 report.md 或 answer.md]",
+  "surprises": [
+    "搜索源没有抽象层：firecrawl 是模块级单例，想换搜索源必须改 src/deep-research.ts 里对 firecrawl.search 的调用，不像 gpt-researcher 那样有 retriever 插件机制",
+    "README 说用 CONCURRENCY_LIMIT 调并发，但代码读的是 FIRECRAWL_CONCURRENCY，文档与实现不一致",
+    "广度随递归减半：每层 newBreadth 取 breadth 一半向上取整、newDepth 为 depth 减一，所以总查询量远小于 breadth 的 depth 次方",
+    "单条查询失败不中断整体：catch 里返回空学习点，研究继续，最终报告可能静默缺少部分来源",
+    "API 的 generate-report 端点有 bug：它直接 return report 而非发送响应，请求会挂起"
+  ],
+  "confidence": "高"
+}

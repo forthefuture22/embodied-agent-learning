@@ -1,0 +1,86 @@
+{
+  "repo": "leggedrobotics/legged_gym",
+  "name": "legged_gym",
+  "one_liner": "基于 Isaac Gym 的腿足机器人强化学习训练框架",
+  "problem": "把腿足机器人粗糙地形行走的训练环境标准化：用统一的配置与注册机制组织观测、奖励、动作与域随机化，并直接对接 rsl_rl 的 PPO，实现仿真到真实的迁移。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "TaskRegistry", "role": "全局任务注册表，按名字登记任务类与环境、训练配置，并负责创建 env 与算法 runner", "file": "legged_gym/utils/task_registry.py"},
+    {"name": "BaseTask", "role": "所有 RL 任务基类，负责 Isaac Gym 初始化、张量缓冲区分配与 reset、render 基础流程", "file": "legged_gym/envs/base/base_task.py"},
+    {"name": "LeggedRobot", "role": "腿足机器人核心环境，组织观测、奖励、动作、地形、域随机化与课程学习", "file": "legged_gym/envs/base/legged_robot.py"},
+    {"name": "LeggedRobotCfg", "role": "环境参数配置类，用嵌套类描述 env、terrain、control、asset、rewards、noise、sim 等全部超参", "file": "legged_gym/envs/base/legged_robot_config.py"},
+    {"name": "LeggedRobotCfgPPO", "role": "训练参数配置类，描述 policy、algorithm 与 runner 的超参", "file": "legged_gym/envs/base/legged_robot_config.py"},
+    {"name": "BaseConfig", "role": "配置基类，提供递归的 to_dict 序列化能力", "file": "legged_gym/envs/base/base_config.py"},
+    {"name": "奖励自动装配机制", "role": "按 cfg 中非零 reward scale 自动查找 _reward_ 前缀方法并组成奖励列表", "file": "legged_gym/envs/base/legged_robot.py"},
+    {"name": "Terrain 地形生成器", "role": "按课程学习参数生成 trimesh 或 heightfield 地形并管理难度等级", "file": "legged_gym/utils/terrain.py"},
+    {"name": "helpers 工具集", "role": "命令行参数解析、配置字典化、sim 参数解析、随机种子与检查点路径查找", "file": "legged_gym/utils/helpers.py"},
+    {"name": "Anymal 环境子类", "role": "示范如何在 LeggedRobot 上叠加执行器网络，重写 reset_idx 与 _compute_torques", "file": "legged_gym/envs/anymal_c/anymal.py"}
+  ],
+  "layers": [
+    {"name": "包入口与常量层", "responsibility": "定义仓库根目录与环境目录常量，供全项目引用", "modules": ["legged_gym"], "files": ["legged_gym/__init__.py"]},
+    {"name": "任务注册与训练编排层", "responsibility": "注册任务、构建环境与 rsl_rl 训练 runner，承载训练与回放脚本", "modules": ["legged_gym/utils", "legged_gym/scripts"], "files": ["legged_gym/utils/task_registry.py", "legged_gym/scripts/train.py"]},
+    {"name": "基础任务抽象层", "responsibility": "封装 Isaac Gym 会话、张量缓冲与渲染，提供 RL 任务统一接口", "modules": ["legged_gym/envs/base"], "files": ["legged_gym/envs/base/base_task.py"]},
+    {"name": "腿足机器人环境层", "responsibility": "实现观测、奖励、动作、地形、域随机化与课程学习等腿足核心逻辑", "modules": ["legged_gym/envs/base"], "files": ["legged_gym/envs/base/legged_robot.py"]},
+    {"name": "配置体系层", "responsibility": "用嵌套类与继承组织环境与训练全部超参", "modules": ["legged_gym/envs/base"], "files": ["legged_gym/envs/base/legged_robot_config.py", "legged_gym/envs/base/base_config.py"]},
+    {"name": "具体机器人任务层", "responsibility": "定义 Anymal、A1、Cassie 等具体机器人的配置与少量环境重写", "modules": ["legged_gym/envs"], "files": ["legged_gym/envs/anymal_c/mixed_terrains/anymal_c_rough_config.py", "legged_gym/envs/cassie/cassie.py"]},
+    {"name": "工具库层", "responsibility": "提供地形生成、数学工具、日志记录与参数辅助函数", "modules": ["legged_gym/utils"], "files": ["legged_gym/utils/terrain.py", "legged_gym/utils/math.py"]},
+    {"name": "资源资产层", "responsibility": "存放机器人 URDF 模型与执行器网络权重", "modules": ["resources"], "files": ["resources/robots/anymal_c/urdf/anymal_c.urdf"]}
+  ],
+  "data_flow": [
+    "第1步：运行 scripts/train.py，先用 get_args 解析命令行，再 import legged_gym.envs",
+    "第2步：envs/__init__.py 被导入时，调用 task_registry.register 把任务名与任务类、环境配置、训练配置登记进全局注册表",
+    "第3步：train 调用 task_registry.make_env，取回任务类与配置，用 update_cfg_from_args 覆盖参数并解析 sim_params",
+    "第4步：实例化任务类，进入 BaseTask.__init__，获取 gym 句柄、分配 obs、rew、reset 等张量缓冲",
+    "第5步：LeggedRobot.__init__ 依次调用 _parse_cfg、_init_buffers、_prepare_reward_function，并按 cfg 选择性地创建地形",
+    "第6步：task_registry.make_alg_runner 用 class_to_dict 把训练配置转成字典，构造 rsl_rl 的 OnPolicyRunner",
+    "第7步：训练循环调用 ppo_runner.learn，runner 反复调用 env.step 收集 rollout",
+    "第8步：step 内先裁剪动作，按 decimation 次循环执行 _compute_torques 算力矩、set_dof_actuation_force_tensor 下发、simulate 推进仿真",
+    "第9步：post_physics_step 刷新根状态与接触力，换算基座速度与投影重力，执行 _post_physics_step_callback",
+    "第10步：依次执行 check_termination、compute_reward、reset_idx 与 compute_observations，返回 obs、rew、done 给算法",
+    "第11步：rsl_rl 的 PPO 用这些数据更新策略网络，训练得到的策略可保存并可迁移到真机"
+  ],
+  "entry_points": [
+    {"path": "legged_gym/scripts/train.py", "what": "训练入口，组装 env 与 PPO runner 并启动学习"},
+    {"path": "legged_gym/scripts/play.py", "what": "回放入口，加载已训练策略并可视化演示"},
+    {"path": "legged_gym/envs/__init__.py", "what": "导入各任务并在导入时向 task_registry 注册任务"},
+    {"path": "legged_gym/utils/task_registry.py", "what": "任务注册表实现，make_env 与 make_alg_runner 的所在地"},
+    {"path": "setup.py", "what": "包安装脚本，声明 isaacgym 与 rsl-rl 依赖"},
+    {"path": "legged_gym/envs/base/legged_robot.py", "what": "核心环境实现，训练时真正被反复调用的类"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读它了解代码结构、训练命令与加新机器人的步骤"},
+    {"path": "legged_gym/envs/__init__.py", "why": "看清任务注册的写法与现有任务清单"},
+    {"path": "legged_gym/utils/task_registry.py", "why": "理解任务注册与 env、算法 runner 的装配关系"},
+    {"path": "legged_gym/envs/base/base_task.py", "why": "看 Isaac Gym 会话与张量缓冲如何初始化"},
+    {"path": "legged_gym/envs/base/legged_robot.py", "why": "核心文件，读 step、post_physics_step 与奖励装配"},
+    {"path": "legged_gym/envs/base/legged_robot_config.py", "why": "一处看全所有超参与奖励尺度，理解参数体系"},
+    {"path": "legged_gym/envs/anymal_c/mixed_terrains/anymal_c_rough_config.py", "why": "具体机器人配置范本，展示 asset 与 PD 增益怎么写"},
+    {"path": "legged_gym/utils/helpers.py", "why": "理解命令行覆盖、配置字典化与 sim 参数解析"}
+  ],
+  "extension_points": [
+    "想加一个新机器人：在 resources/robots 放 URDF，新建 envs/<robot> 目录写继承 LeggedRobotCfg 的配置，设置 asset.file、foot_name、default_joint_angles 与 stiffness、damping",
+    "想加一个新任务：在 envs/ 下新建配置类，可选地继承 LeggedRobot 重写方法，然后在 envs/__init__.py 用 task_registry.register 注册",
+    "想加一个新奖励项：在环境类里加 _reward_<name> 方法，并在 cfg.rewards.scales 里给同名非零权重，_prepare_reward_function 会自动挂载",
+    "想换控制方式：修改 cfg.control.control_type 或重写 _compute_torques，参考 Anymal 用执行器网络替换 PD 的写法",
+    "想换训练算法：在 train_cfg.runner 里改 policy_class_name 与 algorithm_class_name，或替换 rsl_rl 的 runner 实现",
+    "想调地形难度：改 cfg.terrain 的 terrain_proportions、num_rows 与 curriculum 相关参数，或扩展 utils/terrain.py"
+  ],
+  "learning_path": [
+    "第1步读 README.md，了解代码结构与 train、play 两条命令",
+    "第2步读 legged_gym/envs/__init__.py 与 utils/task_registry.py，弄清任务注册与装配",
+    "第3步读 envs/base/base_task.py，理解 Isaac Gym 会话与缓冲区",
+    "第4步精读 envs/base/legged_robot.py 的 step 与 post_physics_step，吃透训练主循环",
+    "第5步读 envs/base/legged_robot_config.py，建立完整参数体系认知",
+    "第6步读 envs/anymal_c 下的配置与 anymal.py，看具体机器人如何落地",
+    "第7步读 utils/terrain.py 与 utils/helpers.py，补齐地形与工具链理解"
+  ],
+  "diagram_mermaid": "graph TD\n  A[train.py 入口] --> B[get_args 解析命令行]\n  B --> C[envs 包导入]\n  C --> D[task_registry 注册任务]\n  D --> E[make_env 构建环境]\n  E --> F[BaseTask 初始化]\n  F --> G[LeggedRobot 缓冲区与奖励装配]\n  D --> H[make_alg_runner]\n  H --> I[OnPolicyRunner 来自 rsl_rl]\n  I --> J[env.step 收集 rollout]\n  J --> K[_compute_torques 与 simulate]\n  K --> L[post_physics_step 算奖励观测]\n  L --> I\n  I --> M[PPO 更新策略]",
+  "surprises": [
+    "奖励函数不靠显式列表注册，而是按配置里非零的 reward scale 名字自动反射查找 _reward_ 方法，加奖励只需加方法加权重",
+    "配置全靠嵌套类继承，改一个机器人的参数用内层类继承内层类，很容易漏掉某个内层类导致参数没被覆盖",
+    "控制频率与仿真频率解耦，靠 cfg.control.decimation 让一次策略输出对应多次物理步进",
+    "仓库本身不含 PPO 实现，训练算法来自外部 rsl_rl 包，本仓库只负责环境与配置装配",
+    "README 里给出了三角形网格地形下接触力张量不可靠的已知坑，需要用力传感器替代"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,230 @@
+{
+  "repo": "sgl-project/sglang",
+  "name": "SGLang",
+  "one_liner": "面向大模型与多模态的高性能推理框架，以 RadixAttention 复用 KV 前缀",
+  "problem": "解决大模型服务与 Agent 场景下推理吞吐低、多轮对话前缀重复计算浪费算力的问题：用前缀树复用 KV 缓存、用前后端分离与连续批处理压榨 GPU，并原生支持结构化输出与投机解码。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "Engine",
+      "role": "离线推理引擎门面，启动 tokenizer 与 scheduler 进程并暴露 generate，是编程式调用的入口",
+      "file": "python/sglang/srt/entrypoints/engine.py"
+    },
+    {
+      "name": "TokenizerManager",
+      "role": "前端进程的核心，负责 tokenize/detokenize、请求状态管理与向 scheduler 收发消息，充当调度器的客户端",
+      "file": "python/sglang/srt/managers/tokenizer_manager.py"
+    },
+    {
+      "name": "Scheduler",
+      "role": "调度主循环，维护等待与运行队列、组织 batch、调用模型执行并处理结果，是推理系统的中枢",
+      "file": "python/sglang/srt/managers/scheduler.py"
+    },
+    {
+      "name": "ScheduleBatch",
+      "role": "一次前向的批次数据结构，承载请求集合与填充、注意力元信息，是调度与执行之间的传递单元",
+      "file": "python/sglang/srt/managers/schedule_batch.py"
+    },
+    {
+      "name": "RadixCache",
+      "role": "RadixAttention 的前缀树实现，用树结构复用 KV 前缀并做 LRU 叶子淘汰，是复用算力的关键",
+      "file": "python/sglang/srt/mem_cache/radix_cache.py"
+    },
+    {
+      "name": "BasePrefixCache",
+      "role": "前缀缓存抽象接口，定义 match_prefix/insert/evict 与锁引用协议，屏蔽多种缓存实现",
+      "file": "python/sglang/srt/mem_cache/base_prefix_cache.py"
+    },
+    {
+      "name": "ModelRunner",
+      "role": "模型执行器，负责权重加载、前向计算、CUDA graph 捕获与采样，封装单个 GPU 上的推理",
+      "file": "python/sglang/srt/model_executor/model_runner.py"
+    },
+    {
+      "name": "ForwardBatch",
+      "role": "前向批信息载体，描述本次前向的模式、位置、注意力元数据与 KV 索引，串起执行层",
+      "file": "python/sglang/srt/model_executor/forward_batch_info.py"
+    },
+    {
+      "name": "ModelRegistry",
+      "role": "模型注册表，按 HF 架构名把模型类映射到实现，扫描 models 目录下带 EntryClass 的模块，是新增模型的挂载点",
+      "file": "python/sglang/srt/models/registry.py"
+    },
+    {
+      "name": "GrammarManager",
+      "role": "约束解码管理器，编译并缓存语法对象、按请求调度掩码，统一 xgrammar/outlines/llguidance 等后端",
+      "file": "python/sglang/srt/constrained/grammar_manager.py"
+    },
+    {
+      "name": "SglExpr",
+      "role": "前端 DSL 的中间表示节点基类，描述 gen/select/fork 等操作，是 SGLang 语言层被解释执行的基础",
+      "file": "python/sglang/lang/ir.py"
+    },
+    {
+      "name": "ServerArgs",
+      "role": "服务端参数总集，集中定义模型、并行、显存、缓存、约束等全部启动配置",
+      "file": "python/sglang/srt/server_args.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "HTTP 与引擎入口层",
+      "responsibility": "暴露 OpenAI 兼容 HTTP 接口与离线 Engine API，处理请求协议与流式响应",
+      "modules": ["python/sglang/srt/entrypoints", "python/sglang/launch_server.py"],
+      "files": ["python/sglang/srt/entrypoints/http_server.py", "python/sglang/srt/entrypoints/engine.py", "python/sglang/launch_server.py"]
+    },
+    {
+      "name": "前端 tokenize 层",
+      "responsibility": "分词、请求状态管理、流式回传与多模态输入预处理",
+      "modules": ["python/sglang/srt/managers"],
+      "files": ["python/sglang/srt/managers/tokenizer_manager.py", "python/sglang/srt/managers/io_struct.py"]
+    },
+    {
+      "name": "调度层",
+      "responsibility": "调度主循环、批组织、chunked prefill、投机解码与 prefill/decode 分离",
+      "modules": ["python/sglang/srt/managers", "python/sglang/srt/disaggregation"],
+      "files": ["python/sglang/srt/managers/scheduler.py", "python/sglang/srt/managers/schedule_batch.py", "python/sglang/srt/managers/schedule_policy.py"]
+    },
+    {
+      "name": "KV 缓存与内存层",
+      "responsibility": "前缀树复用、KV 显存池、分层缓存与淘汰策略",
+      "modules": ["python/sglang/srt/mem_cache"],
+      "files": ["python/sglang/srt/mem_cache/radix_cache.py", "python/sglang/srt/mem_cache/base_prefix_cache.py", "python/sglang/srt/mem_cache/memory_pool.py"]
+    },
+    {
+      "name": "模型执行层",
+      "responsibility": "加载权重、执行前向、CUDA graph 捕获、采样与投机解码",
+      "modules": ["python/sglang/srt/model_executor", "python/sglang/srt/speculative"],
+      "files": ["python/sglang/srt/model_executor/model_runner.py", "python/sglang/srt/model_executor/forward_batch_info.py"]
+    },
+    {
+      "name": "模型定义层",
+      "responsibility": "各模型网络实现与注册表解析，按架构名分发到具体实现",
+      "modules": ["python/sglang/srt/models", "python/sglang/srt/model_loader"],
+      "files": ["python/sglang/srt/models/registry.py", "python/sglang/srt/models/llama.py", "python/sglang/srt/model_loader/loader.py"]
+    },
+    {
+      "name": "约束解码层",
+      "responsibility": "把 JSON schema 或正则编译为语法对象并在解码时施加 token 掩码",
+      "modules": ["python/sglang/srt/constrained"],
+      "files": ["python/sglang/srt/constrained/grammar_manager.py", "python/sglang/srt/constrained/xgrammar_backend.py", "python/sglang/srt/constrained/base_grammar_backend.py"]
+    },
+    {
+      "name": "DSL 语言层",
+      "responsibility": "提供 SGLang 前端语言，把 Python 函数追踪成 IR 并解释执行为推理请求",
+      "modules": ["python/sglang/lang"],
+      "files": ["python/sglang/lang/ir.py", "python/sglang/lang/interpreter.py", "python/sglang/lang/api.py"]
+    },
+    {
+      "name": "分布式与硬件后端层",
+      "responsibility": "张量并行、数据并行、平台适配与各厂商硬件后端",
+      "modules": ["python/sglang/srt/distributed", "python/sglang/srt/platforms", "python/sglang/srt/hardware_backend"],
+      "files": ["python/sglang/srt/distributed/parallel_state.py", "python/sglang/srt/configs/model_config.py"]
+    }
+  ],
+  "data_flow": [
+    "第1步：请求从 HTTP 接口或 Engine.generate 进入，交给前端 TokenizerManager",
+    "第2步：TokenizerManager 把 prompt 分词成 token ids 与采样参数，构造 Req 并发送给 Scheduler 进程",
+    "第3步：Scheduler 从等待队列取请求，用 RadixCache.match_prefix 查找最长可复用前缀并锁定对应 KV 节点",
+    "第4步：只对未命中前缀做 prefill 计算，命中部分直接复用 KV，显著降低算力",
+    "第5步：调度器按调度策略把多个请求组成 ScheduleBatch，生成 ForwardBatch",
+    "第6步：ModelRunner 执行前向，用 CUDA graph 加速并做采样得到下一个 token",
+    "第7步：若启用约束解码，GrammarManager 在此阶段计算 token 掩码约束采样结果",
+    "第8步：Scheduler 在 process_batch_result 中更新请求状态、把新生成的 KV 插入 RadixCache 并决定请求是否完成",
+    "第9步：完成的 token 流式回传 TokenizerManager，detokenize 成文本推给客户端",
+    "第10步：显存不足时 RadixCache 按 LRU 淘汰未被引用的叶子节点回收 KV 块"
+  ],
+  "entry_points": [
+    {
+      "path": "python/sglang/launch_server.py",
+      "what": "服务启动脚本，解析参数并调用 http_server.launch_server 拉起进程"
+    },
+    {
+      "path": "python/sglang/srt/entrypoints/http_server.py",
+      "what": "FastAPI 应用与 launch_server 定义，暴露 OpenAI 兼容接口"
+    },
+    {
+      "path": "python/sglang/srt/entrypoints/engine.py",
+      "what": "Engine 类定义，离线批量推理与进程编排入口"
+    },
+    {
+      "path": "python/sglang/srt/managers/scheduler.py",
+      "what": "run_scheduler_process 是调度子进程的启动函数，进入调度主循环"
+    },
+    {
+      "path": "python/sglang/lang/api.py",
+      "what": "SGLang 语言层的 Runtime 与 gen 等 DSL 函数入口"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "README.md",
+      "why": "先建立整体认知：RadixAttention、结构化输出、多硬件支持等卖点"
+    },
+    {
+      "path": "python/sglang/srt/entrypoints/engine.py",
+      "why": "看 Engine 如何启动 tokenizer 与 scheduler 进程，理解前后端分离的进程模型"
+    },
+    {
+      "path": "python/sglang/srt/managers/tokenizer_manager.py",
+      "why": "理解请求如何被分词、状态化并与调度器通信"
+    },
+    {
+      "path": "python/sglang/srt/managers/scheduler.py",
+      "why": "调度主循环与批组织是系统中枢，get_next_batch_to_run 与 run_batch 是必读"
+    },
+    {
+      "path": "python/sglang/srt/mem_cache/radix_cache.py",
+      "why": "RadixAttention 的实现核心，match_prefix/insert/evict 三函数理解前缀复用与淘汰"
+    },
+    {
+      "path": "python/sglang/srt/model_executor/model_runner.py",
+      "why": "看单卡如何加载权重、执行前向与捕获 CUDA graph"
+    },
+    {
+      "path": "python/sglang/srt/models/registry.py",
+      "why": "模型注册与解析机制，是新增模型必须理解的分发逻辑"
+    },
+    {
+      "path": "python/sglang/lang/ir.py",
+      "why": "前端 DSL 的 IR 节点定义，理解 SglGen/Select 等表达式如何被解释"
+    },
+    {
+      "path": "python/sglang/srt/constrained/grammar_manager.py",
+      "why": "约束解码的统一管理器，理解结构化输出如何接入采样"
+    },
+    {
+      "path": "python/sglang/srt/server_args.py",
+      "why": "全部启动参数集中于此，是理解参数体系的入口"
+    }
+  ],
+  "extension_points": [
+    "想新增模型：在 python/sglang/srt/models 下新增实现文件并定义 EntryClass，注册表会自动扫描；可参考 python/sglang/srt/models/llama.py",
+    "想新增约束解码后端：实现 python/sglang/srt/constrained/base_grammar_backend.py 的接口并在 grammar_manager 中接入",
+    "想改调度策略：修改 python/sglang/srt/managers/schedule_policy.py 与 scheduler.py 的批组织逻辑",
+    "想新增 KV 缓存实现：实现 python/sglang/srt/mem_cache/base_prefix_cache.py 的 BasePrefixCache 接口",
+    "想扩展 KV 显存池类型：参考 python/sglang/srt/mem_cache/memory_pool.py 中的 MHATokenToKVPool 系列",
+    "想新增前端 DSL 算子：在 python/sglang/lang/ir.py 增加 SglExpr 子类并在 interpreter.py 中实现执行",
+    "想新增 OpenAI 兼容接口：在 python/sglang/srt/entrypoints/openai 下扩展协议与适配",
+    "想改并行策略：修改 python/sglang/srt/distributed/parallel_state.py 与 server_args 中的并行参数"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，建立「高性能推理 + 前缀复用 + 结构化输出」的整体印象",
+    "第2步：读 python/sglang/launch_server.py 与 python/sglang/srt/entrypoints/http_server.py，理解服务如何启动",
+    "第3步：读 python/sglang/srt/entrypoints/engine.py，理解 tokenizer 与 scheduler 多进程如何被编排",
+    "第4步：读 python/sglang/srt/managers/tokenizer_manager.py，理解请求分词与状态管理",
+    "第5步：读 python/sglang/srt/managers/scheduler.py 的 event_loop 与 get_next_batch_to_run，掌握调度主循环",
+    "第6步：读 python/sglang/srt/mem_cache/radix_cache.py，理解 RadixAttention 的前缀复用与 LRU 淘汰",
+    "第7步：读 python/sglang/srt/model_executor/model_runner.py，理解单卡前向与 CUDA graph",
+    "第8步：读 python/sglang/srt/models/registry.py 与 llama.py，掌握如何新增一个模型"
+  ],
+  "diagram_mermaid": "graph TD\n  Client[客户端] --> HTTPServer[HTTP Server 与 Engine]\n  HTTPServer --> TokenizerMgr[TokenizerManager 前端]\n  TokenizerMgr --> Scheduler[Scheduler 调度器]\n  Scheduler --> RadixCache[RadixCache 前缀树]\n  Scheduler --> ScheduleBatch[ScheduleBatch 批次]\n  ScheduleBatch --> ModelRunner[ModelRunner 执行器]\n  ModelRunner --> ForwardBatch[ForwardBatch 前向信息]\n  ForwardBatch --> ModelDef[模型定义层]\n  ModelRunner --> GrammarMgr[GrammarManager 约束解码]\n  Scheduler --> MemPool[KV 显存池]\n  RadixCache --> MemPool\n  ModelDef --> ModelRegistry[ModelRegistry 注册表]\n  ModelRunner --> Sampler[采样器]\n  TokenizerMgr --> Detokenize[Detokenize 文本]\n  Detokenize --> Client\n  Scheduler --> SpecDec[投机解码]\n  Scheduler --> Disagg[Prefill Decode 分离]",
+  "surprises": [
+    "RadixAttention 不是注意力算法而是 KV 缓存管理：把 token 前缀建成基数树，不同请求共享相同前缀的 KV，靠 lock_ref 计数保护在用节点、按 LRU 淘汰叶子",
+    "系统是前后端分离的多进程架构，TokenizerManager 在独立进程通过消息队列与 Scheduler 通信，HTTP 进程本身不做推理",
+    "match_prefix 支持 extra_key 命名空间，可让相同 token 前缀的不同 LoRA 或不同 cache salt 请求故意不共享 KV",
+    "约束解码是多后端并存设计，xgrammar、outlines、llguidance 各有一套后端实现，由 GrammarManager 统一调度",
+    "仓库里同时存在两套入口：srt 是推理引擎，lang 是 SGLang 前端 DSL，二者可独立使用，容易混淆"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,88 @@
+{
+  "repo": "microsoft/autogen",
+  "name": "AutoGen",
+  "one_liner": "微软多智能体对话框架，分层设计，支持多种团队编排",
+  "problem": "让开发者用统一的消息传递与事件驱动运行时构建可自主协作或与人协作的多智能体应用，并提供多种团队编排模式。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Agent", "role": "核心智能体协议，定义 on_message、id、metadata 与状态保存契约", "file": "python/packages/autogen-core/src/autogen_core/_agent.py"},
+    {"name": "BaseAgent", "role": "智能体基类，提供消息发送、订阅声明与 id 绑定能力", "file": "python/packages/autogen-core/src/autogen_core/_base_agent.py"},
+    {"name": "AgentRuntime", "role": "智能体运行时协议，负责消息路由、注册与生命周期管理", "file": "python/packages/autogen-core/src/autogen_core/_agent_runtime.py"},
+    {"name": "SingleThreadedAgentRuntime", "role": "默认的单线程事件驱动运行时实现，用队列串行处理消息", "file": "python/packages/autogen-core/src/autogen_core/_single_threaded_agent_runtime.py"},
+    {"name": "RoutedAgent", "role": "基于消息类型自动路由到对应处理函数的智能体基类", "file": "python/packages/autogen-core/src/autogen_core/_routed_agent.py"},
+    {"name": "TypeSubscription", "role": "按消息类型订阅，把发布者与消费者在运行时连接起来", "file": "python/packages/autogen-core/src/autogen_core/_type_subscription.py"},
+    {"name": "ChatCompletionClient", "role": "模型客户端抽象，统一各 provider 的补全与流式调用", "file": "python/packages/autogen-core/src/autogen_core/models/_model_client.py"},
+    {"name": "ChatAgent", "role": "AgentChat 层聊天智能体抽象，定义 on_messages 与流式接口", "file": "python/packages/autogen-agentchat/src/autogen_agentchat/base/_chat_agent.py"},
+    {"name": "Team", "role": "团队抽象，统一编排多个 ChatAgent 并暴露 run 与 run_stream", "file": "python/packages/autogen-agentchat/src/autogen_agentchat/base/_team.py"},
+    {"name": "BaseGroupChat", "role": "群聊团队基类，把 AgentChat 参与者映射到 Core 运行时", "file": "python/packages/autogen-agentchat/src/autogen_agentchat/teams/_group_chat/_base_group_chat.py"},
+    {"name": "BaseGroupChatManager", "role": "群聊管理器，决定下一个发言者并判断终止条件", "file": "python/packages/autogen-agentchat/src/autogen_agentchat/teams/_group_chat/_base_group_chat_manager.py"},
+    {"name": "ChatAgentContainer", "role": "把 ChatAgent 包装成运行时 Agent 的适配容器", "file": "python/packages/autogen-agentchat/src/autogen_agentchat/teams/_group_chat/_chat_agent_container.py"}
+  ],
+  "layers": [
+    {"name": "Core 层", "responsibility": "消息传递、运行时、订阅机制与模型工具协议，不含任务级概念", "modules": ["python/packages/autogen-core"], "files": ["python/packages/autogen-core/src/autogen_core/_agent.py", "python/packages/autogen-core/src/autogen_core/_single_threaded_agent_runtime.py"]},
+    {"name": "AgentChat 层", "responsibility": "面向任务的高级智能体与团队 API，构建在 Core 之上", "modules": ["python/packages/autogen-agentchat"], "files": ["python/packages/autogen-agentchat/src/autogen_agentchat/base/_chat_agent.py", "python/packages/autogen-agentchat/src/autogen_agentchat/teams/_group_chat/_base_group_chat.py"]},
+    {"name": "Extensions 层", "responsibility": "模型、工具、代码执行器、运行时等具体实现", "modules": ["python/packages/autogen-ext"], "files": ["python/packages/autogen-ext/src/autogen_ext/teams/magentic_one.py", "python/packages/autogen-ext/src/autogen_ext/models/openai/_openai_client.py"]},
+    {"name": "应用层", "responsibility": "Magentic-One 应用与 AutoGen Studio 无代码界面", "modules": ["python/packages/autogen-magentic-one", "python/packages/autogen-studio"], "files": ["python/packages/autogen-studio/README.md"]},
+    {"name": ".NET 层", "responsibility": "与 Python 对等的 .NET 实现，共享协议定义", "modules": ["dotnet"], "files": ["dotnet/AutoGen.sln"]},
+    {"name": "协议与文档层", "responsibility": "protobuf 协议定义与项目文档", "modules": ["protos", "docs"], "files": ["python/README.md"]}
+  ],
+  "data_flow": [
+    "第1步：用户调用 team.run 或 run_stream 并传入初始任务",
+    "第2步：BaseGroupChat 启动 SingleThreadedAgentRuntime",
+    "第3步：各参与者 ChatAgent 被 ChatAgentContainer 包装并注册到运行时",
+    "第4步：群聊管理器 BaseGroupChatManager 收到任务并选择下一个发言者",
+    "第5步：管理器通过 TypeSubscription 把消息发布给选中的参与者容器",
+    "第6步：容器把消息转交给底层 ChatAgent 的 on_messages 处理",
+    "第7步：ChatAgent 调用 ChatCompletionClient 请求模型，必要时执行工具",
+    "第8步：响应消息发布回群聊并广播给所有参与者",
+    "第9步：管理器检查终止条件，未满足则回到选择下一个发言者",
+    "第10步：满足终止条件后聚合消息并返回 TaskResult 给调用方"
+  ],
+  "entry_points": [
+    {"path": "python/packages/autogen-agentchat/src/autogen_agentchat/agents/_assistant_agent.py", "what": "AssistantAgent 主要入口，最常用的对话智能体"},
+    {"path": "python/packages/autogen-agentchat/src/autogen_agentchat/base/_team.py", "what": "Team 抽象，team.run 是团队执行入口"},
+    {"path": "python/packages/autogen-core/src/autogen_core/_single_threaded_agent_runtime.py", "what": "默认运行时实现，理解消息如何被投递"},
+    {"path": "python/packages/autogen-ext/src/autogen_ext/models/openai/__init__.py", "what": "OpenAI 模型客户端入口"},
+    {"path": "python/packages/autogen-studio", "what": "无代码 GUI 应用"},
+    {"path": "dotnet/AutoGen.sln", "what": ".NET 实现的解决方案入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先了解框架定位与快速上手方式"},
+    {"path": "python/packages/autogen-core/src/autogen_core/_agent.py", "why": "最底层的智能体协议，理解消息传递契约"},
+    {"path": "python/packages/autogen-core/src/autogen_core/_base_agent.py", "why": "智能体基类，理解订阅与发送消息"},
+    {"path": "python/packages/autogen-core/src/autogen_core/_single_threaded_agent_runtime.py", "why": "运行时核心，理解事件驱动与消息路由"},
+    {"path": "python/packages/autogen-agentchat/src/autogen_agentchat/base/_chat_agent.py", "why": "AgentChat 层核心抽象"},
+    {"path": "python/packages/autogen-agentchat/src/autogen_agentchat/base/_team.py", "why": "团队抽象，理解编排入口"},
+    {"path": "python/packages/autogen-agentchat/src/autogen_agentchat/teams/_group_chat/_base_group_chat.py", "why": "群聊如何把 AgentChat 映射到 Core"},
+    {"path": "python/packages/autogen-agentchat/src/autogen_agentchat/teams/_group_chat/_base_group_chat_manager.py", "why": "编排逻辑的核心，理解发言者选择"},
+    {"path": "python/packages/autogen-agentchat/src/autogen_agentchat/agents/_assistant_agent.py", "why": "看一个具体 Agent 的完整实现"},
+    {"path": "python/packages/autogen-core/src/autogen_core/models/_model_client.py", "why": "模型客户端抽象，理解多 provider 接入"}
+  ],
+  "extension_points": [
+    "新增 Agent 类型：继承 autogen_agentchat 的 BaseChatAgent，实现 on_messages 与 on_messages_stream",
+    "新增底层 Agent：继承 autogen_core 的 RoutedAgent 或 BaseAgent 并声明消息处理函数",
+    "新增模型 provider：在 autogen-ext/models 下实现 ChatCompletionClient",
+    "新增工具：实现 autogen_core.tools 的 Tool 协议或 Workbench",
+    "新增团队编排：继承 BaseGroupChat 与 BaseGroupChatManager",
+    "新增运行时：实现 AgentRuntime 协议，如 autogen-ext/runtimes/grpc"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，建立整体与分层认知",
+    "第2步：读 python/packages/autogen-core/src/autogen_core/_agent.py 与 _base_agent.py，理解消息传递契约",
+    "第3步：读 python/packages/autogen-core/src/autogen_core/_single_threaded_agent_runtime.py，理解运行时",
+    "第4步：读 python/packages/autogen-core/src/autogen_core/models/_model_client.py，理解模型抽象",
+    "第5步：读 python/packages/autogen-agentchat/src/autogen_agentchat/base/_chat_agent.py 与 _team.py，理解高级抽象",
+    "第6步：读 python/packages/autogen-agentchat/src/autogen_agentchat/agents/_assistant_agent.py，理解一个具体 Agent",
+    "第7步：读 python/packages/autogen-agentchat/src/autogen_agentchat/teams/_group_chat/_base_group_chat.py 与管理器，理解编排",
+    "第8步：读 python/packages/autogen-ext/src/autogen_ext/teams/magentic_one.py，看完整应用"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户调用 team.run 传入任务] --> B[启动 SingleThreadedAgentRuntime]\n  B --> C[ChatAgentContainer 包装并注册参与者]\n  C --> D[群聊管理器选择下一个发言者]\n  D --> E[通过 TypeSubscription 发布消息]\n  E --> F[容器转交 ChatAgent 处理]\n  F --> G[调用 ChatCompletionClient 请求模型]\n  G --> H[响应广播回群聊]\n  H --> I{是否满足终止条件}\n  I -->|否| D\n  I -->|是| J[聚合并返回 TaskResult]",
+  "surprises": [
+    "分层非常严格：core 只做消息传递与运行时，agentchat 才提供任务级 API，ext 才提供具体模型与工具实现",
+    "AgentChat 的 Team 底层复用 Core 的 AgentRuntime，ChatAgent 需经 ChatAgentContainer 适配成运行时 Agent",
+    "群聊编排逻辑集中在一个 GroupChatManager 智能体里，通过消息类型订阅驱动，而非直接函数调用",
+    "项目已进入维护模式，官方建议新用户改用 Microsoft Agent Framework",
+    "Python 与 .NET 两套实现并存，通过 protos 目录共享协议定义"
+  ],
+  "confidence": "高"
+}

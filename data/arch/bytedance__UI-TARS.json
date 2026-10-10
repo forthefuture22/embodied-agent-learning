@@ -1,0 +1,127 @@
+{
+  "repo": "bytedance/UI-TARS",
+  "name": "UI-TARS",
+  "one_liner": "字节端到端 GUI 操作模型的推理后处理与动作解析工具包",
+  "problem": "让多模态大模型直接看图操作 GUI，需要统一动作空间、把模型输出的坐标归一化还原到真实屏幕像素，并转成可执行脚本。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {
+      "name": "Action Space 提示词模板",
+      "role": "用自然语言定义模型可输出的动作集合（click/type/hotkey/drag/scroll 等）与 Thought/Action 输出格式，区分桌面、移动、纯 grounding 三种场景",
+      "file": "codes/ui_tars/prompt.py"
+    },
+    {
+      "name": "动作解析器",
+      "role": "把模型返回的 'Thought: ... Action: click(...)' 文本用正则+AST 解析成结构化动作字典列表",
+      "file": "codes/ui_tars/action_parser.py"
+    },
+    {
+      "name": "坐标归一化",
+      "role": "smart_resize 计算模型输入图像缩放尺寸，并把模型输出的绝对/相对坐标除以缩放尺寸得到 0-1 归一化框",
+      "file": "codes/ui_tars/action_parser.py"
+    },
+    {
+      "name": "pyautogui 代码生成",
+      "role": "把结构化动作翻译成可执行的 pyautogui 脚本字符串，处理 hotkey/type/drag/scroll/click 各分支",
+      "file": "codes/ui_tars/action_parser.py"
+    },
+    {
+      "name": "box token 格式化",
+      "role": "把历史 assistant 消息里的坐标包裹成 <|box_start|>(x,y)<|box_end|> 特殊 token，用于多轮对话上下文",
+      "file": "codes/ui_tars/action_parser.py"
+    },
+    {
+      "name": "训练数据格式",
+      "role": "多轮 messages 列表，含 system/user/assistant 角色、loss_mask 与 vision token，示范监督微调的数据组织",
+      "file": "data/training_example.json"
+    }
+  ],
+  "layers": [
+    {
+      "name": "提示词层",
+      "responsibility": "定义动作空间、输出格式与平台差异（桌面/移动/grounding）",
+      "modules": ["codes/ui_tars"],
+      "files": ["codes/ui_tars/prompt.py"]
+    },
+    {
+      "name": "解析与坐标层",
+      "responsibility": "解析模型文本输出、归一化坐标、统一 box/point 表示",
+      "modules": ["codes/ui_tars"],
+      "files": ["codes/ui_tars/action_parser.py"]
+    },
+    {
+      "name": "动作执行层",
+      "responsibility": "将结构化动作转为 pyautogui 可执行代码",
+      "modules": ["codes/ui_tars"],
+      "files": ["codes/ui_tars/action_parser.py"]
+    },
+    {
+      "name": "数据与示例层",
+      "responsibility": "提供训练数据格式样例与推理请求消息样例",
+      "modules": ["data"],
+      "files": ["data/training_example.json", "data/test_messages_single_image.json"]
+    },
+    {
+      "name": "文档与部署层",
+      "responsibility": "说明坐标处理流程、HuggingFace 端点部署与提示词用法",
+      "modules": ["."],
+      "files": ["README.md", "README_coordinates.md", "README_deploy.md"]
+    },
+    {
+      "name": "测试层",
+      "responsibility": "对解析、坐标转换与 pyautogui 生成做单元测试与可视化验证",
+      "modules": ["codes/tests"],
+      "files": ["codes/tests/action_parser_test.py", "codes/tests/inference_test.py"]
+    }
+  ],
+  "data_flow": [
+    "第1步：按目标平台选择提示词模板，把用户指令填入 instruction 占位符",
+    "第2步：把截图与历史动作一起送入多模态模型，模型返回 'Thought: ... Action: ...' 文本",
+    "第3步：parse_action_to_structure_output 用正则拆分 Thought 与 Action 部分",
+    "第4步：smart_resize 计算模型输入图的缩放后宽高",
+    "第5步：把 start_box/end_box 坐标按缩放尺寸归一化为 0-1 浮点框",
+    "第6步：解析出的动作组装为含 action_type/action_inputs 的字典",
+    "第7步：parsing_response_to_pyautogui_code 把归一化框乘回真实图像宽高得到像素坐标",
+    "第8步：按动作类型生成对应 pyautogui 调用，type 动作用剪贴板粘贴实现",
+    "第9步：生成的脚本在环境中执行，产生新截图进入下一轮循环"
+  ],
+  "entry_points": [
+    {"path": "codes/ui_tars/action_parser.py", "what": "核心库入口，暴露 parse_action_to_structure_output 与 parsing_response_to_pyautogui_code"},
+    {"path": "codes/tests/inference_test.py", "what": "坐标还原与可视化的可运行示例脚本"},
+    {"path": "codes/makefile", "what": "运行单元测试的入口命令"},
+    {"path": "README_deploy.md", "what": "HuggingFace 端点部署与 OpenAI 客户端推理调用示例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：项目定位、性能数据与快速上手三步"},
+    {"path": "README_coordinates.md", "why": "理解坐标处理与 smart_resize 归一化的关键说明"},
+    {"path": "codes/ui_tars/prompt.py", "why": "动作空间与输出格式的定义处，是理解 Agent 行为的起点"},
+    {"path": "codes/ui_tars/action_parser.py", "why": "全部解析、归一化与 pyautogui 生成逻辑所在，最核心文件"},
+    {"path": "codes/README.md", "why": "库级 API 文档，说明函数参数与返回值"},
+    {"path": "data/training_example.json", "why": "训练数据格式与 loss_mask、box token 的实例"},
+    {"path": "README_deploy.md", "why": "模型如何被调用、消息如何构造的端到端示例"}
+  ],
+  "extension_points": [
+    "新增一个动作类型：在 codes/ui_tars/prompt.py 的动作空间里加定义，并在 codes/ui_tars/action_parser.py 的 parsing_response_to_pyautogui_code 中加对应分支",
+    "支持新的模型输出坐标体系：在 parse_action_to_structure_output 的 model_type 分支里扩展",
+    "更换动作空间或平台：直接改 codes/ui_tars/prompt.py 中的模板字符串",
+    "调整图像缩放策略：修改 action_parser.py 顶部的 IMAGE_FACTOR / MIN_PIXELS / MAX_PIXELS 常量",
+    "接入真实执行环境：复用 parsing_response_to_pyautogui_code 生成的脚本，或自行替换执行后端"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 了解项目定位与三步快速上手",
+    "第2步：读 README_coordinates.md 理解坐标归一化问题",
+    "第3步：读 codes/ui_tars/prompt.py 掌握动作空间定义",
+    "第4步：精读 codes/ui_tars/action_parser.py，从 parse_action_to_structure_output 到 parsing_response_to_pyautogui_code 顺下来",
+    "第5步：读 data/training_example.json 理解多轮上下文与 loss_mask",
+    "第6步：跑 codes/tests/action_parser_test.py 验证理解"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户指令与截图] --> B[提示词模板 定义动作空间]\n  B --> C[多模态模型推理]\n  C --> D[Thought 与 Action 文本]\n  D --> E[动作解析器 结构化]\n  E --> F[smart_resize 坐标归一化]\n  F --> G[pyautogui 代码生成]\n  G --> H[环境执行]\n  H --> I[新截图]\n  I --> A",
+  "surprises": [
+    "本仓库并不包含模型本体，只有推理后处理包与提示词；模型权重在 HuggingFace 上的 ByteDance-Seed/UI-TARS-1.5-7B，属于文档+工具型仓库",
+    "坐标系约定反直觉：Qwen2.5-VL 系输出的是绝对坐标，需除以缩放后尺寸归一化，而 qwen2vl 系输出相对坐标直接除以 factor",
+    "type 动作默认用剪贴板 pyperclip 粘贴而非逐字输入，避免中文/特殊字符丢失",
+    "训练数据里只有最后一个 assistant 动作 loss_mask 为 1，前面的历史动作不参与损失",
+    "convert_point_to_coordinates 中 x=(x1+x1)//2 的写法看似冗余，实为 point 只带一个坐标对时的截断取整"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,224 @@
+{
+  "repo": "chroma-core/chroma",
+  "name": "Chroma",
+  "one_liner": "面向 AI 的轻量向量数据库，Rust 核心加 Python/TS 客户端",
+  "problem": "为 RAG 与 Agent 提供开箱即用的向量存储与相似检索：自动完成分词、嵌入与索引，同时支持元数据过滤、全文与稀疏混合检索，本地单机即可原型，也能无缝上云。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "Client",
+      "role": "Python 客户端门面，负责选择后端实现、创建与获取 Collection，并按运行模式装配 System 组件",
+      "file": "chromadb/api/client.py"
+    },
+    {
+      "name": "Collection",
+      "role": "面向用户的集合对象，暴露 add/query/get/update/delete，把用户输入编译为 Search 计划后交给底层 API",
+      "file": "chromadb/api/models/Collection.py"
+    },
+    {
+      "name": "ServerAPI",
+      "role": "服务端 API 抽象基类，定义全部集合与记录操作契约，屏蔽本地绑定实现与 HTTP 远程实现的差异",
+      "file": "chromadb/api/segment.py"
+    },
+    {
+      "name": "RustBindingsAPI",
+      "role": "把 pyo3 暴露的 Rust Bindings 适配成 Python ServerAPI 的垫片层，负责类型转换与配置翻译",
+      "file": "chromadb/api/rust.py"
+    },
+    {
+      "name": "Bindings",
+      "role": "Rust 侧 pyo3 类，持有 tokio 运行时、System、SqliteDb、压缩器与 Frontend，是 Python 进程内直接调用 Rust 核心的入口",
+      "file": "rust/python_bindings/src/bindings.rs"
+    },
+    {
+      "name": "SegmentType",
+      "role": "段类型枚举，用 urn 标识元数据段、记录段、HNSW 本地/分布式段、SPANN 段等，是存储与索引组合的契约",
+      "file": "rust/types/src/segment.rs"
+    },
+    {
+      "name": "EmbeddingFunction",
+      "role": "文本转向量的异步 trait，支持稠密与稀疏嵌入，是新增嵌入模型的唯一扩展接口",
+      "file": "rust/chroma/src/embed/mod.rs"
+    },
+    {
+      "name": "HnswIndexProvider",
+      "role": "HNSW 索引的加载/落盘/缓存提供者，按 CollectionUuid 缓存索引并管理写锁与对象存储持久化",
+      "file": "rust/index/src/hnsw_provider.rs"
+    },
+    {
+      "name": "HnswIndex",
+      "role": "HNSW 图索引本体，封装底层 hnswlib 的建图与近邻查询，是向量检索的执行单元",
+      "file": "rust/index/src/hnsw.rs"
+    },
+    {
+      "name": "CollectionConfiguration",
+      "role": "集合级配置结构，声明 hnsw/spann 向量索引与全文、稀疏、倒排等各类索引的组合，决定段如何被创建",
+      "file": "rust/types/src/collection_configuration.rs"
+    },
+    {
+      "name": "Search",
+      "role": "Python 侧查询计划表达式，把 where 过滤、KNN、RRF 融合等算子组织成可编译的执行计划",
+      "file": "chromadb/execution/expression/plan.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "Python 客户端层",
+      "responsibility": "提供用户 API，管理 System 组件装配、嵌入函数解析、查询计划编译与遥测",
+      "modules": ["chromadb/api", "chromadb/execution"],
+      "files": ["chromadb/api/client.py", "chromadb/api/models/Collection.py", "chromadb/execution/expression/plan.py"]
+    },
+    {
+      "name": "远程服务层",
+      "responsibility": "以 FastAPI 暴露 REST 接口，作为 client-server 模式的远程后端",
+      "modules": ["chromadb/server/fastapi", "chromadb/api/fastapi.py"],
+      "files": ["chromadb/server/fastapi/__init__.py", "chromadb/api/fastapi.py"]
+    },
+    {
+      "name": "CLI 入口层",
+      "responsibility": "提供 chroma run 等命令，启动服务并管理持久化目录",
+      "modules": ["chromadb/cli"],
+      "files": ["chromadb/cli/cli.py"]
+    },
+    {
+      "name": "Python 到 Rust 绑定层",
+      "responsibility": "用 pyo3 把 Rust Frontend 与 System 暴露为 Python 可调用对象，完成参数与结果类型转换",
+      "modules": ["rust/python_bindings"],
+      "files": ["rust/python_bindings/src/bindings.rs", "chromadb/chromadb_rust_bindings.pyi", "chromadb/api/rust.py"]
+    },
+    {
+      "name": "Rust 前端与执行层",
+      "responsibility": "接收请求、编译执行计划、调度本地 executor 与日志压缩，是核心业务逻辑所在",
+      "modules": ["rust/frontend", "rust/log-service"],
+      "files": ["rust/frontend/src/lib.rs", "rust/frontend/src/server.rs"]
+    },
+    {
+      "name": "Rust 段管理层",
+      "responsibility": "管理本地段生命周期、元数据段与向量段的读写与合并",
+      "modules": ["rust/segment"],
+      "files": ["rust/segment/src/local_segment_manager.rs", "rust/segment/src/types.rs"]
+    },
+    {
+      "name": "Rust 索引层",
+      "responsibility": "实现 HNSW、SPANN 向量索引与全文、稀疏、元数据倒排索引",
+      "modules": ["rust/index"],
+      "files": ["rust/index/src/hnsw.rs", "rust/index/src/hnsw_provider.rs", "rust/index/src/sparse/mod.rs"]
+    },
+    {
+      "name": "Rust 类型与嵌入层",
+      "responsibility": "定义跨层共享类型、集合配置、where 表达式解析与嵌入函数实现",
+      "modules": ["rust/types", "rust/chroma/src/embed"],
+      "files": ["rust/types/src/segment.rs", "rust/types/src/collection_configuration.rs", "rust/chroma/src/embed/mod.rs"]
+    },
+    {
+      "name": "Rust 存储层",
+      "responsibility": "提供对象存储、本地文件、SQLite 与 WAL 等持久化后端",
+      "modules": ["rust/storage", "rust/sqlite", "rust/wal3"],
+      "files": ["rust/storage/src/local.rs", "rust/storage/src/object_storage.rs"]
+    }
+  ],
+  "data_flow": [
+    "第1步：用户调用 chromadb.Client 得到 Client，再 create_collection 得到 Python Collection 对象",
+    "第2步：调用 collection.add/query 时，Collection 把参数编译成 Search 查询计划，并解析出目标嵌入函数",
+    "第3步：请求交给 ServerAPI；本地模式命中 RustBindingsAPI，远程模式命中 FastAPI 的 HttpClient",
+    "第4步：本地模式下 RustBindingsAPI 通过 pyo3 调用 Rust Bindings 对象，进入 tokio 运行时",
+    "第5步：Rust Frontend 接收请求，从 System 定位集合与其 Segment 集合",
+    "第6步：写入路径把记录先追加到 WAL 与日志服务，再由压缩器异步合并进各索引段",
+    "第7步：查询路径按 CollectionConfiguration 决定走 HNSW 或 SPANN 向量索引，并叠加元数据与全文过滤",
+    "第8步：HnswIndexProvider 按 CollectionUuid 从缓存取索引，未命中则从对象存储加载并反序列化",
+    "第9步：各段返回候选并按距离排序，融合结果后回填文档、元数据与向量",
+    "第10步：结果经 pyo3 转成 Python 类型，最终由 Collection 包装为 QueryResult 返回用户"
+  ],
+  "entry_points": [
+    {
+      "path": "chromadb/__init__.py",
+      "what": "Python 包门面，导出 Client/Collection/Schema 等公共 API 并声明版本"
+    },
+    {
+      "path": "chromadb/api/client.py",
+      "what": "Client 实现，按 Settings 决定本地绑定还是 HTTP 后端并创建 Collection"
+    },
+    {
+      "path": "chromadb/cli/cli.py",
+      "what": "chroma 命令行入口，实现 chroma run 启动服务"
+    },
+    {
+      "path": "chromadb/server/fastapi/__init__.py",
+      "what": "FastAPI 应用装配，把 REST 路由挂到 ServerAPI 实现上"
+    },
+    {
+      "path": "rust/python_bindings/src/bindings.rs",
+      "what": "Rust 侧 pyo3 绑定入口，构造 System/Frontend 并暴露集合操作给 Python"
+    }
+  ],
+  "key_files": [
+    {
+      "path": "chromadb/api/client.py",
+      "why": "先读它理解本地与远程两种后端如何被选择，以及 System 组件装配的整体骨架"
+    },
+    {
+      "path": "chromadb/api/models/Collection.py",
+      "why": "Collection 是用户最常打交道的对象，能看清 add/query 如何转成执行计划"
+    },
+    {
+      "path": "chromadb/api/rust.py",
+      "why": "RustBindingsAPI 是 Python 与 Rust 的接缝，理解两端类型与配置如何翻译"
+    },
+    {
+      "path": "rust/python_bindings/src/bindings.rs",
+      "why": "Rust 侧绑定入口，看 System、Frontend、压缩器如何被装配并暴露为 Python 类"
+    },
+    {
+      "path": "rust/types/src/segment.rs",
+      "why": "SegmentType 枚举定义了元数据段、记录段与各类向量段的契约，是数据模型的支点"
+    },
+    {
+      "path": "rust/types/src/collection_configuration.rs",
+      "why": "集合配置声明了可用索引组合，决定段与索引如何被创建"
+    },
+    {
+      "path": "rust/index/src/hnsw_provider.rs",
+      "why": "HNSW 索引加载、缓存与持久化的核心，理解索引如何按集合缓存与落盘"
+    },
+    {
+      "path": "rust/chroma/src/embed/mod.rs",
+      "why": "EmbeddingFunction trait 只有两个方法，是新增嵌入模型的最小改动面"
+    },
+    {
+      "path": "chromadb/api/collection_configuration.py",
+      "why": "Python 侧配置类型，对照 Rust 配置理解参数体系与扩展点"
+    },
+    {
+      "path": "chromadb/execution/expression/plan.py",
+      "why": "Search 计划定义了 where、KNN、RRF 等算子如何被编译，是查询语义的核心"
+    }
+  ],
+  "extension_points": [
+    "想新增嵌入函数：在 Python 侧 chromadb/utils/embedding_functions 下新增实现并在 __init__.py 注册；若需进入核心则在 rust/chroma/src/embed 下实现 EmbeddingFunction trait",
+    "想新增向量索引类型：在 rust/index/src 下新增模块，并在 rust/types/src/segment.rs 的 SegmentType 枚举与 urn 映射中加入新分支",
+    "想新增全文或稀疏索引：参考 rust/index/src/fulltext/mod.rs 与 rust/index/src/sparse/mod.rs 的读写器结构",
+    "想新增元数据倒排索引类型：参考 rust/index/src/metadata/mod.rs 与 rust/types/src/collection_configuration.rs 的配置声明",
+    "想扩展查询算子：在 chromadb/execution/expression/operator.py 与 plan.py 增加算子并接入编译流程",
+    "想新增存储后端：实现 rust/storage/src/object_storage.rs 的 Storage 抽象并接入 config 注册表",
+    "想改集合级索引组合：修改 chromadb/api/collection_configuration.py 与 rust/types/src/collection_configuration.rs"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 chromadb/__init__.py，建立「四函数 API + 自动嵌入」的整体印象",
+    "第2步：读 chromadb/api/client.py 与 chromadb/api/models/Collection.py，理解用户 API 到执行计划的路径",
+    "第3步：读 chromadb/api/rust.py 与 chromadb/chromadb_rust_bindings.pyi，理解 Python 与 Rust 的绑定契约",
+    "第4步：读 rust/python_bindings/src/bindings.rs，看 Rust 侧如何装配 System 与 Frontend",
+    "第5步：读 rust/types/src/segment.rs 与 rust/types/src/collection_configuration.rs，掌握段与索引组合的配置模型",
+    "第6步：读 rust/index/src/hnsw_provider.rs 与 rust/index/src/hnsw.rs，理解向量索引的加载、缓存与查询",
+    "第7步：读 rust/index/src/fulltext/mod.rs 与 rust/index/src/sparse/mod.rs，理解混合检索中的全文与稀疏索引",
+    "第8步：读 rust/chroma/src/embed/mod.rs 与 rust/chroma/src/embed/bm25.rs，理解嵌入函数与 BM25 稀疏嵌入的实现"
+  ],
+  "diagram_mermaid": "graph TD\n  User[用户代码] --> Client[Python Client]\n  Client --> Collection[Collection 集合对象]\n  Collection --> Plan[Search 查询计划]\n  Plan --> ServerAPI[ServerAPI 抽象]\n  ServerAPI --> Bindings[RustBindingsAPI 垫片]\n  ServerAPI --> FastAPI[FastAPI 远程服务]\n  Bindings --> PyO3[pyo3 Bindings]\n  FastAPI --> PyO3\n  PyO3 --> Frontend[Rust Frontend 前端]\n  Frontend --> System[Rust System 调度]\n  System --> LogService[日志服务与 WAL]\n  System --> SegmentMgr[LocalSegmentManager 段管理]\n  SegmentMgr --> SegMeta[元数据段]\n  SegmentMgr --> SegVector[向量段]\n  SegVector --> HnswProvider[HnswIndexProvider 索引提供者]\n  HnswProvider --> Hnsw[HnswIndex 图索引]\n  HnswProvider --> Storage[对象存储与本地文件]\n  SegMeta --> Fulltext[全文与倒排索引]\n  Frontend --> Embed[EmbeddingFunction 嵌入函数]",
+  "surprises": [
+    "这是新架构版 Chroma：核心逻辑已从 Python 迁移到 Rust，Python 包主要通过 pyo3 绑定驱动 Rust Frontend，旧的纯 Python segment 实现仍保留在 chromadb/segment/impl 作为参考",
+    "CollectionConfiguration 让一个集合同时挂载多种索引：向量索引之外还能配全文、稀疏与倒排索引，查询时用 RRF 融合，这是为混合检索设计而非纯向量库",
+    "HNSW 索引缓存以 CollectionUuid 为键，注释坦承在版本交错时可能用旧版本覆盖新版本，属于已知待改进点",
+    "RustBindingsAPI 只是垫片而非直接实现 ServerAPI，目的是避免把 Rust 绑定类型泄漏进 Python 公共 API，作者留了 TODO 想彻底统一类型",
+    "ChromadbRustBindings 在非 Windows 上读取文件句柄上限来计算 HNSW 缓存大小，按每个索引 5 个文件估算可缓存索引数"
+  ],
+  "confidence": "高"
+}

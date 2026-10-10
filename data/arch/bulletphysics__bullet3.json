@@ -1,0 +1,90 @@
+{
+  "repo": "bulletphysics/bullet3",
+  "name": "Bullet3",
+  "one_liner": "实时碰撞检测与多物理仿真引擎，含 PyBullet Python 绑定",
+  "problem": "为游戏、VR、机器人与强化学习提供统一的实时刚体、软体和铰接体动力学求解器，让 C++ 与 Python 用户都能方便地搭建物理世界并做碰撞查询与仿真。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "btCollisionWorld", "role": "碰撞检测世界的基类，持有碰撞对象、Broadphase、Dispatcher，负责 AABB 更新、配对、射线与接触查询", "file": "src/BulletCollision/CollisionDispatch/btCollisionWorld.h"},
+    {"name": "btDynamicsWorld", "role": "动力学世界抽象接口，继承自 btCollisionWorld，新增 stepSimulation、重力、约束与刚体管理", "file": "src/BulletDynamics/Dynamics/btDynamicsWorld.h"},
+    {"name": "btDiscreteDynamicsWorld", "role": "默认离散刚体世界实现，组织刚体、约束、岛屿管理与积分步骤", "file": "src/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h"},
+    {"name": "btTypedConstraint", "role": "所有约束类型的抽象基类，定义 getInfo1/getInfo2 约束方程装配接口", "file": "src/BulletDynamics/ConstraintSolver/btTypedConstraint.h"},
+    {"name": "btSequentialImpulseConstraintSolver", "role": "默认的顺序冲量 LCP 求解器，迭代求解接触与关节约束", "file": "src/BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h"},
+    {"name": "btRigidBody", "role": "刚体对象，封装质量、惯量、速度与力，继承 btCollisionObject", "file": "src/BulletDynamics/Dynamics/btRigidBody.h"},
+    {"name": "btMultiBody", "role": "Featherstone 铰接体，用关节树描述机器人，是机器人学与 PyBullet 的主力表示", "file": "src/BulletDynamics/Featherstone/btMultiBody.h"},
+    {"name": "btSoftBody", "role": "软体表示，基于质点-弹簧网络，支持软体与刚体耦合", "file": "src/BulletSoftBody/btSoftBody.h"},
+    {"name": "btBroadphaseInterface", "role": "宽阶段加速结构抽象，负责快速筛除不相交的物体对", "file": "src/BulletCollision/BroadphaseCollision/btBroadphaseInterface.h"},
+    {"name": "btCollisionShape", "role": "碰撞形状基类，定义包围盒、局部惯性等几何查询", "file": "src/BulletCollision/CollisionShapes/btCollisionShape.h"},
+    {"name": "btDeformableMultiBodyDynamicsWorld", "role": "可变形体与多体混合的世界实现，支持隐式可变形求解", "file": "src/BulletSoftBody/btDeformableMultiBodyDynamicsWorld.h"},
+    {"name": "PhysicsClientC_API", "role": "PyBullet 命令协议层，用 b3Init*Command 构造共享内存命令并提交给物理服务端", "file": "examples/SharedMemory/PhysicsClientC_API.h"}
+  ],
+  "layers": [
+    {"name": "线性数学层", "responsibility": "向量、矩阵、四元数、变换与内存对齐容器", "modules": ["src/LinearMath"], "files": ["src/LinearMath/btVector3.h"]},
+    {"name": "碰撞检测层", "responsibility": "宽阶段、窄阶段、碰撞形状、射线与接触流形", "modules": ["src/BulletCollision"], "files": ["src/BulletCollision/CollisionDispatch/btCollisionWorld.cpp", "src/BulletCollision/NarrowPhaseCollision/btPersistentManifold.h"]},
+    {"name": "刚体动力学与约束层", "responsibility": "刚体世界、约束求解器、车辆、角色与 Featherstone 多体", "modules": ["src/BulletDynamics"], "files": ["src/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.cpp", "src/BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"]},
+    {"name": "软体与可变形体层", "responsibility": "软体、可变形体、软刚耦合与隐式求解", "modules": ["src/BulletSoftBody"], "files": ["src/BulletSoftBody/btSoftBody.cpp", "src/BulletSoftBody/btSoftRigidDynamicsWorld.h"]},
+    {"name": "GPU 与 OpenCL 层", "responsibility": "在 GPU 上执行碰撞检测与刚体管线", "modules": ["src/Bullet3OpenCL"], "files": ["src/Bullet3OpenCL/RigidBody/b3GpuRigidBodyPipeline.h"]},
+    {"name": "逆动力学层", "responsibility": "给定运动轨迹反解关节力矩，用于控制与仿真校验", "modules": ["src/BulletInverseDynamics"], "files": ["src/BulletInverseDynamics/MultiBodyTree.hpp"]},
+    {"name": "资源导入层", "responsibility": "解析 URDF、MJCF、SDF、OBJ、STL、COLLADA 等机器人描述", "modules": ["examples/Importers"], "files": ["examples/Importers/ImportURDFDemo/URDFImporterInterface.h"]},
+    {"name": "PyBullet 绑定与服务层", "responsibility": "Python C 扩展、共享内存命令协议、物理服务端与图形客户端", "modules": ["examples/pybullet", "examples/SharedMemory"], "files": ["examples/pybullet/pybullet.c", "examples/SharedMemory/PhysicsServerCommandProcessor.cpp"]},
+    {"name": "示例与基准层", "responsibility": "可运行 Demo、ExampleBrowser、RL 环境与性能基准", "modules": ["examples"], "files": ["examples/ExampleBrowser/main.cpp", "examples/HelloWorld/HelloWorld.cpp"]}
+  ],
+  "data_flow": [
+    "第1步：用户创建 btDefaultCollisionConfiguration、btCollisionDispatcher、btBroadphaseInterface 与约束求解器，作为世界的四大部件",
+    "第2步：用上述部件实例化具体世界，例如 btDiscreteDynamicsWorld 或 btSoftRigidDynamicsWorld",
+    "第3步：通过 addRigidBody、addCollisionObject 注册刚体，通过 addConstraint 注册关节约束",
+    "第4步：调用 stepSimulation，世界内部按固定子步切分时间并推进",
+    "第5步：performDiscreteCollisionDetection 先 updateAabbs，再 broadphase 配对，最后窄阶段生成 btPersistentManifold 接触点",
+    "第6步：solveConstraints 调用 btSequentialImpulseConstraintSolver，把接触与关节约束装配成约束方程并迭代求解冲量",
+    "第7步：predictUnconstraintMotion 与 integrateTransforms 积分速度和位置，更新每帧世界变换",
+    "第8步：synchronizeMotionStates 与内部 tick 回调把新状态同步给图形层或用户代码",
+    "第9步：PyBullet 侧 Python 调用 pybullet.c，经 b3Init*Command 写入共享内存命令",
+    "第10步：PhysicsServerCommandProcessor 读取命令并驱动对应世界执行，把结果写回共享内存",
+    "第11步：Python 侧读取状态句柄，返回物体位姿、接触点或射线结果"
+  ],
+  "entry_points": [
+    {"path": "examples/pybullet/pybullet.c", "what": "PyBullet Python C 扩展模块，导出全部 p.* API"},
+    {"path": "examples/ExampleBrowser/main.cpp", "what": "官方可视化示例浏览器可执行程序入口"},
+    {"path": "examples/HelloWorld/HelloWorld.cpp", "what": "最小 C++ 示例，演示创建世界与步进仿真"},
+    {"path": "examples/SharedMemory/PhysicsServerCommandProcessor.cpp", "what": "物理服务端命令处理器，执行 PyBullet 下发的命令"},
+    {"path": "src/btBulletDynamicsCommon.h", "what": "常用动力学头文件聚合入口，C++ 用户首选 include"},
+    {"path": "CMakeLists.txt", "what": "顶层构建入口，定义各库与 PyBullet 目标"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读它了解 PyBullet 定位、构建方式与项目全景"},
+    {"path": "src/btBulletDynamicsCommon.h", "why": "一处看全核心类，理解世界的组装顺序"},
+    {"path": "src/BulletCollision/CollisionDispatch/btCollisionWorld.h", "why": "碰撞检测世界基类，理解查询与配对接口"},
+    {"path": "src/BulletDynamics/Dynamics/btDynamicsWorld.h", "why": "动力学抽象接口与世界类型枚举，理清继承关系"},
+    {"path": "src/BulletDynamics/Dynamics/btDiscreteDynamicsWorld.cpp", "why": "读 stepSimulation 主循环，看仿真是怎么跑起来的"},
+    {"path": "src/BulletDynamics/ConstraintSolver/btTypedConstraint.h", "why": "约束基类与 getInfo1/getInfo2 契约，扩展约束必读"},
+    {"path": "src/BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.cpp", "why": "默认求解器实现，理解冲量迭代"},
+    {"path": "examples/pybullet/pybullet.c", "why": "PyBullet 全部 API 实现，理解绑定如何生成"},
+    {"path": "examples/SharedMemory/PhysicsServerCommandProcessor.cpp", "why": "命令协议服务端，理解 PyBullet 与服务端的解耦"}
+  ],
+  "extension_points": [
+    "想加一个新约束类型：新建继承 btTypedConstraint 的类，实现 getInfo1/getInfo2 与 setParam，在 btTypedConstraint.h 的 btTypedConstraintType 枚举加类型，并在 btSequentialImpulseConstraintSolver 的求解流程里被统一处理",
+    "想加一个新的碰撞形状：继承 btCollisionShape 实现 calculateLocalInertia、getAabb、setLocalScaling",
+    "想换求解器：实现 btConstraintSolver 接口，或直接用 btMLCPSolvers 下的 btMLCPSolver、btDantzigSolver",
+    "想加一个新的物理后端或世界类型：继承 btDynamicsWorld 并在 btDynamicsWorldType 枚举注册，参考 btSoftRigidDynamicsWorld 与 btMultiBodyDynamicsWorld",
+    "想扩展 PyBullet API：在 examples/pybullet/pybullet.c 加 PyMethodDef 与包装函数，命令经 examples/SharedMemory/PhysicsClientC_API.h 扩展",
+    "想支持新的机器人描述格式：在 examples/Importers 下新增 Importer 实现 URDFImporterInterface"
+  ],
+  "learning_path": [
+    "第1步读 README.md，明确 Bullet3 是引擎加 PyBullet 绑定，先跑通一个 PyBullet 例子",
+    "第2步读 examples/HelloWorld/HelloWorld.cpp，看 C++ 世界如何被创建与步进",
+    "第3步读 src/btBulletDynamicsCommon.h 与 btCollisionWorld.h、btDynamicsWorld.h，理清世界类继承链",
+    "第4步读 btDiscreteDynamicsWorld.cpp 的 stepSimulation，吃透碰撞与积分主循环",
+    "第5步读 btTypedConstraint.h 与 btSequentialImpulseConstraintSolver.cpp，理解约束求解",
+    "第6步按需读 Featherstone/btMultiBody.h 与 BulletSoftBody，理解铰接体与软体",
+    "第7步读 examples/pybullet/pybullet.c 与 SharedMemory/PhysicsClientC_API.h，理解 Python 绑定与服务端协议"
+  ],
+  "diagram_mermaid": "graph TD\n  A[Python 用户脚本] --> B[pybullet.c 扩展模块]\n  B --> C[b3Init 命令构造]\n  C --> D[共享内存命令队列]\n  D --> E[PhysicsServerCommandProcessor]\n  E --> F[btDiscreteDynamicsWorld]\n  F --> G[btCollisionWorld 碰撞检测]\n  F --> H[btSequentialImpulseConstraintSolver]\n  G --> I[btPersistentManifold 接触点]\n  I --> H\n  H --> J[integrateTransforms 积分]\n  J --> K[synchronizeMotionStates 同步]\n  K --> B\n  L[C++ 用户] --> F",
+  "surprises": [
+    "PyBullet 不是直接绑定 C++ 类，而是走共享内存命令协议，Python 与服务端可同进程也可跨 TCP、UDP，因此 API 与仿真可解耦部署",
+    "btDynamicsWorld 继承 btCollisionWorld，纯碰撞检测不需要动力学世界，rayTest 与 contactTest 在基类即可用",
+    "btTypedConstraint 的接口在历史上有两套，新式 getInfo1/getInfo2 装配约束方程，旧式 buildJacobian 已基本废弃但仍保留",
+    "多体机器人默认用 Featherstone 的 btMultiBody 而非 btRigidBody 链，关节驱动要配合 btMultiBodyJointMotor 这类多体约束",
+    "同一个物理引擎提供离散、连续、软刚、可变形、GPU 等多种世界类型，靠 btDynamicsWorldType 枚举与不同子类区分"
+  ],
+  "confidence": "高"
+}

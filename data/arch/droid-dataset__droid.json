@@ -1,0 +1,91 @@
+{
+  "repo": "droid-dataset/droid",
+  "name": "droid",
+  "one_liner": "DROID 机器人平台：遥操作采数据、后处理并上传的代码库",
+  "problem": "采集大规模真实机器人操作数据需要硬件控制、遥操作、落盘、校验与上传一整套流程。本仓库提供 DROID 平台从机器人设置到数据上传的完整工具链，数据集本体托管在云端。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "DataCollecter", "role": "采集器：把环境观测与控制器动作逐帧写入轨迹，是数据产生的源头", "file": "droid/user_interface/data_collector.py"},
+    {"name": "RobotEnv", "role": "机器人环境：封装机械臂、相机与夹爪的观测与动作接口", "file": "droid/robot_env.py"},
+    {"name": "VRPolicy", "role": "遥操作控制器：把 Oculus VR 手柄位姿转成机器人末端动作", "file": "droid/controllers/oculus_controller.py"},
+    {"name": "轨迹写入器", "role": "把观测字典与动作按时间序列写入 HDF5", "file": "droid/trajectory_utils/trajectory_writer.py"},
+    {"name": "DROIDUploadConfig", "role": "上传配置：声明实验室、数据目录、S3 凭据与各阶段开关", "file": "scripts/postprocess.py"},
+    {"name": "后处理三阶段", "role": "run_indexing、run_processing、run_upload 构成校验到转换到上传的主流程", "file": "droid/postprocessing/stages.py"},
+    {"name": "TRAJECTORY_SCHEMA", "role": "元数据 ETL 定义：把 HDF5 属性映射成 JSON 可序列化记录", "file": "droid/postprocessing/schema.py"},
+    {"name": "parse_trajectory", "role": "解析器：从 trajectory.h5 抽取动作与相机信息并生成记录", "file": "droid/postprocessing/parse.py"},
+    {"name": "TrajectorySampler", "role": "轨迹采样器：为训练从磁盘并行加载与增强轨迹", "file": "droid/data_loading/trajectory_sampler.py"},
+    {"name": "TrajectoryDataset", "role": "迭代式数据集：把采样器包装成可刷新生成器的 IterableDataset", "file": "droid/data_loading/dataset.py"},
+    {"name": "create_dataloader", "role": "数据加载工厂：组装采样器、数据集、洗牌与多进程 DataLoader", "file": "droid/data_loading/data_loader.py"},
+    {"name": "SVO 转 MP4", "role": "把 ZED 的 SVO 录制转成 MP4，是后处理的关键步骤", "file": "droid/postprocessing/util/svo2mp4.py"}
+  ],
+  "layers": [
+    {"name": "用户交互层", "responsibility": "采集 GUI、数据采集器与评估界面", "modules": ["droid/user_interface"], "files": ["droid/user_interface/data_collector.py", "droid/user_interface/gui.py"]},
+    {"name": "机器人与遥操作层", "responsibility": "机器人环境、Oculus 控制器与运动学求解", "modules": ["droid/robot_env.py", "droid/controllers", "droid/robot_ik"], "files": ["droid/robot_env.py", "droid/controllers/oculus_controller.py", "droid/robot_ik/robot_ik_solver.py"]},
+    {"name": "相机与标定层", "responsibility": "多相机读取、录制回放与手眼标定", "modules": ["droid/camera_utils", "droid/calibration"], "files": ["droid/camera_utils/wrappers/multi_camera_wrapper.py", "droid/calibration/calibration_utils.py"]},
+    {"name": "轨迹存储层", "responsibility": "轨迹的读写与格式定义", "modules": ["droid/trajectory_utils"], "files": ["droid/trajectory_utils/trajectory_writer.py", "droid/trajectory_utils/trajectory_reader.py"]},
+    {"name": "后处理层", "responsibility": "校验、SVO 转换、元数据生成与上传", "modules": ["droid/postprocessing"], "files": ["droid/postprocessing/stages.py", "droid/postprocessing/schema.py", "droid/postprocessing/parse.py"]},
+    {"name": "数据加载层", "responsibility": "面向训练的采样、数据集与加载器", "modules": ["droid/data_loading"], "files": ["droid/data_loading/trajectory_sampler.py", "droid/data_loading/dataset.py", "droid/data_loading/data_loader.py"]},
+    {"name": "训练与评估层", "responsibility": "策略网络、训练器与策略评估封装", "modules": ["droid/training", "droid/evaluation"], "files": ["droid/training/model_trainer.py", "droid/evaluation/policy_wrapper.py"]},
+    {"name": "脚本与运维层", "responsibility": "采集、转换、可视化、训练入口脚本与 Docker 部署", "modules": ["scripts", ".docker"], "files": ["scripts/main.py", "scripts/postprocess.py", "scripts/convert/to_tfrecord.py"]}
+  ],
+  "data_flow": [
+    "第1步：在采集笔记本上运行 scripts/main.py，构建 RobotEnv、VRPolicy 与采集 GUI",
+    "第2步：操作者用 VR 遥操作机械臂完成任务，DataCollecter 记录观测与动作",
+    "第3步：轨迹按 success 或 failure 加日期加时间戳的目录落盘，内含 trajectory.h5 与 recordings/SVO 下的 SVO 文件",
+    "第4步：运行 scripts/postprocess.py，先做索引阶段扫描目录并校验 HDF5 与三个 SVO 是否齐全",
+    "第5步：处理阶段用 parse_trajectory 抽取元数据，并把 SVO 转成 MP4 与可选深度",
+    "第6步：为每条轨迹写出 metadata_uuid.json 元数据记录",
+    "第7步：上传阶段用 boto3 逐文件上传到 S3 桶 droid-data 的 lab-uploads 前缀下",
+    "第8步：各阶段结果写入 lab-cache.json，避免重复处理并支持中断续跑",
+    "第9步：官方把原始数据整理成 RLDS 与原始两种格式，托管在 Google Cloud 桶供下载",
+    "第10步：训练时用 create_dataloader 从轨迹目录并行加载、增强并喂给策略网络",
+    "第11步：可用可视化脚本回放轨迹，或导出 TFRecord 用于其他训练框架"
+  ],
+  "entry_points": [
+    {"path": "scripts/main.py", "what": "数据采集入口：组装机器人环境、VR 控制器与采集 GUI"},
+    {"path": "scripts/postprocess.py", "what": "后处理入口：索引、处理、上传三阶段流水线"},
+    {"path": "scripts/convert/to_tfrecord.py", "what": "转换入口：把轨迹导出为 TFRecord"},
+    {"path": "scripts/visualizations/visualize_trajectory.py", "what": "可视化入口：回放单条轨迹的相机与状态"},
+    {"path": "scripts/training/train_policy.py", "what": "训练入口：在 DROID 数据上训练策略网络"},
+    {"path": "scripts/server/run_server.py", "what": "控制服务入口：在 NUC 上运行机器人控制服务"},
+    {"path": "docs/the-droid-dataset.md", "what": "数据集文档入口：说明托管位置与 gsutil 下载命令"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先确认仓库定位是机器人平台与采集而非数据集本体"},
+    {"path": "docs/the-droid-dataset.md", "why": "说明数据集托管在 GCS 及下载方式"},
+    {"path": "scripts/postprocess.py", "why": "后处理主入口与配置，理解三阶段编排"},
+    {"path": "droid/postprocessing/stages.py", "why": "索引、处理、上传的实际逻辑与缓存机制"},
+    {"path": "droid/postprocessing/schema.py", "why": "轨迹元数据字段定义"},
+    {"path": "droid/postprocessing/parse.py", "why": "从 HDF5 抽元数据的解析逻辑"},
+    {"path": "scripts/main.py", "why": "采集入口，理解环境、控制器与 GUI 如何组装"},
+    {"path": "droid/user_interface/data_collector.py", "why": "数据如何逐帧落盘"},
+    {"path": "droid/data_loading/trajectory_sampler.py", "why": "训练侧如何加载轨迹"}
+  ],
+  "extension_points": [
+    "采集新任务：在采集 GUI 里录入任务描述，轨迹会带上 current_task 属性",
+    "支持新实验室或成员：在 scripts/postprocess.py 的 REGISTERED_MEMBERS 增加条目，必要时在 REGISTERED_ALIASES 加别名",
+    "改元数据字段：在 droid/postprocessing/schema.py 的 TRAJECTORY_SCHEMA 增删 ETL 函数",
+    "新增后处理能力：在 droid/postprocessing/stages.py 增加阶段并在 scripts/postprocess.py 接线",
+    "换上传目标：改 droid/postprocessing/stages.py 中 run_upload 的 bucket_name 与 prefix",
+    "支持深度数据：在处理阶段打开 extract_depth_data 并调整深度分辨率与频率",
+    "训练新策略：在 droid/training/models 下新增网络，并复用 create_dataloader"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 docs/the-droid-dataset.md，先厘清仓库性质与数据集托管方式",
+    "第2步：读 scripts/postprocess.py，理解后处理配置与三阶段编排",
+    "第3步：读 droid/postprocessing/stages.py，掌握索引、处理、上传细节与缓存",
+    "第4步：读 droid/postprocessing/schema.py 与 droid/postprocessing/parse.py，理解轨迹元数据格式",
+    "第5步：读 scripts/main.py 与 droid/user_interface/data_collector.py，理解数据如何采集",
+    "第6步：读 droid/data_loading/trajectory_sampler.py 与 droid/data_loading/data_loader.py，理解训练侧加载",
+    "第7步：读 droid/trajectory_utils/trajectory_writer.py，理解 HDF5 落盘格式"
+  ],
+  "diagram_mermaid": "graph TD\n  A[运行 scripts/main.py] --> B[RobotEnv 与 VRPolicy]\n  B --> C[DataCollecter 采集]\n  C --> D[轨迹落盘 trajectory.h5 与 SVO]\n  D --> E[scripts/postprocess.py]\n  E --> F[索引阶段校验 HDF5 与 SVO]\n  F --> G[处理阶段解析元数据]\n  G --> H[SVO 转 MP4 与深度]\n  H --> I[写出 metadata JSON]\n  I --> J[上传阶段 boto3 传 S3]\n  J --> K[云端汇总为 RLDS 与原始数据]\n  K --> L[create_dataloader 训练加载]\n  L --> M[训练策略网络]",
+  "surprises": [
+    "仓库名与内容有落差：它是 DROID 机器人平台与采集工具，不是数据集本体；数据集托管在 Google Cloud 桶，下载命令只在 docs/the-droid-dataset.md 里以 gsutil 形式给出",
+    "仓库内没有下载脚本，策略训练也在另一个外部仓库 droid_policy_learning，本仓库只做采集与后处理",
+    "后处理依赖 ZED SDK 与硬件：SVO 转换必须跑在有 ZED SDK 的采集笔记本上，且 ZED SDK 处理超约 2000 个视频后会段错误，代码用 process_batch_limit 主动退出规避",
+    "缓存文件 lab-cache.json 在 finally 里落盘，且注释直言缓存失效很难，出错修好后需手动改 cache",
+    "采集依赖两个 git 子模块 oculus_reader 与 fairo 提供 VR 读取与机器人控制，克隆时需带 recursive"
+  ],
+  "confidence": "高"
+}

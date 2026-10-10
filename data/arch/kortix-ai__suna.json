@@ -1,0 +1,175 @@
+{
+  "repo": "kortix-ai/suna",
+  "name": "Kortix",
+  "one_liner": "把公司配置当作 git 仓库、为每个会话开一台云沙箱的开源 AI 操作系统",
+  "problem": "通用 AI 助理要真正干活，需要隔离的执行环境、可持久化与恢复的任务、可治理的工具与密钥，以及人审后才落地的变更，而多数产品把这些关在自家云里。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {
+      "name": "Project 项目",
+      "role": "一个 git 仓库加 kortix.yaml，承载 agents、skills、memory、connectors、triggers 的全部配置",
+      "file": "apps/api/src/projects/provision-core.ts"
+    },
+    {
+      "name": "Session 会话",
+      "role": "一次任务执行单元，拥有独立云沙箱与独立分支，产物经 change request 合并回 main",
+      "file": "apps/api/src/projects/session-open/session-open.ts"
+    },
+    {
+      "name": "Sandbox Provider 沙箱提供商",
+      "role": "抽象 Daytona/Platinum/e2b 等执行后端的创建、状态查询、暂停恢复与入口解析",
+      "file": "apps/api/src/platform/providers"
+    },
+    {
+      "name": "Session 生命周期命令队列",
+      "role": "把 prompt 持久化为 continue_session 命令行，用租约、重试、死信与放置修复保证送达沙箱",
+      "file": "apps/api/src/projects/session-lifecycle/store.ts"
+    },
+    {
+      "name": "Sandbox Proxy 沙箱代理",
+      "role": "统一 HTTP 与 WebSocket 入口，解析沙箱地址、鉴权与健康，转发请求到沙箱内守护进程",
+      "file": "apps/api/src/sandbox-proxy/backend.ts"
+    },
+    {
+      "name": "LLM Gateway 模型网关",
+      "role": "服务端注入模型凭证，按项目与账号做路由、配额与用量结算，沙箱侧只拿句柄",
+      "file": "apps/api/src/llm-gateway/wire.ts"
+    },
+    {
+      "name": "kortixd 沙箱守护进程",
+      "role": "沙箱内运行的 Bun 服务，负责工作区、配置、运行时资产、工具与 harness 的编排",
+      "file": "apps/kortix-sandbox-agent-server/src/main.ts"
+    },
+    {
+      "name": "Harness 运行时适配器",
+      "role": "把 OpenCode 与 pi 两种 agent 运行时隔离在各自适配器内，对上层暴露统一端口",
+      "file": "apps/kortix-sandbox-agent-server/src/harness/harness.ts"
+    },
+    {
+      "name": "Runtime Assets 运行时资产",
+      "role": "守护进程与 CLI 二进制、托管技能的一致性与自更新，防止旧沙箱跑过时运行时",
+      "file": "apps/api/src/runtime-assets/manifest.ts"
+    },
+    {
+      "name": "数据模型",
+      "role": "Drizzle 定义的 kortix schema，覆盖项目、会话、沙箱、命令、密钥、审计等全部持久状态",
+      "file": "packages/db/src/schema/kortix.ts"
+    }
+  ],
+  "layers": [
+    {
+      "name": "前端层",
+      "responsibility": "Next.js 应用，提供会话界面、配置管理、审批与计算机预览",
+      "modules": ["apps/web/src"],
+      "files": ["apps/web/src/app", "apps/web/src/features", "apps/web/src/components"]
+    },
+    {
+      "name": "API 控制平面层",
+      "responsibility": "Bun + Hono 服务，负责项目、会话、沙箱编排、鉴权与全部 v1 路由",
+      "modules": ["apps/api/src"],
+      "files": ["apps/api/src/index.ts", "apps/api/src/app.ts", "apps/api/src/projects/provision-core.ts"]
+    },
+    {
+      "name": "沙箱代理与隧道层",
+      "responsibility": "对外统一代理沙箱 HTTP/WS，并向本地机器建立反向隧道",
+      "modules": ["apps/api/src/sandbox-proxy", "apps/api/src/tunnel"],
+      "files": ["apps/api/src/sandbox-proxy/backend.ts", "apps/api/src/tunnel/index.ts"]
+    },
+    {
+      "name": "模型网关层",
+      "responsibility": "多提供商模型路由、凭证注入、配额与用量结算",
+      "modules": ["apps/api/src/llm-gateway"],
+      "files": ["apps/api/src/llm-gateway/wire.ts", "apps/api/src/llm-gateway/models/provider-registry.ts"]
+    },
+    {
+      "name": "后台任务层",
+      "responsibility": "会话生命周期、沙箱回收、审计归档、计费等异步 worker",
+      "modules": ["apps/api/src/workers"],
+      "files": ["apps/api/src/workers/session-lifecycle-worker.ts", "apps/api/src/workers/trigger-scheduler-worker.ts"]
+    },
+    {
+      "name": "数据持久层",
+      "responsibility": "Drizzle schema 与 SQL 迁移，定义并演进 kortix 数据库",
+      "modules": ["packages/db"],
+      "files": ["packages/db/src/schema/kortix.ts", "packages/db/migrations"]
+    },
+    {
+      "name": "契约与 SDK 层",
+      "responsibility": "跨端共享的类型契约与面向用户的 TypeScript SDK",
+      "modules": ["packages/api-contract", "packages/sdk"],
+      "files": ["packages/api-contract/src/index.ts", "packages/sdk/src/index.ts"]
+    },
+    {
+      "name": "沙箱运行时层",
+      "responsibility": "沙箱基础镜像与内部守护进程 kortixd，运行工作区与 agent harness",
+      "modules": ["apps/sandbox", "apps/kortix-sandbox-agent-server/src"],
+      "files": ["apps/sandbox/Dockerfile", "apps/kortix-sandbox-agent-server/src/main.ts", "apps/kortix-sandbox-agent-server/src/harness/harness.ts"]
+    },
+    {
+      "name": "客户端层",
+      "responsibility": "命令行、桌面与移动端接入同一控制平面",
+      "modules": ["apps/cli", "apps/desktop-electron", "apps/mobile"],
+      "files": ["apps/cli/src", "apps/cli/README.md"]
+    }
+  ],
+  "data_flow": [
+    "第1步：用户在 web、Slack、CLI 或 webhook 触发一个会话，带上 prompt 与项目 id",
+    "第2步：API 在 kortix schema 写入 project_sessions 与 session_lifecycle_commands 行",
+    "第3步：openSession 判断该会话是否有可用沙箱，没有则按项目快照创建沙箱",
+    "第4步：沙箱从项目快照或 git 仓库获取工作区，切到以会话命名的分支",
+    "第5步：session-lifecycle worker 通过 NOTIFY 被唤醒，认领命令行并获得租约",
+    "第6步：deliver 经 sandbox-proxy 把 prompt 转发进沙箱内的 kortixd",
+    "第7步：kortixd 的 harness 适配器把 prompt 交给 OpenCode 或 pi 运行时执行",
+    "第8步：运行时按需通过 llm-proxy 与 egress-shim 访问模型与连接器，密钥在服务端注入",
+    "第9步：工具执行结果与助手消息经事件总线回流，代理把 SSE 流推给前端",
+    "第10步：会话产物提交到分支并生成 change request，等待人工审批合并",
+    "第11步：沙箱空闲被 reaper 回收，行状态与命令队列的中间态由 worker 持续修复"
+  ],
+  "entry_points": [
+    {"path": "apps/api/src/index.ts", "what": "API 服务启动入口，做 schema 检查、启动 worker 与信号处理"},
+    {"path": "apps/api/src/app.ts", "what": "组装全部 v1 路由的 Hono 应用"},
+    {"path": "apps/kortix-sandbox-agent-server/src/main.ts", "what": "沙箱内守护进程 kortixd 的入口"},
+    {"path": "apps/web/src/app", "what": "Next.js 前端路由入口"},
+    {"path": "apps/cli/src", "what": "kortix 命令行工具入口"},
+    {"path": "packages/db/migrations", "what": "数据库迁移目录，初始化与演进 schema"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：定位、沙箱与 change request 的核心模型"},
+    {"path": "apps/api/src/index.ts", "why": "看清 API 如何启动、schema 检查与后台服务的装配"},
+    {"path": "apps/api/src/app.ts", "why": "一张路由地图，理解控制平面暴露了哪些能力"},
+    {"path": "apps/api/src/projects/session-lifecycle/README.md", "why": "逐跳列出 prompt 送达沙箱的所有重试与超时规则，是理解任务持久化的关键"},
+    {"path": "apps/api/src/projects/session-open/session-open.ts", "why": "会话如何被拉起与恢复的权威路径"},
+    {"path": "apps/kortix-sandbox-agent-server/ARCHITECTURE.md", "why": "沙箱内守护进程的分层与导入规则，理解 harness 与 services 的关系"},
+    {"path": "apps/kortix-sandbox-agent-server/src/harness/harness.ts", "why": "两种 agent 运行时如何被统一抽象"},
+    {"path": "packages/db/src/schema/kortix.ts", "why": "持久化模型全貌，几乎所有抽象都能在此找到对应表"},
+    {"path": "apps/api/src/sandbox-proxy/backend.ts", "why": "理解沙箱地址解析、鉴权与唤醒的单一入口"}
+  ],
+  "extension_points": [
+    "接入新的模型提供商：改 apps/api/src/llm-gateway/models/provider-registry.ts 与 wire.ts 的路由分支",
+    "接入新的沙箱提供商：在 apps/api/src/platform/providers 下新增 provider 实现并注册",
+    "新增 agent 工具或托管技能：改 apps/kortix-sandbox-agent-server/src/services/tools 与 packages/starter 模板",
+    "新增 harness 适配器：在 apps/kortix-sandbox-agent-server/src/harness 下加目录并在 resolveHarness 注册",
+    "新增 API 能力：在 apps/api/src/projects/routes 下加路由，并在 apps/api/src/app.ts 挂载",
+    "新增持久化表：在 packages/db/src/schema/kortix.ts 加表并生成 migrations",
+    "新增后台任务：在 apps/api/src/workers 下加 worker 并在 bootstrap 中注册"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 MANIFESTO.md，理解 project/session/sandbox/change request 的核心模型",
+    "第2步：读 apps/api/src/app.ts 建立控制平面的路由全貌",
+    "第3步：读 apps/api/src/projects/session-lifecycle/README.md 理解任务如何被持久化与重试",
+    "第4步：读 apps/api/src/projects/session-open/session-open.ts 理解会话拉起与恢复",
+    "第5步：读 apps/kortix-sandbox-agent-server/ARCHITECTURE.md 与 src/main.ts 理解沙箱内运行时",
+    "第6步：读 apps/kortix-sandbox-agent-server/src/harness/harness.ts 理解 agent 运行时适配",
+    "第7步：读 packages/db/src/schema/kortix.ts 把抽象与数据库表对应起来"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户或触发器] --> B[API 控制平面]\n  B --> C[写入会话与命令队列]\n  C --> D[openSession 拉起沙箱]\n  D --> E[沙箱从项目快照获取工作区]\n  C --> F[worker 认领命令]\n  F --> G[sandbox-proxy 转发]\n  G --> H[kortixd 守护进程]\n  H --> I[harness 适配器运行 agent]\n  I --> J[llm-proxy 与 egress-shim 注入密钥]\n  I --> K[结果经事件流回流前端]\n  I --> L[提交分支并生成 change request]\n  L --> M[人工审批合并]",
+  "surprises": [
+    "本仓库已从早期 Python 后端的 Suna 演进为 TypeScript/Bun 的 Kortix 单体仓库，Python 只剩技能脚本与 infra 的 terraform 脚本，原 Python Agent 后端已不存在",
+    "每个会话是一台独立沙箱加独立 git 分支，agent 的改动默认不能直接进 main，必须走人工审批的 change request",
+    "会话生命周期是一套持久化命令队列，重试、租约、死信、放置修复逐跳限额都写在 session-lifecycle/README.md 里，复杂度远超一般 Agent 项目",
+    "沙箱内不持有连接器与模型的真实密钥，靠服务端 broker 与 egress 代理在出口处替换句柄",
+    "kortixd 用 eslint 规则强制分层与独立模块，并有 ratchet 规则禁止 OpenCode 名称泄漏到非适配器代码",
+    "apps/api/src/projects/session-lifecycle/worker.ts 只有一行，是重导出而非实现，容易误导阅读"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,91 @@
+{
+  "repo": "StanfordVL/BEHAVIOR-1K",
+  "name": "BEHAVIOR-1K",
+  "one_liner": "1000 项家庭日常活动的具身智能仿真基准",
+  "problem": "为具身智能体提供统一可比的评测：用 BDDL 谓词逻辑定义 1000 项家务活动的初始与目标条件，在 OmniGibson 高保真仿真中实例化，并用谓词求值与指标衡量任务完成度与效率。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "BDDL 活动定义", "role": "用 :objects、:init、:goal 描述每个活动的物体、初始状态与目标逻辑表达式", "file": "bddl3/bddl/activity.py"},
+    {"name": "条件编译与求值", "role": "把 BDDL 目标表达式编译为可求值的逻辑表达式对象，并对仿真状态求值", "file": "bddl3/bddl/condition_evaluation.py"},
+    {"name": "KnowledgeBase 与 Task", "role": "汇总物体分类、谓词、属性与活动定义，对外提供 Task 对象统一访问", "file": "bddl3/bddl/knowledge_base/knowledgebase.py"},
+    {"name": "Environment", "role": "OmniGibson 核心环境，遵循 Gym 接口，负责加载场景、机器人与任务并推进仿真", "file": "OmniGibson/omnigibson/envs/env_base.py"},
+    {"name": "BehaviorTask", "role": "BEHAVIOR 具体任务，把 BDDL 目标接入终止条件与奖励，管理物体与谓词作用域", "file": "OmniGibson/omnigibson/tasks/behavior_task.py"},
+    {"name": "BaseTask", "role": "所有任务基类，定义 load、reset、step、观测空间与终止奖励装配接口", "file": "OmniGibson/omnigibson/tasks/task_base.py"},
+    {"name": "Simulator", "role": "Omniverse 之上的全局仿真单例，管理场景加载、物体导入、物理步进与回调", "file": "OmniGibson/omnigibson/simulator.py"},
+    {"name": "Scene", "role": "场景基类，封装 USD 场景、房间与可遍历结构", "file": "OmniGibson/omnigibson/scenes/scene_base.py"},
+    {"name": "DatasetObject", "role": "从 BEHAVIOR 数据集中加载 USD 物体，承载类别、状态与语义标注", "file": "OmniGibson/omnigibson/objects/dataset_object.py"},
+    {"name": "Object States 与谓词", "role": "把 inside、ontop、cooked 等物体状态实现为可查询系统，支撑 BDDL 谓词求值", "file": "OmniGibson/omnigibson/object_states/factory.py"},
+    {"name": "PredicateGoal", "role": "终止条件实现，调用编译后的目标表达式判断任务是否达成", "file": "OmniGibson/omnigibson/termination_conditions/predicate_goal.py"},
+    {"name": "TaskMetric", "role": "评测指标，计算任务进度与相对人类的效率指标 Q 分数", "file": "OmniGibson/omnigibson/metrics/task_metric.py"}
+  ],
+  "layers": [
+    {"name": "活动定义层", "responsibility": "以目录与 problemN.bddl 文件组织 1000 项活动的多套变体", "modules": ["bddl3/bddl/activity_definitions"], "files": ["bddl3/bddl/activity_definitions/adding_fabric_softener/problem0.bddl"]},
+    {"name": "BDDL 解析与逻辑求值层", "responsibility": "解析 BDDL 领域与问题文件，编译并求值谓词逻辑表达式", "modules": ["bddl3/bddl"], "files": ["bddl3/bddl/activity.py", "bddl3/bddl/condition_evaluation.py", "bddl3/bddl/parsing.py"]},
+    {"name": "知识库层", "responsibility": "组织物体分类学、谓词、属性、过渡规则并对外提供统一查询", "modules": ["bddl3/bddl/knowledge_base"], "files": ["bddl3/bddl/knowledge_base/models.py", "bddl3/bddl/knowledge_base/knowledgebase.py"]},
+    {"name": "仿真核心层", "responsibility": "在 Omniverse 上管理场景、物体、状态、传感器与物理步进", "modules": ["OmniGibson/omnigibson"], "files": ["OmniGibson/omnigibson/simulator.py", "OmniGibson/omnigibson/scenes/scene_base.py", "OmniGibson/omnigibson/object_states/factory.py"]},
+    {"name": "环境与任务层", "responsibility": "提供 Gym 风格环境与各类任务，把 BDDL 目标接入 RL 训练与评测", "modules": ["OmniGibson/omnigibson/envs", "OmniGibson/omnigibson/tasks"], "files": ["OmniGibson/omnigibson/envs/env_base.py", "OmniGibson/omnigibson/tasks/behavior_task.py"]},
+    {"name": "控制器与机器人层", "responsibility": "提供移动机械臂机器人与其关节、末端、抓取等模块化控制器", "modules": ["OmniGibson/omnigibson/robots", "OmniGibson/omnigibson/controllers"], "files": ["OmniGibson/omnigibson/robots/robot.py", "OmniGibson/omnigibson/controllers/controller_base.py"]},
+    {"name": "评测与指标层", "responsibility": "终止条件、奖励函数、评测器与指标统计", "modules": ["OmniGibson/omnigibson/eval", "OmniGibson/omnigibson/metrics", "OmniGibson/omnigibson/termination_conditions", "OmniGibson/omnigibson/reward_functions"], "files": ["OmniGibson/omnigibson/eval/evaluator.py", "OmniGibson/omnigibson/metrics/task_metric.py", "OmniGibson/omnigibson/reward_functions/potential_reward.py"]},
+    {"name": "数据采集与遥操作层", "responsibility": "用 JoyLo 遥操作硬件采集人类演示数据", "modules": ["joylo"], "files": ["joylo/README.md"]},
+    {"name": "资产流水线层", "responsibility": "把原始模型转换为 BEHAVIOR 数据集资产，管理 USD 与语义标注", "modules": ["asset_pipeline"], "files": ["asset_pipeline/README.md"]},
+    {"name": "分布式评测作业层", "responsibility": "以 FastAPI 作业队列与 SLURM worker 分布式评测挑战赛提交", "modules": ["eval-jobqueue"], "files": ["eval-jobqueue/jobqueue.py"]}
+  ],
+  "data_flow": [
+    "第1步：评测或训练从某个活动的 problemN.bddl 出发，文件用 BDDL 描述 objects、init 与 goal",
+    "第2步：bddl 的 parsing 解析领域与问题文件，得到物体列表、初始文字与目标表达式",
+    "第3步：condition_evaluation 的 compile_state 把目标表达式编译成可求值的逻辑表达式对象，并生成 ground 选项",
+    "第4步：Environment 依据 config 校验场景与任务类型，依次加载 scene、robot 与 task",
+    "第5步：BehaviorTask._load 通过 KnowledgeBase 取到 Task，导入活动所需物体并绑定到 BDDL 作用域",
+    "第6步：Simulator 在 Omniverse 上加载 USD 场景与物体，准备物理与渲染",
+    "第7步：env.step 接收策略动作，经机器人控制器转成关节命令并推进一步物理仿真",
+    "第8步：object_states 与谓词在仿真状态上实时求值，PredicateGoal 判断目标条件是否满足",
+    "第9步：termination_conditions 决定 episode 是否终止，reward_functions 提供稠密奖励供 RL 使用",
+    "第10步：TaskMetric 记录进度与 Q 分数，评测通过 eval-jobqueue 分布式调度 websocket 策略服务完成"
+  ],
+  "entry_points": [
+    {"path": "OmniGibson/omnigibson/eval/eval.py", "what": "评测入口，把策略以 websocket 服务接入 BatchedEvaluator 批量跑任务"},
+    {"path": "OmniGibson/omnigibson/envs/env_base.py", "what": "Environment 类，OmniGibson 环境的统一入口"},
+    {"path": "OmniGibson/omnigibson/tasks/behavior_task.py", "what": "BEHAVIOR 任务实现，连接 BDDL 目标与仿真"},
+    {"path": "bddl3/bddl/activity.py", "what": "BDDL 活动定义解析的公开 API 入口"},
+    {"path": "OmniGibson/omnigibson/simulator.py", "what": "全局仿真单例，负责启动与步进 Omniverse 仿真"},
+    {"path": "eval-jobqueue/jobqueue.py", "what": "分布式评测作业队列服务，调度大规模任务评测"},
+    {"path": "README.md", "what": "仓库总览与安装、引用信息"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先读它了解基准定位与整体构成"},
+    {"path": "bddl3/bddl/activity_definitions/adding_fabric_softener/problem0.bddl", "why": "最直观地看到一项活动是如何被 BDDL 描述的"},
+    {"path": "bddl3/bddl/activity.py", "why": "理解活动定义如何被解析成条件对象"},
+    {"path": "bddl3/bddl/condition_evaluation.py", "why": "理解目标表达式如何编译与求值，是评测的核心"},
+    {"path": "OmniGibson/omnigibson/tasks/behavior_task.py", "why": "看 BDDL 如何接入仿真任务、终止条件与作用域"},
+    {"path": "OmniGibson/omnigibson/envs/env_base.py", "why": "看环境如何组装场景、机器人与任务"},
+    {"path": "OmniGibson/omnigibson/simulator.py", "why": "理解 OmniGibson 在 Omniverse 上的仿真封装"},
+    {"path": "OmniGibson/omnigibson/metrics/task_metric.py", "why": "理解任务如何被量化评测，含 Q 分数"}
+  ],
+  "extension_points": [
+    "想加一项新活动：在 bddl3/bddl/activity_definitions 下新建活动目录并写 problemN.bddl，在 :objects 声明物体、:init 写初始状态、:goal 写目标谓词",
+    "想加一个新谓词或物体状态：在 bddl3/bddl/predicates.py 定义谓词，并在 OmniGibson 的 object_states 下实现对应的可查询状态系统",
+    "想加一个新任务类型：继承 OmniGibson/omnigibson/tasks/task_base.py 的 BaseTask，实现 _load、_create_termination_conditions 与 _create_reward_functions 并注册",
+    "想加一个新机器人：在 OmniGibson/omnigibson/robots 下继承 Robot 定义机器人及其控制器配置",
+    "想加一个新的评测指标：在 OmniGibson/omnigibson/metrics 下继承 MetricBase，并通过 MetricsWrapper 挂到环境上",
+    "想换渲染或物理后端：修改 OmniGibson/omnigibson/simulator.py 与对应的 kit 配置文件"
+  ],
+  "learning_path": [
+    "第1步读 README.md，明确 BEHAVIOR-1K 是基准加仿真，先建立整体认知",
+    "第2步读 bddl3/README.md 与一个 problem0.bddl，理解 BDDL 如何描述活动",
+    "第3步读 bddl3/bddl/activity.py 与 condition_evaluation.py，吃透解析与逻辑求值",
+    "第4步读 OmniGibson/README.md 与 simulator.py，理解仿真层封装",
+    "第5步读 OmniGibson/omnigibson/envs/env_base.py 与 tasks/behavior_task.py，看任务如何装配",
+    "第6步读 object_states/factory.py 与 predicates，理解谓词如何映射到仿真状态",
+    "第7步读 metrics/task_metric.py 与 eval/evaluator.py，理解评测与指标",
+    "第8步按需读 joylo、asset_pipeline、eval-jobqueue，理解数据采集、资产与分布式评测"
+  ],
+  "diagram_mermaid": "graph TD\n  A[problem0.bddl 活动定义] --> B[BDDL parsing 解析]\n  B --> C[condition_evaluation 编译目标]\n  C --> D[KnowledgeBase 取 Task]\n  D --> E[BehaviorTask 加载任务]\n  E --> F[Environment 组装]\n  F --> G[Simulator 加载 USD 场景]\n  H[策略动作] --> I[机器人控制器]\n  I --> J[仿真物理步进]\n  J --> K[object_states 谓词求值]\n  K --> L[PredicateGoal 判定目标]\n  L --> M[TaskMetric 指标与 Q 分数]\n  M --> N[eval-jobqueue 分布式评测]",
+  "surprises": [
+    "任务成功与否不靠手写判定，而是把 BDDL 目标表达式编译成谓词逻辑并对仿真状态求值，改目标只改文本定义",
+    "每个活动目录可含多个 problemN.bddl 变体，任务名加变体号才唯一确定一个具体实例，官方还额外给出预采样任务",
+    "数据集与资产不随仓库分发，datasets 目录只是占位，需另行下载或用 OMNIGIBSON_DATA_PATH 指定",
+    "OmniGibson 构建在 NVIDIA Omniverse 之上并用 USD 描述场景物体，对运行环境有较强依赖",
+    "评测面向挑战赛，策略以 websocket 服务远程接入，配合作业队列做分布式批量评测"
+  ],
+  "confidence": "高"
+}

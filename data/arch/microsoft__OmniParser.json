@@ -1,0 +1,144 @@
+{
+  "repo": "microsoft/OmniParser",
+  "name": "OmniParser",
+  "one_liner": "把 GUI 截图解析成带编号可交互元素的纯视觉屏幕解析器",
+  "problem": "纯视觉 LLM 难以直接在像素级截图上定位可点击元素，需要把屏幕解析成结构化元素列表并叠加标注图，让任意 LLM 都能准确 grounding。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {
+      "name": "Omniparser 门面",
+      "role": "封装模型加载与 parse 方法，接收 base64 截图返回标注图与结构化元素列表",
+      "file": "util/omniparser.py"
+    },
+    {
+      "name": "SOM 标注流水线",
+      "role": "核心函数，串联 YOLO 检测、OCR、去重、图标描述、画框标注，输出带编号图像与坐标字典",
+      "file": "util/utils.py"
+    },
+    {
+      "name": "交互区域检测器",
+      "role": "基于 YOLOv9-E 的 TorchScript 检测模型，输出候选可交互图标框",
+      "file": "util/yolov9.py"
+    },
+    {
+      "name": "图标语义描述模型",
+      "role": "对每个裁剪图标用 Florence2/BLIP2 生成功能描述，让 LLM 理解图标含义",
+      "file": "util/utils.py"
+    },
+    {
+      "name": "OCR 文本框提取",
+      "role": "用 EasyOCR/PaddleOCR 抽取屏幕文本与文本框，补充图标检测的文本信息",
+      "file": "util/utils.py"
+    },
+    {
+      "name": "框去重合并",
+      "role": "按 IoU 与包含关系过滤重叠框，合并 OCR 文本到图标，决定最终元素集合",
+      "file": "util/utils.py"
+    },
+    {
+      "name": "下游 Agent 适配器",
+      "role": "调用 OmniParser 服务、把元素列表转成 ID+文本/图标描述，供 LLM 按 Box ID 决策",
+      "file": "omnitool/gradio/agent/llm_utils/omniparserclient.py"
+    },
+    {
+      "name": "VLM 规划器",
+      "role": "构造含屏幕元素的系统提示，让 LLM 输出带 Box ID 的 JSON 动作，再转成 computer 工具调用",
+      "file": "omnitool/gradio/agent/vlm_agent.py"
+    }
+  ],
+  "layers": [
+    {
+      "name": "检测与解析核心层",
+      "responsibility": "图标检测、OCR、去重、图标描述与 SOM 图像生成",
+      "modules": ["util"],
+      "files": ["util/omniparser.py", "util/utils.py", "util/yolov9.py", "util/box_annotator.py"]
+    },
+    {
+      "name": "服务层",
+      "responsibility": "把解析能力封装为 FastAPI 的 /parse/ 接口供远程调用",
+      "modules": ["omnitool/omniparserserver"],
+      "files": ["omnitool/omniparserserver/omniparserserver.py"]
+    },
+    {
+      "name": "Agent 编排层",
+      "responsibility": "循环调用解析服务与 LLM，维护消息历史与多轮决策",
+      "modules": ["omnitool/gradio/agent"],
+      "files": ["omnitool/gradio/loop.py", "omnitool/gradio/agent/vlm_agent.py", "omnitool/gradio/agent/anthropic_agent.py"]
+    },
+    {
+      "name": "工具与执行层",
+      "responsibility": "屏幕截图、鼠标键盘动作执行，把坐标转成 pyautogui 操作",
+      "modules": ["omnitool/gradio/tools"],
+      "files": ["omnitool/gradio/tools/computer.py", "omnitool/gradio/tools/screen_capture.py", "omnitool/gradio/tools/base.py"]
+    },
+    {
+      "name": "VM 沙箱层",
+      "responsibility": "以 Docker 方式提供 Windows 11 VM 与计算机控制 API",
+      "modules": ["omnitool/omnibox"],
+      "files": ["omnitool/omnibox/compose.yml", "omnitool/omnibox/scripts/manage_vm.sh"]
+    },
+    {
+      "name": "示例与评估层",
+      "responsibility": "提供单图演示、Gradio 界面与 ScreenSpot-Pro 评估脚本",
+      "modules": [".", "eval", "docs"],
+      "files": ["gradio_demo.py", "demo.ipynb", "eval/ss_pro_gpt4o_omniv2.py", "docs/Evaluation.md"]
+    }
+  ],
+  "data_flow": [
+    "第1步：get_screenshot 截取屏幕或读取上传图片，编码为 base64",
+    "第2步：check_ocr_box 用 EasyOCR/PaddleOCR 抽取文本与文本框",
+    "第3步：get_yolo_model 的检测器输出候选图标框 xyxy 与置信度",
+    "第4步：坐标除以图像宽高归一化，OCR 框与图标框分别构造元素字典",
+    "第5步：remove_overlap_new 按 IoU 与包含关系去重并合并 OCR 文本到图标",
+    "第6步：按顺序裁剪图标区域 resize 到 64x64，送入 Florence2 生成功能描述",
+    "第7步：把图标描述与 OCR 文本合并成 parsed_content_list，元素类型标注 icon 或 text",
+    "第8步：annotate 用 BoxAnnotator 在原图画出带编号的框，得到 SOM 标注图",
+    "第9步：返回 base64 标注图、归一化坐标字典与结构化元素列表",
+    "第10步：下游 LLM 收到 SOM 图与元素描述，输出带 Box ID 的 JSON 动作",
+    "第11步：按 Box ID 取框中心坐标乘回屏幕宽高，转成 computer 工具点击执行",
+    "第12步：执行后重新截图进入下一轮循环"
+  ],
+  "entry_points": [
+    {"path": "gradio_demo.py", "what": "单图上传的 Gradio 演示入口，直接调用解析流水线"},
+    {"path": "omnitool/omniparserserver/omniparserserver.py", "what": "FastAPI 服务入口，暴露 /parse/ 接口"},
+    {"path": "omnitool/gradio/app.py", "what": "OmniTool 的 Gradio 应用入口，串联解析服务与 Agent 循环"},
+    {"path": "demo.ipynb", "what": "notebook 形式的用法示例与逐步骤演示"},
+    {"path": "eval/ss_pro_gpt4o_omniv2.py", "what": "ScreenSpot-Pro 基准上的 grounding 评估脚本"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：定位、V1/V2 版本差异与权重下载方式"},
+    {"path": "util/omniparser.py", "why": "最短的门面类，一眼看清 parse 的输入输出"},
+    {"path": "util/utils.py", "why": "全部核心逻辑所在：get_som_labeled_img 是理解整个解析流程的关键"},
+    {"path": "util/yolov9.py", "why": "理解交互区域检测模型如何加载与推理"},
+    {"path": "omnitool/omniparserserver/omniparserserver.py", "why": "看解析能力如何服务化并被下游调用"},
+    {"path": "omnitool/gradio/agent/llm_utils/omniparserclient.py", "why": "理解解析结果如何转成 LLM 可读的屏幕描述"},
+    {"path": "omnitool/gradio/agent/vlm_agent.py", "why": "看 LLM 如何按 Box ID 决策并转成工具调用"},
+    {"path": "omnitool/gradio/loop.py", "why": "串起解析、规划、执行的主循环"}
+  ],
+  "extension_points": [
+    "更换或新增图标检测模型：改 util/utils.py 的 get_yolo_model 分支逻辑",
+    "更换图标描述模型：在 util/utils.py 的 get_caption_model_processor 中增加模型类型分支",
+    "接入新的下游 LLM：在 omnitool/gradio/agent/vlm_agent.py 的模型映射与 loop.py 的分支中扩展",
+    "调整检测灵敏度：修改 config 的 BOX_TRESHOLD 与 iou_threshold 参数",
+    "新增可执行动作：在 omnitool/gradio/tools/computer.py 的 Action 联合类型与执行分支中添加",
+    "改变元素输出格式：修改 get_som_labeled_img 中 parsed_content_list 的构造与 OmniParserClient 的 reformat_messages"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 了解项目定位与 V2 能力",
+    "第2步：读 util/omniparser.py 把握输入输出接口",
+    "第3步：精读 util/utils.py 的 get_som_labeled_img，顺着调用链理解检测到标注的全过程",
+    "第4步：读 util/yolov9.py 理解检测器实现",
+    "第5步：读 omnitool/omniparserserver/omniparserserver.py 与 omniparserclient.py 理解服务化对接",
+    "第6步：读 omnitool/gradio/agent/vlm_agent.py 与 loop.py 理解 Agent 闭环",
+    "第7步：跑 gradio_demo.py 观察标注图与元素列表"
+  ],
+  "diagram_mermaid": "graph TD\n  A[屏幕截图] --> B[OCR 文本提取]\n  A --> C[YOLO 图标检测]\n  B --> D[框去重与合并]\n  C --> D\n  D --> E[裁剪图标]\n  E --> F[图标描述模型]\n  F --> G[结构化元素列表]\n  D --> H[SOM 标注图]\n  G --> I[下游 LLM 决策]\n  H --> I\n  I --> J[按 Box ID 定位坐标]\n  J --> K[computer 工具执行]\n  K --> A",
+  "surprises": [
+    "本仓库不含动作决策模型，OmniParser 只做感知侧解析，动作由外部 LLM 与 computer 工具完成",
+    "parsed_content_list 的顺序经过 sorted 让 content 为 None 的图标排在末尾，因此元素 ID 与检测顺序不一致，下游必须用 ID 而非位置索引",
+    "图标语义靠 Florence2 对 64x64 裁剪图生成 caption，小图标语义准确性受裁剪与分辨率影响",
+    "YOLOv9-E 检测器用 torch.jit.load 加载 TorchScript 权重而非 ultralytics 训练框架，权重需从 HuggingFace PR 手动下载",
+    "get_som_labeled_img 内部把 iou 阈值硬编码为 0.1 传给 predict_yolo，与外部传入的 iou_threshold 用途不同，容易混淆"
+  ],
+  "confidence": "高"
+}

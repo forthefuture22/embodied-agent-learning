@@ -95,6 +95,25 @@
   "warnings": []
  },
  {
+  "file": "BerriAI__litellm.json",
+  "repo": "BerriAI/litellm",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 9,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 47,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "Cinnamon__kotaemon.json",
   "repo": "Cinnamon/kotaemon",
   "confidence": "高",
@@ -475,6 +494,25 @@
   "warnings": []
  },
  {
+  "file": "StanfordVL__BEHAVIOR-1K.json",
+  "repo": "StanfordVL/BEHAVIOR-1K",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 10,
+  "flow": 10,
+  "key_files": 8,
+  "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "a2aproject__A2A.json",
   "repo": "a2aproject/A2A",
   "confidence": "中",
@@ -489,6 +527,25 @@
   "skipped": {
    "symbol": 0,
    "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "agno-agi__agno.json",
+  "repo": "agno-agi/agno",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 40,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
   },
   "errors": [],
   "warnings": []
@@ -551,6 +608,44 @@
   "warnings": []
  },
  {
+  "file": "bulletphysics__bullet3.json",
+  "repo": "bulletphysics/bullet3",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 9,
+  "flow": 11,
+  "key_files": 9,
+  "paths_checked": 41,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "bytedance__UI-TARS.json",
+  "repo": "bytedance/UI-TARS",
+  "confidence": "高",
+  "abstractions": 6,
+  "layers": 6,
+  "flow": 9,
+  "key_files": 7,
+  "paths_checked": 27,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "camel-ai__camel.json",
   "repo": "camel-ai/camel",
   "confidence": "高",
@@ -559,6 +654,25 @@
   "flow": 11,
   "key_files": 8,
   "paths_checked": 44,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "chroma-core__chroma.json",
+  "repo": "chroma-core/chroma",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 9,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 47,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -603,6 +717,44 @@
   "skipped": {
    "symbol": 0,
    "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "droid-dataset__droid.json",
+  "repo": "droid-dataset/droid",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 9,
+  "paths_checked": 48,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "dzhng__deep-research.json",
+  "repo": "dzhng/deep-research",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 5,
+  "flow": 11,
+  "key_files": 9,
+  "paths_checked": 33,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 1
   },
   "errors": [],
   "warnings": []
@@ -931,6 +1083,25 @@
   "warnings": []
  },
  {
+  "file": "kortix-ai__suna.json",
+  "repo": "kortix-ai/suna",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 9,
+  "flow": 11,
+  "key_files": 9,
+  "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "langchain-ai__langchain.json",
   "repo": "langchain-ai/langchain",
   "confidence": "高",
@@ -956,6 +1127,44 @@
   "abstractions": 7,
   "layers": 6,
   "flow": 10,
+  "key_files": 8,
+  "paths_checked": 36,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "langgenius__dify.json",
+  "repo": "langgenius/dify",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 43,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "leggedrobotics__legged_gym.json",
+  "repo": "leggedrobotics/legged_gym",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 11,
   "key_files": 8,
   "paths_checked": 36,
   "paths_bad": 0,
@@ -1007,6 +1216,25 @@
   "warnings": []
  },
  {
+  "file": "microsoft__OmniParser.json",
+  "repo": "microsoft/OmniParser",
+  "confidence": "高",
+  "abstractions": 8,
+  "layers": 6,
+  "flow": 12,
+  "key_files": 8,
+  "paths_checked": 38,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "microsoft__TaskWeaver.json",
   "repo": "microsoft/TaskWeaver",
   "confidence": "高",
@@ -1034,6 +1262,25 @@
   "flow": 12,
   "key_files": 10,
   "paths_checked": 46,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "microsoft__autogen.json",
+  "repo": "microsoft/autogen",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 6,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 37,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -1387,6 +1634,25 @@
   "warnings": []
  },
  {
+  "file": "ros2__ros2.json",
+  "repo": "ros2/ros2",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 7,
+  "flow": 11,
+  "key_files": 9,
+  "paths_checked": 30,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 7
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "run-llama__llama_index.json",
   "repo": "run-llama/llama_index",
   "confidence": "高",
@@ -1395,6 +1661,25 @@
   "flow": 9,
   "key_files": 9,
   "paths_checked": 41,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "sgl-project__sglang.json",
+  "repo": "sgl-project/sglang",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 9,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 51,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],

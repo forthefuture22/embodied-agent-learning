@@ -1,0 +1,87 @@
+{
+  "repo": "ros2/ros2",
+  "name": "ros2",
+  "one_liner": "ROS 2 元仓库：用 vcs 清单与 pixi 聚合上百子仓库",
+  "problem": "ROS 2 由上百个独立仓库组成，逐个克隆难保证版本一致。本仓库用 vcs 清单固定子仓库分支、用 pixi 固定跨平台依赖，并提供 nightly 发布与镜像 CI，作为统一入口。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "ros2.repos", "role": "vcstool 清单：声明全部子仓库的 URL 与分支版本，是聚合的核心", "file": "ros2.repos"},
+    {"name": "pixi.toml", "role": "跨平台依赖与任务清单：定义 win-64/linux-64 环境、colcon 工具链与 buildfarm 特性环境", "file": "pixi.toml"},
+    {"name": "pixi.lock", "role": "锁定文件：把 pixi.toml 的解算结果逐包锁定，保证可复现", "file": "pixi.lock"},
+    {"name": "仓库校验工作流", "role": "pr.yaml 用 yamllint 与 vcs validate 校验 ros2.repos 的格式与合法性", "file": ".github/workflows/pr.yaml"},
+    {"name": "锁文件校验工作流", "role": "pixi-lock.yaml 确保 pixi.lock 与 pixi.toml 一致且各平台可安装", "file": ".github/workflows/pixi-lock.yaml"},
+    {"name": "nightly 发布工作流", "role": "release-nightlies.yaml 从 Jenkins 拉取各平台二进制并发布 GitHub Release", "file": ".github/workflows/release-nightlies.yaml"},
+    {"name": "分支镜像工作流", "role": "mirror-rolling-to-master.yaml 把 rolling 分支同步到 master", "file": ".github/workflows/mirror-rolling-to-master.yaml"},
+    {"name": "锁文件检查脚本", "role": "pixi-lock-check.sh 判定锁文件是 current、unsolvable 还是 stale 并给出修复提示", "file": ".github/scripts/pixi-lock-check.sh"},
+    {"name": "平台矩阵脚本", "role": "pixi-lock-matrix.sh 把 workspace.platforms 映射为 CI runner 矩阵", "file": ".github/scripts/pixi-lock-matrix.sh"},
+    {"name": "变更检测脚本", "role": "pixi-lock-changed-files.sh 判断 PR 是否触碰 pixi 相关文件", "file": ".github/scripts/pixi-lock-changed-files.sh"},
+    {"name": "src 占位目录", "role": "空目录仅保留 .gitkeep，子仓库由 vcs import 拉入此处", "file": "src/.gitkeep"}
+  ],
+  "layers": [
+    {"name": "聚合清单层", "responsibility": "用 vcs 清单声明全部子仓库来源与分支", "modules": ["."], "files": ["ros2.repos"]},
+    {"name": "依赖与环境层", "responsibility": "用 pixi 定义跨平台构建依赖与工具链", "modules": ["."], "files": ["pixi.toml", "pixi.lock"]},
+    {"name": "源码汇聚层", "responsibility": "src/ 空目录作为子仓库导入落点", "modules": ["src"], "files": ["src/.gitkeep"]},
+    {"name": "校验 CI 层", "responsibility": "校验清单与锁文件的 PR 工作流", "modules": [".github/workflows"], "files": [".github/workflows/pr.yaml", ".github/workflows/pixi-lock.yaml"]},
+    {"name": "发布 CI 层", "responsibility": "nightly 二进制聚合发布", "modules": [".github/workflows"], "files": [".github/workflows/release-nightlies.yaml"]},
+    {"name": "分支镜像层", "responsibility": "rolling 到 master 的分支同步", "modules": [".github/workflows"], "files": [".github/workflows/mirror-rolling-to-master.yaml"]},
+    {"name": "CI 辅助脚本层", "responsibility": "供工作流调用的 shell 脚本", "modules": [".github/scripts"], "files": [".github/scripts/pixi-lock-check.sh", ".github/scripts/pixi-lock-matrix.sh", ".github/scripts/pixi-lock-changed-files.sh"]}
+  ],
+  "data_flow": [
+    "第1步：开发者克隆元仓库，只得到清单、pixi 配置与 CI，不含任何 ROS 2 源码",
+    "第2步：安装 vcstool 并执行 vcs import src < ros2.repos，把清单里的全部子仓库拉到 src/",
+    "第3步：用 pixi 按 pixi.toml 创建跨平台环境并安装锁定依赖",
+    "第4步：在 src/ 上运行 colcon build 编译全部 ROS 2 包",
+    "第5步：提交 PR 时 pr.yaml 触发，用 yamllint 与 vcs validate 校验 ros2.repos",
+    "第6步：若改动 pixi.toml 或 pixi.lock，pixi-lock.yaml 触发，先探测变更再校验锁文件",
+    "第7步：pixi-lock-check.sh 判定锁文件是 current、unsolvable 还是 stale，并给出修复提示",
+    "第8步：pixi-lock-matrix.sh 把 workspace.platforms 映射成 CI runner 矩阵",
+    "第9步：各平台并行安装锁定环境，验证解算确实可用",
+    "第10步：release-nightlies.yaml 定时从 Jenkins 校验各平台 nightly 产物并发布 GitHub Release",
+    "第11步：rolling 分支合并后由 mirror 工作流同步到 master"
+  ],
+  "entry_points": [
+    {"path": "ros2.repos", "what": "真正的入口：vcs 清单，决定 vcs import 会拉取哪些子仓库及分支"},
+    {"path": "pixi.toml", "what": "构建环境入口：定义平台、依赖与 buildfarm 环境"},
+    {"path": "README.md", "what": "面向用户的门面：指向 ros.org 安装指南、REP-2000 与 API 文档"},
+    {"path": ".github/workflows/pr.yaml", "what": "CI 入口：校验 ros2.repos 的格式与合法性"},
+    {"path": ".github/workflows/pixi-lock.yaml", "what": "CI 入口：校验 pixi.lock 与 pixi.toml 是否一致"},
+    {"path": ".github/workflows/release-nightlies.yaml", "what": "发布入口：聚合各平台 nightly 二进制并发布 Release"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先看它了解仓库定位与外部入口"},
+    {"path": "ros2.repos", "why": "核心：看它如何声明上百个子仓库与分支"},
+    {"path": "pixi.toml", "why": "理解跨平台依赖体系与 buildfarm 环境"},
+    {"path": ".gitignore", "why": "说明 src 为何为空，是理解元仓库性质的关键"},
+    {"path": ".github/workflows/pr.yaml", "why": "最小 CI：清单如何被校验"},
+    {"path": ".github/workflows/pixi-lock.yaml", "why": "锁文件一致性 CI 的完整编排"},
+    {"path": ".github/scripts/pixi-lock-check.sh", "why": "锁文件校验的实际逻辑"},
+    {"path": ".github/workflows/release-nightlies.yaml", "why": "nightly 发布流水线"},
+    {"path": "src/.gitkeep", "why": "子仓库导入落点"}
+  ],
+  "extension_points": [
+    "新增或更新子仓库：编辑 ros2.repos 增删条目并提交，CI 会用 vcs validate 校验",
+    "换子仓库分支：修改 ros2.repos 中对应条目的 version 字段",
+    "新增构建依赖：在 pixi.toml 的 dependencies 或平台段增加，并运行 pixi lock 重新生成 pixi.lock",
+    "新增目标平台：在 pixi.toml 的 workspace.platforms 增加平台，并在 pixi-lock-matrix.sh 的 runner_for 里映射对应 runner",
+    "调整 nightly 发布：改 release-nightlies.yaml 的 cron、Jenkins 任务名与产物命名规则",
+    "调整镜像分支：改 mirror-rolling-to-master.yaml 的触发分支与 target-branch"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 .gitignore，先确认这是元仓库、src 为空",
+    "第2步：读 ros2.repos，理解它聚合了哪些子仓库与分支",
+    "第3步：读 pixi.toml，理解跨平台依赖与 buildfarm 环境",
+    "第4步：读 .github/workflows/pr.yaml，看清单如何被校验",
+    "第5步：读 .github/workflows/pixi-lock.yaml 与 .github/scripts/pixi-lock-check.sh，理解锁文件一致性",
+    "第6步：读 release-nightlies.yaml，理解 nightly 发布",
+    "第7步：按 ros2.repos 挑一个子仓库如 ros2/rclcpp 继续深入，才真正进入 ROS 2 实现"
+  ],
+  "diagram_mermaid": "graph TD\n  A[克隆 ros2 元仓库] --> B[读 ros2.repos 清单]\n  B --> C[vcs import 拉取子仓库到 src]\n  C --> D[读 pixi.toml 建环境]\n  D --> E[colcon build 编译全部包]\n  A --> F[提交 PR 触发 CI]\n  F --> G[pr.yaml 校验清单]\n  F --> H[pixi-lock.yaml 校验锁文件]\n  H --> I[pixi-lock-check.sh 判定锁状态]\n  H --> J[pixi-lock-matrix.sh 生成平台矩阵]\n  A --> K[release-nightlies.yaml 拉取 Jenkins 产物]\n  K --> L[发布 GitHub Release]\n  A --> M[mirror 工作流同步 rolling 到 master]",
+  "surprises": [
+    "这其实是元仓库而非实现：src/ 目录除 .gitkeep 外全被 .gitignore 忽略，真正的 ROS 2 代码在 ros2.repos 指向的上百个独立仓库里",
+    "仓库里没有任何 REP 或设计文档，REP-2000 等规范只在 README 里以外部链接指向 ros.org，设计与实现都不在本仓库",
+    "构建不依赖仓库内代码，而依赖 pixi 的锁定环境与外部 vcstool，所以元仓库本身几乎不产生编译产物",
+    "依赖被贴齐 Ubuntu 地激进锁定：pixi.toml 里大量精确版本并附 TODO 说明与 Ubuntu 的差异，换平台或升 Python 极易解算失败",
+    "nightly 发布不在此构建，而是从外部 Jenkins ci.ros2.org 拉取各平台二进制再聚合发布"
+  ],
+  "confidence": "高"
+}
