@@ -1,0 +1,89 @@
+{
+  "repo": "stack-of-tasks/pinocchio",
+  "name": "Pinocchio",
+  "one_liner": "高效刚体多体动力学与运动学计算 C++ 库，含 Python 绑定",
+  "problem": "机器人控制与优化需要快速且可微的刚体动力学。Pinocchio 用空间代数与递归算法实现正逆运动学/动力学及其解析导数，并提供 Python 接口便于原型开发。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "ModelTpl", "role": "系统结构描述：拓扑、关节列表、惯量、关节位姿、frame、父子关系与 nq/nv/njoints 维度，不含计算中间量", "file": "include/pinocchio/src/multibody/model.hxx"},
+    {"name": "DataTpl", "role": "计算工作区与结果容器：oMi / liMi 位姿、v/a/f 空间量、tau、质量矩阵等，每个算法把结果写回 data", "file": "include/pinocchio/src/multibody/data.hxx"},
+    {"name": "SE3Tpl", "role": "刚体变换（旋转加平移）类型，是关节位姿与坐标系变换的基本载体", "file": "include/pinocchio/src/spatial/se3-tpl.hxx"},
+    {"name": "MotionTpl", "role": "空间运动向量（线速度加角速度），用于速度、加速度等切空间量", "file": "include/pinocchio/src/spatial/motion-tpl.hxx"},
+    {"name": "ForceTpl", "role": "空间力向量（力加力矩），用于力矩、动量与接触力", "file": "include/pinocchio/src/spatial/force-tpl.hxx"},
+    {"name": "InertiaTpl", "role": "空间惯量，描述连杆质量、质心与转动惯量", "file": "include/pinocchio/src/spatial/inertia.hxx"},
+    {"name": "JointModelBase", "role": "关节模型的 CRTP 基类，规定 calc / integrate / jacobian 等接口，所有关节类型都继承它", "file": "include/pinocchio/src/multibody/joint/joint-model-base.hxx"},
+    {"name": "JointCollectionDefaultTpl", "role": "默认关节集合，用 typedef 枚举所有可用关节类型并组装 boost::variant 的 JointModelVariant / JointDataVariant", "file": "include/pinocchio/src/multibody/joint/joint-collection.hxx"},
+    {"name": "JointModelTpl", "role": "类型擦除后的通用关节模型，包装 JointModelVariant，让 Model 能以统一类型存任意关节", "file": "include/pinocchio/src/multibody/joint/joint-generic.hxx"},
+    {"name": "RNEA / ABA 等算法", "role": "逆动力学与正动力学等核心算法，统一签名 model + data + q/v/a，结果写回 data", "file": "include/pinocchio/algorithm/rnea.hpp"},
+    {"name": "buildModel", "role": "从 URDF 构建 Model，把 XML 里的连杆与关节翻译成空间惯量与关节模型", "file": "include/pinocchio/src/parsers/urdf/model.hxx"},
+    {"name": "Python 模块入口", "role": "BOOST_PYTHON_MODULE 定义，依次调用 exposeSE3 / exposeModel / exposeData / exposeAlgorithms 暴露 C++ 能力", "file": "bindings/python/module.cpp"}
+  ],
+  "layers": [
+    {"name": "空间代数层", "responsibility": "定义 SE3、Motion、Force、Inertia、Symmetric3 与指数对数映射等空间向量代数", "modules": ["include/pinocchio/src/spatial"], "files": ["include/pinocchio/src/spatial/se3-tpl.hxx", "include/pinocchio/src/spatial/motion-tpl.hxx", "include/pinocchio/src/spatial/force-tpl.hxx", "include/pinocchio/src/spatial/inertia.hxx", "include/pinocchio/src/spatial/explog.hxx"]},
+    {"name": "多体核心层", "responsibility": "Model 与 Data 两大结构、Frame、JointMotionSubspace 与访问器", "modules": ["include/pinocchio/src/multibody"], "files": ["include/pinocchio/src/multibody/model.hxx", "include/pinocchio/src/multibody/data.hxx", "include/pinocchio/src/multibody/frame.hxx", "include/pinocchio/src/multibody/joint-motion-subspace-base.hxx"]},
+    {"name": "关节模型层", "responsibility": "各关节类型（旋转、平移、球形、自由飞行、复合、螺旋、样条等）的 CRTP 实现与统一 variant 集合", "modules": ["include/pinocchio/src/multibody/joint"], "files": ["include/pinocchio/src/multibody/joint/joint-revolute.hxx", "include/pinocchio/src/multibody/joint/joint-free-flyer.hxx", "include/pinocchio/src/multibody/joint/joint-composite.hxx", "include/pinocchio/src/multibody/joint/joint-collection.hxx", "include/pinocchio/src/multibody/joint/joint-generic.hxx"]},
+    {"name": "算法层", "responsibility": "正逆运动学与动力学、质心动力学、约束动力学、导数和回归量等算法", "modules": ["include/pinocchio/algorithm", "src/algorithm"], "files": ["include/pinocchio/algorithm/rnea.hpp", "include/pinocchio/algorithm/aba.hpp", "include/pinocchio/algorithm/kinematics.hpp", "include/pinocchio/algorithm/crba.hpp", "src/algorithm/aba.cpp"]},
+    {"name": "解析与几何层", "responsibility": "URDF / SDF / MJCF / SRDF 解析为 Model，以及几何模型与碰撞集成", "modules": ["include/pinocchio/src/parsers", "include/pinocchio/src/geometry", "include/pinocchio/src/collision"], "files": ["include/pinocchio/src/parsers/urdf/model.hxx", "include/pinocchio/src/parsers/urdf/urdf.hxx", "include/pinocchio/src/parsers/mjcf/mjcf.hxx"]},
+    {"name": "Python 绑定层", "responsibility": "用 boost::python 与 eigenpy 把空间类型、Model/Data、算法与解析器逐层暴露为 pinocchio 模块", "modules": ["bindings/python"], "files": ["bindings/python/module.cpp", "bindings/python/spatial/expose-SE3.cpp", "bindings/python/multibody/expose-model.cpp", "bindings/python/multibody/expose-data.cpp", "bindings/python/algorithm/expose-algorithms.cpp", "bindings/python/parsers/urdf/model.cpp"]},
+    {"name": "Python 高层封装层", "responsibility": "在纯 Python 中提供 RobotWrapper、shortcuts、可视化与快捷构建函数", "modules": ["bindings/python/pinocchio"], "files": ["bindings/python/pinocchio/__init__.py", "bindings/python/pinocchio/robot_wrapper.py", "bindings/python/pinocchio/shortcuts.py"]},
+    {"name": "示例与测试层", "responsibility": "提供 C++ / Python 示例与覆盖各算法与关节的单元测试", "modules": ["examples", "unittest", "models"], "files": ["examples/overview-urdf.py", "examples/inverse-dynamics.py", "models/simple_model.py", "unittest/data.cpp"]}
+  ],
+  "data_flow": [
+    "第1步：用 buildModel 或 Python 的 buildModelFromUrdf 从 URDF 解析出 Model，内部把每个关节实例化成 JointModel 并累加 nq/nv",
+    "第2步：构造 DataTpl data(model)，按 model 的维度分配 oMi、liMi、v、a、f、tau 等全部中间量",
+    "第3步：给定配置 q 与速度 v，调用 forwardKinematics 把各连杆位姿写入 data.oMi 与 data.liMi",
+    "第4步：调用 rnea 做逆动力学，输入 q、v、a 得到关节力矩，结果写入 data.tau",
+    "第5步：调用 aba 做正动力学，输入 q、v、tau 得到关节加速度，结果写入 data.ddq",
+    "第6步：调用 crba 组装质量矩阵 data.M，或调用 computeJointJacobians 得到雅可比 data.J",
+    "第7步：调用对应的 -derivatives 算法得到解析导数，供梯度优化或控制使用",
+    "第8步：Python 侧通过 eigenpy 把 Eigen 矩阵零拷贝映射为 numpy 数组，直接读取 data 中结果",
+    "第9步：RobotWrapper 在 Python 里组合 Model、Data 与碰撞模型，提供 update / forwardKinematics / mass 等高层方法"
+  ],
+  "entry_points": [
+    {"path": "bindings/python/module.cpp", "what": "Python 模块定义入口，注册全部类型与算法"},
+    {"path": "examples/overview-urdf.py", "what": "从 URDF 建模型并跑基础计算的 Python 入门示例"},
+    {"path": "examples/inverse-dynamics.py", "what": "逆动力学 Python 示例，展示 rnea 的典型用法"},
+    {"path": "include/pinocchio/algorithm/rnea.hpp", "what": "逆动力学算法模板实现"},
+    {"path": "include/pinocchio/algorithm/aba.hpp", "what": "正动力学算法模板实现"},
+    {"path": "include/pinocchio/src/parsers/urdf/model.hxx", "what": "buildModel / buildModelFromXML，URDF 到 Model 的构建入口"},
+    {"path": "models/simple_model.py", "what": "用代码直接搭一个简单模型的脚本，绕过 URDF"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：能力范围、安装方式与依赖的 Eigen、coal 等"},
+    {"path": "include/pinocchio/src/multibody/model.hxx", "why": "Model 定义，理解结构如何被表达以及 nq/nv 的来源"},
+    {"path": "include/pinocchio/src/multibody/data.hxx", "why": "Data 定义，理解所有中间量与结果存放位置"},
+    {"path": "include/pinocchio/src/spatial/se3-tpl.hxx", "why": "空间变换，理解空间代数的最小单元"},
+    {"path": "include/pinocchio/src/multibody/joint/joint-model-base.hxx", "why": "关节 CRTP 基类，理解关节必须实现哪些操作"},
+    {"path": "include/pinocchio/src/multibody/joint/joint-collection.hxx", "why": "关节集合与 variant，理解关节类型如何被统一管理"},
+    {"path": "include/pinocchio/algorithm/rnea.hpp", "why": "逆动力学，理解算法统一的 model + data 调用范式"},
+    {"path": "include/pinocchio/src/parsers/urdf/model.hxx", "why": "建模入口，理解外部描述如何变成 Model"},
+    {"path": "bindings/python/module.cpp", "why": "Python 绑定总入口，理解暴露顺序与模块组织"},
+    {"path": "bindings/python/pinocchio/__init__.py", "why": "Python 包初始化，理解编译模块如何被包装成可用包"}
+  ],
+  "extension_points": [
+    "想加新关节类型：参考 include/pinocchio/src/multibody/joint/joint-revolute.hxx 写一个 CRTP 的 JointModel/JointData，再在 joint-collection.hxx 里加 typedef 并把它加入 JointModelVariant 与 JointDataVariant，最后在 bindings/python 的关节绑定中暴露",
+    "想加新算法：在 include/pinocchio/algorithm/ 下新增头文件，函数统一接受 model 与 data，结果写入 data，并在 bindings/python/algorithm 下写 expose-xxx.cpp 注册",
+    "想加新描述格式：在 include/pinocchio/src/parsers/<format>/ 下实现解析并填 Model，再在 bindings/python/parsers 下暴露",
+    "想加 Python 高层 API：在 bindings/python/pinocchio/ 下新增纯 Python 模块，如 robot_wrapper.py 风格",
+    "想加自定义标量或自动微分：在 include/pinocchio/src/autodiff/ 与 context.hpp 中扩展标量类型与上下文"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 examples/overview-urdf.py，建立 Model 加 Data 加算法的使用直觉",
+    "第2步：读 include/pinocchio/src/multibody/model.hxx 与 data.hxx，彻底理解结构与工作区的分离",
+    "第3步：读 include/pinocchio/src/spatial/se3-tpl.hxx 与 motion-tpl.hxx，掌握空间代数基本类型",
+    "第4步：读 include/pinocchio/src/multibody/joint/joint-model-base.hxx 与 joint-collection.hxx，理解关节抽象与类型集合",
+    "第5步：读 include/pinocchio/algorithm/rnea.hpp 与 aba.hpp，理解算法的统一调用范式",
+    "第6步：读 include/pinocchio/src/parsers/urdf/model.hxx，理解建模入口",
+    "第7步：读 bindings/python/module.cpp 与 bindings/python/pinocchio/__init__.py，理解 C++ 到 Python 的映射",
+    "第8步：读 bindings/python/pinocchio/robot_wrapper.py，看高层封装如何组合底层能力"
+  ],
+  "diagram_mermaid": "graph TD\n  URDF[URDF 文件] --> BUILD[buildModel 解析]\n  BUILD --> MODEL[Model 结构与拓扑]\n  MODEL --> DATA[Data 分配工作区]\n  Q[配置 q 与速度 v] --> KIN[forwardKinematics 正运动学]\n  DATA --> KIN\n  MODEL --> KIN\n  KIN --> RNEA[rnea 逆动力学得到力矩]\n  KIN --> ABA[aba 正动力学得到加速度]\n  KIN --> CRBA[crba 质量矩阵]\n  KIN --> JAC[computeJointJacobians 雅可比]\n  RNEA --> DERIV[解析导数算法]\n  ABA --> DERIV\n  DATA --> PY[Python eigenpy 映射为 numpy]\n  DERIV --> PY\n  PY --> CTRL[控制 优化 学习]\n  MODEL --> RW[RobotWrapper 高层封装]\n  DATA --> RW",
+  "surprises": [
+    "Model 与 Data 强制分离：Model 只存结构与惯量且可共享，所有中间量都在 Data 中；同一 Model 可由多个线程各持一份 Data 并发计算而不冲突",
+    "空间向量采用 Featherstone 约定，Motion 里线速度在前、角速度在后，线性分量索引 LINEAR 为 0、角分量 ANGULAR 为 3，与直觉顺序不同",
+    "关节是编译期确定的静态集合：每个关节类型都要显式加入 joint-collection.hxx 的 boost::variant，新增关节需要重新编译而非运行时注册",
+    "核心是 header-only 模板库，src 目录里多是显式实例化与薄封装，真正的实现大量在 include/pinocchio/src 的 .hxx 中",
+    "Python 模块名由编译期宏 PINOCCHIO_PYTHON_MODULE_NAME 决定，且 __init__.py 需要手动把编译出的子模块注册进 sys.modules 才能被导入"
+  ],
+  "confidence": "高"
+}

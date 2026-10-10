@@ -1,0 +1,88 @@
+{
+  "repo": "eosphoros-ai/DB-GPT",
+  "name": "DB-GPT",
+  "one_liner": "连接数据库与知识库的 Agentic AI 数据分析助手平台",
+  "problem": "把数据库、文件与知识库接入 AI：用自然语言自动写 SQL 与代码，经 AWEL 工作流与多 Agent 编排，在沙箱中执行分析并产出图表、报表与结论。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "DAG / DAGNode", "role": "AWEL 有向无环图与节点：用 >> 运算符声明依赖，管理上下游与图结构，是所有工作流的载体", "file": "packages/dbgpt-core/src/dbgpt/core/awel/dag/base.py"},
+    {"name": "BaseOperator", "role": "算子基类：定义同步与流式两套调用入口，算子即 DAG 节点，负责真正处理数据", "file": "packages/dbgpt-core/src/dbgpt/core/awel/operators/base.py"},
+    {"name": "MapOperator / JoinOperator / BranchOperator", "role": "常用算子族：分别做一对一映射、多路汇聚与条件分支，构成工作流的基本积木", "file": "packages/dbgpt-core/src/dbgpt/core/awel/operators/common_operator.py"},
+    {"name": "Flow / FlowPanel", "role": "流程 DSL：用声明式字段与资源描述算子，支持从 UI 画布 JSON 反序列化为可执行流程", "file": "packages/dbgpt-core/src/dbgpt/core/awel/flow/base.py"},
+    {"name": "FlowFactory", "role": "流程工厂：把前端画布的 FlowPanel 定义构建成可运行的 DAG，是可视化编排的落地入口", "file": "packages/dbgpt-core/src/dbgpt/core/awel/flow/flow_factory.py"},
+    {"name": "DAGManager", "role": "DAG 生命周期管理：从目录加载 DAG、注册并绑定触发器到 TriggerManager", "file": "packages/dbgpt-core/src/dbgpt/core/awel/dag/dag_manager.py"},
+    {"name": "ConversableAgent", "role": "多 Agent 基类：实现接收-思考-行动-回复循环，可绑定资源、动作、记忆与 LLM 配置", "file": "packages/dbgpt-core/src/dbgpt/agent/core/base_agent.py"},
+    {"name": "AgentManager", "role": "Agent 注册表：登记各类 Agent 实现，按名称查找并实例化", "file": "packages/dbgpt-core/src/dbgpt/agent/core/agent_manage.py"},
+    {"name": "AWELAgentOperator", "role": "把 Agent 包装成 AWEL 算子：让 Agent 作为 DAG 节点参与编排，实现多 Agent 协作", "file": "packages/dbgpt-core/src/dbgpt/agent/core/plan/awel/agent_operator.py"},
+    {"name": "BaseConnector", "role": "数据源连接器协议：统一 get_table_info/run/get_columns 等接口，屏蔽不同数据库差异", "file": "packages/dbgpt-core/src/dbgpt/datasource/base.py"},
+    {"name": "RDBMSConnector", "role": "关系库连接器实现：抽取表结构、字段与索引，执行 SQL 并返回结果集或 DataFrame", "file": "packages/dbgpt-core/src/dbgpt/datasource/rdbms/base.py"},
+    {"name": "ChatWithDbAutoExecute", "role": "Text2SQL 聊天场景：用向量检索召回相关表结构，生成 SQL、解析并执行，返回查询结果", "file": "packages/dbgpt-app/src/dbgpt_app/scene/chat_db/auto_execute/chat.py"}
+  ],
+  "layers": [
+    {"name": "AWEL 编排层", "responsibility": "提供 DAG、算子、触发器与流程 DSL，是工作流与可视编排的运行时", "modules": ["packages/dbgpt-core/src/dbgpt/core/awel"], "files": ["packages/dbgpt-core/src/dbgpt/core/awel/dag/base.py", "packages/dbgpt-core/src/dbgpt/core/awel/operators/base.py", "packages/dbgpt-core/src/dbgpt/core/awel/flow/base.py", "packages/dbgpt-core/src/dbgpt/core/awel/flow/flow_factory.py"]},
+    {"name": "Agent 层", "responsibility": "多 Agent 基类、注册表、规划与团队协作，并通过 AWEL 算子接入工作流", "modules": ["packages/dbgpt-core/src/dbgpt/agent"], "files": ["packages/dbgpt-core/src/dbgpt/agent/core/base_agent.py", "packages/dbgpt-core/src/dbgpt/agent/core/agent_manage.py", "packages/dbgpt-core/src/dbgpt/agent/core/plan/awel/agent_operator.py", "packages/dbgpt-core/src/dbgpt/agent/core/base_team.py"]},
+    {"name": "数据源层", "responsibility": "连接器抽象与关系库/NoSQL 实现，负责 schema 抽取与 SQL 执行", "modules": ["packages/dbgpt-core/src/dbgpt/datasource", "packages/dbgpt-serve/src/dbgpt_serve/datasource"], "files": ["packages/dbgpt-core/src/dbgpt/datasource/base.py", "packages/dbgpt-core/src/dbgpt/datasource/rdbms/base.py", "packages/dbgpt-serve/src/dbgpt_serve/datasource/service/db_summary_client.py"]},
+    {"name": "RAG 层", "responsibility": "文档加载切分、嵌入、检索与重排，以及数据库表结构摘要", "modules": ["packages/dbgpt-core/src/dbgpt/rag", "packages/dbgpt-ext/src/dbgpt_ext/rag"], "files": ["packages/dbgpt-core/src/dbgpt/rag/operators/datasource.py", "packages/dbgpt-core/src/dbgpt/rag/retriever/embedding.py", "packages/dbgpt-core/src/dbgpt/rag/knowledge/base.py", "packages/dbgpt-ext/src/dbgpt_ext/rag/summary/rdbms_db_summary.py"]},
+    {"name": "应用场景层", "responsibility": "组织各类聊天与数据场景，把数据源、模型与提示词拼装成可用应用", "modules": ["packages/dbgpt-app/src/dbgpt_app/scene"], "files": ["packages/dbgpt-app/src/dbgpt_app/scene/chat_db/auto_execute/chat.py", "packages/dbgpt-app/src/dbgpt_app/scene/chat_factory.py", "packages/dbgpt-app/src/dbgpt_app/scene/base_chat.py"]},
+    {"name": "服务层", "responsibility": "对外 HTTP 接口与 Agent 应用服务，编排会话、Agent 与资源", "modules": ["packages/dbgpt-serve/src/dbgpt_serve"], "files": ["packages/dbgpt-serve/src/dbgpt_serve/agent/agents/controller.py", "packages/dbgpt-serve/src/dbgpt_serve/agent/chat/serve.py"]}
+  ],
+  "data_flow": [
+    "第1步：启动时 DAGManager.after_start 从配置目录加载 DAG 文件并注册，触发器交给 TriggerManager",
+    "第2步：用户请求命中 HttpTrigger 或聊天接口，DAG 从根算子开始执行",
+    "第3步：DAGContext 保存各算子的 TaskOutput 与跨算子共享数据",
+    "第4步：MapOperator 等算子执行 map/transform，结果沿依赖边流向下游算子",
+    "第5步：可视化场景下，前端画布产出 FlowPanel JSON，FlowFactory.build 生成等价 DAG",
+    "第6步：多 Agent 场景下，AWELAgentOperator 把 ConversableAgent 包装成算子，Agent 之间按 DAG 编排协作",
+    "第7步：Text2SQL 场景中，ChatWithDbAutoExecute.generate_input_values 用 DBSummaryClient 检索相关表结构",
+    "第8步：表结构由 RDBMSConnector.get_table_info 抽取，按 schema_retrieve_top_k 截取后拼进提示词",
+    "第9步：提示词交给 LLM 生成 SQL，经 out_parser 解析出可执行语句",
+    "第10步：SQL 由 connector.run_to_df 执行，结果返回前端并渲染成表格或图表"
+  ],
+  "entry_points": [
+    {"path": "packages/dbgpt-app/src/dbgpt_app/dbgpt_server.py", "what": "Web 服务主入口，启动 DB-GPT 服务端"},
+    {"path": "examples/awel/simple_dag_example.py", "what": "最小 AWEL 示例，展示 DAG/HttpTrigger/MapOperator 与 >> 连边"},
+    {"path": "examples/awel/simple_nl_schema_sql_chart_example.py", "what": "自然语言转 SQL 并出图的 AWEL 完整示例"},
+    {"path": "examples/rag/simple_dbschema_retriever_example.py", "what": "数据库 schema 检索的 RAG 示例"},
+    {"path": "packages/dbgpt-app/src/dbgpt_app/scene/chat_db/auto_execute/chat.py:generate_input_values", "what": "Text2SQL 场景构造提示词输入的入口"},
+    {"path": "packages/dbgpt-core/src/dbgpt/core/awel/dag/dag_manager.py", "what": "DAG 加载与注册入口，理解工作流如何被发现"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：Agentic 数据分析助手、AWEL、多数据源、沙箱执行"},
+    {"path": "packages/dbgpt-core/src/dbgpt/core/awel/dag/base.py", "why": "DAG 与节点模型，理解 >> 连边与依赖管理"},
+    {"path": "packages/dbgpt-core/src/dbgpt/core/awel/operators/base.py", "why": "算子基类与流式调用协议，工作流运行的核心抽象"},
+    {"path": "packages/dbgpt-core/src/dbgpt/core/awel/operators/common_operator.py", "why": "Map/Join/Branch 等常用算子，理解数据如何流动"},
+    {"path": "packages/dbgpt-core/src/dbgpt/core/awel/flow/base.py", "why": "Flow DSL 与 FlowRegistry，理解可视化编排的数据结构"},
+    {"path": "packages/dbgpt-core/src/dbgpt/agent/core/base_agent.py", "why": "ConversableAgent 的接收-思考-行动循环，多 Agent 的根基"},
+    {"path": "packages/dbgpt-core/src/dbgpt/agent/core/plan/awel/agent_operator.py", "why": "Agent 如何变成 AWEL 算子，多 Agent 编排的关键"},
+    {"path": "packages/dbgpt-core/src/dbgpt/datasource/rdbms/base.py", "why": "关系库连接器，schema 抽取与 SQL 执行的实现"},
+    {"path": "packages/dbgpt-app/src/dbgpt_app/scene/chat_db/auto_execute/chat.py", "why": "Text2SQL 场景链路，串起数据源、检索与提示词"},
+    {"path": "examples/awel/simple_dag_example.py", "why": "最短的 AWEL 上手示例，先跑通再深入"}
+  ],
+  "extension_points": [
+    "加一个新数据源：继承 BaseConnector 并实现 get_table_info/run 等方法，参考 datasource/rdbms/base.py，再在 ConnectorManager 注册",
+    "加一个新 AWEL 算子：继承 BaseOperator 或 MapOperator，参考 operators/common_operator.py",
+    "加一个新 Agent：继承 ConversableAgent 并实现 generate_reply，参考 agent/expand 下各 Agent，再用 AgentManager 注册",
+    "定义可视化流程：用 Flow/FlowPanel 的 DSL 描述算子，或直接由前端画布产出 JSON，交给 FlowFactory.build 生成 DAG",
+    "加一个聊天场景：继承 BaseChat 并在 ChatScene 与 ChatFactory 中注册，参考 chat_db/auto_execute/chat.py",
+    "调整 Text2SQL 行为：改 scene/chat_db/auto_execute 下的 prompt.py 与 out_parser.py"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，明确 DB-GPT 是 Agentic 数据分析平台，核心是 Agent 与 AWEL",
+    "第2步：读 examples/awel/simple_dag_example.py，跑通最小 AWEL 示例",
+    "第3步：读 awel/dag/base.py，理解 DAG、节点与 >> 依赖声明",
+    "第4步：读 operators/base.py 与 operators/common_operator.py，掌握算子体系",
+    "第5步：读 flow/base.py 与 flow_factory.py，理解 Flow DSL 与画布如何变成 DAG",
+    "第6步：读 agent/core/base_agent.py，理解多 Agent 的思考-行动循环",
+    "第7步：读 agent_operator.py，理解 Agent 如何作为算子参与 AWEL 编排",
+    "第8步：读 datasource/rdbms/base.py 与 chat_db/auto_execute/chat.py，走通 Text2SQL 链路"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户请求 自然语言] --> H[HttpTrigger 或 聊天接口]\n  H --> D[DAG 从根算子执行]\n  D --> C[DAGContext 保存任务输出]\n  C --> O[MapOperator 等算子执行]\n  O --> F[FlowFactory 由画布 JSON 构建 DAG]\n  O --> A[AWELAgentOperator 包装 Agent]\n  A --> G[ConversableAgent 思考与行动]\n  U --> S[Text2SQL 场景 ChatWithDbAutoExecute]\n  S --> M[DBSummaryClient 检索表结构]\n  M --> R[RDBMSConnector 抽取 schema 与执行 SQL]\n  R --> P[LLM 生成 SQL 并解析执行]\n  P --> X[返回结果与图表]",
+  "surprises": [
+    "多 Agent 不是独立框架：Agent 被 AWELAgentOperator 包装成 DAG 算子，协作靠 AWEL 的图编排实现",
+    "算子同时支持同步与流式两套调用，同一算子可返回 AsyncIterator 作为流式输出，框架自动选择执行路径",
+    "Text2SQL 不是固定链路：先用 DBSummaryClient 对表结构做向量检索筛出 top_k 相关表，再拼进提示词，避免超长 schema",
+    "DAG 用 >> 运算符声明依赖，图在 with DAG(...) 上下文管理器中隐式收集节点，而不是显式 add_node",
+    "Flow DSL 与代码 DAG 同构：前端画布产出的 FlowPanel JSON 由 FlowFactory.build 生成等价可执行 DAG"
+  ],
+  "confidence": "高"
+}

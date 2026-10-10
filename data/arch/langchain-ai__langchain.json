@@ -1,0 +1,94 @@
+{
+  "repo": "langchain-ai/langchain",
+  "name": "LangChain",
+  "one_liner": "用统一协议组合 LLM 组件的应用框架",
+  "problem": "解决 LLM 应用里组件互不兼容的问题：用 Runnable 协议统一模型、提示词、工具、检索器等所有组件的调用方式，让开发者能用管道符自由组合，并内置回调与追踪实现可观测。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Runnable", "role": "全框架统一协议：定义 invoke/batch/stream 及异步版本的调用契约，是所有可组合组件的基类", "file": "libs/core/langchain_core/runnables/base.py"},
+    {"name": "RunnableSequence", "role": "LCEL 的核心组合算子：把多个 Runnable 首尾相连，前一个输出作为后一个输入", "file": "libs/core/langchain_core/runnables/base.py"},
+    {"name": "RunnableConfig", "role": "贯穿调用链的配置载体：携带 callbacks、tags、metadata、run_id、max_concurrency 等，随组合自动传播", "file": "libs/core/langchain_core/runnables/config.py"},
+    {"name": "RunnableLambda", "role": "把普通函数或生成器包装成 Runnable，是接入自定义逻辑的桥", "file": "libs/core/langchain_core/runnables/base.py"},
+    {"name": "RunnableParallel", "role": "并行组合算子：把一个输入同时喂给多个 Runnable 并以字典聚合结果", "file": "libs/core/langchain_core/runnables/base.py"},
+    {"name": "RunnablePassthrough", "role": "透传算子：原样传递输入并可选补充字段，常用于构造字典输入", "file": "libs/core/langchain_core/runnables/passthrough.py"},
+    {"name": "RunnableBranch", "role": "条件分支算子：按条件选择不同的 Runnable 执行", "file": "libs/core/langchain_core/runnables/branch.py"},
+    {"name": "BaseCallbackHandler", "role": "回调处理器基类：定义 on_llm_start/on_chain_end/on_tool_start 等钩子，是可观测的扩展点", "file": "libs/core/langchain_core/callbacks/base.py"},
+    {"name": "CallbackManager", "role": "回调管理器：聚合多个 handler，按 run 生命周期分发事件，并负责把 handler 注入到各组件", "file": "libs/core/langchain_core/callbacks/manager.py"},
+    {"name": "BaseChatModel", "role": "聊天模型抽象：统一 invoke/stream/bind_tools 接口，返回 BaseMessage 序列", "file": "libs/core/langchain_core/language_models/chat_models.py"},
+    {"name": "BaseTool", "role": "工具抽象：继承 RunnableSerializable，把函数包装成带 args_schema 的可调用单元", "file": "libs/core/langchain_core/tools/base.py"},
+    {"name": "create_agent / AgentMiddleware", "role": "v1 高层 Agent 构造器与中间件协议，用 before_model/wrap_tool_call 等钩子组装 Agent", "file": "libs/langchain_v1/langchain/agents/factory.py"}
+  ],
+  "layers": [
+    {"name": "核心 Runnable 层", "responsibility": "定义 Runnable 协议与所有组合算子、配置传播与批处理并发，是整个框架的地基", "modules": ["libs/core/langchain_core/runnables"], "files": ["libs/core/langchain_core/runnables/base.py", "libs/core/langchain_core/runnables/config.py", "libs/core/langchain_core/runnables/passthrough.py", "libs/core/langchain_core/runnables/branch.py"]},
+    {"name": "核心组件层", "responsibility": "把模型、消息、提示词、工具、检索器、输出解析器统一实现为 Runnable，构成可组合的标准件", "modules": ["libs/core/langchain_core/language_models", "libs/core/langchain_core/tools", "libs/core/langchain_core/messages", "libs/core/langchain_core/prompts", "libs/core/langchain_core/output_parsers"], "files": ["libs/core/langchain_core/language_models/base.py", "libs/core/langchain_core/language_models/chat_models.py", "libs/core/langchain_core/tools/base.py", "libs/core/langchain_core/messages/base.py", "libs/core/langchain_core/prompts/base.py", "libs/core/langchain_core/output_parsers/base.py"]},
+    {"name": "回调与追踪层", "responsibility": "提供回调管理器与 handler 体系，把运行事件分发给日志、LangSmith 追踪等观察者", "modules": ["libs/core/langchain_core/callbacks", "libs/core/langchain_core/tracers"], "files": ["libs/core/langchain_core/callbacks/base.py", "libs/core/langchain_core/callbacks/manager.py", "libs/core/langchain_core/callbacks/stdout.py"]},
+    {"name": "v1 Agent 层", "responsibility": "新一代 langchain 包：用 create_agent 与中间件机制构建带工具调用、结构化输出、人类介入的 Agent，底层依赖 LangGraph", "modules": ["libs/langchain_v1/langchain"], "files": ["libs/langchain_v1/langchain/agents/factory.py", "libs/langchain_v1/langchain/agents/middleware/types.py", "libs/langchain_v1/langchain/chat_models/base.py", "libs/langchain_v1/langchain/tools/tool_node.py"]},
+    {"name": "经典兼容层", "responsibility": "langchain_classic 保留 v0 时代的 chains、agents、memory 等旧接口，主要是历史兼容与迁移", "modules": ["libs/langchain/langchain_classic"], "files": ["libs/langchain/langchain_classic/__init__.py", "libs/langchain/langchain_classic/chains/base.py"]},
+    {"name": "集成伙伴层", "responsibility": "每个厂商一个独立可分发的包，实现 BaseChatModel/Embeddings/VectorStore 等抽象对接第三方服务", "modules": ["libs/partners"], "files": ["libs/partners/openai/langchain_openai/chat_models/base.py", "libs/partners/anthropic", "libs/partners/ollama"]},
+    {"name": "标准测试层", "responsibility": "提供集成包必须通过的标准化测试套件，保证各 partner 实现行为一致", "modules": ["libs/standard-tests"], "files": ["libs/standard-tests/langchain_tests/base.py"]},
+    {"name": "辅助工具包层", "responsibility": "文本切分与模型画像数据等独立小包，供核心与集成层复用", "modules": ["libs/text-splitters", "libs/model-profiles"], "files": ["libs/text-splitters/langchain_text_splitters", "libs/model-profiles/langchain_model_profiles"]}
+  ],
+  "data_flow": [
+    "第1步：用户用 LCEL 管道符把组件串成链，如 prompt | model | parser，每个 | 触发 __or__ 返回一个 RunnableSequence",
+    "第2步：RunnableSequence 在构造时把各步规整为 Runnable，并把嵌套的 Sequence 拍平为 first/middle/last",
+    "第3步：调用 chain.invoke(input) 或 stream/batch，ensure_config 把外部传入的 config 补全为完整 RunnableConfig",
+    "第4步：RunnableSequence 按 steps 顺序逐个 invoke，把上一步输出作为下一步输入，config 逐步 patch 传递下去",
+    "第5步：进入模型组件时，BaseChatModel 从 config 取出 callbacks 构造 CallbackManager，触发 on_chat_model_start 并调用底层 API",
+    "第6步：模型返回 BaseMessage，流式时通过 on_llm_new_token 逐 token 回调，最终触发 on_llm_end",
+    "第7步：输出解析器作为链的末端把消息转为结构化对象，触发 on_parser_start/end 回调",
+    "第8步：若用到工具，BaseTool.invoke 校验参数后执行 _run，期间触发 on_tool_start/on_tool_end",
+    "第9步：所有回调事件经 CallbackManager 分发给注册的 handler，LangSmith tracer 据此构建运行树",
+    "第10步：v1 的 create_agent 把模型与工具编译成 LangGraph 状态图，AgentMiddleware 的 before_model/wrap_tool_call 在循环中拦截与改写",
+    "第11步：最终输出沿链回传到调用方，若发生异常则触发 on_chain_error 并可按 with_fallbacks/with_retry 策略重试"
+  ],
+  "entry_points": [
+    {"path": "libs/core/langchain_core/runnables/base.py:Runnable.invoke", "what": "所有组件的统一调用入口，理解同步执行契约的起点"},
+    {"path": "libs/core/langchain_core/runnables/base.py:Runnable.__or__", "what": "LCEL 管道符实现，把两个组件合成 RunnableSequence"},
+    {"path": "libs/langchain_v1/langchain/agents/factory.py:create_agent", "what": "v1 构建 Agent 的高层入口，封装模型、工具与中间件"},
+    {"path": "libs/langchain_v1/langchain/chat_models/base.py:init_chat_model", "what": "按模型字符串初始化聊天模型的门面函数，最常见的上手入口"},
+    {"path": "libs/core/langchain_core/callbacks/manager.py", "what": "回调管理器，可观测能力的核心分发点"},
+    {"path": "libs/partners/openai/langchain_openai/chat_models/base.py", "what": "OpenAI 聊天模型实现，看 partner 如何落地 BaseChatModel 抽象"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立定位：统一接口 + 可组合组件 + 生态集成，注意 v1 与 LangGraph/Deep Agents 的分工"},
+    {"path": "libs/core/langchain_core/runnables/__init__.py", "why": "看清 Runnable 家族有哪些成员与懒加载映射，是理解协议全貌的目录"},
+    {"path": "libs/core/langchain_core/runnables/base.py", "why": "Runnable 协议与 Sequence/Parallel/Lambda 等算子的定义处，全框架最重要的一份文件"},
+    {"path": "libs/core/langchain_core/runnables/config.py", "why": "RunnableConfig 与 ensure/patch/merge 逻辑，理解配置如何在链上传播"},
+    {"path": "libs/core/langchain_core/callbacks/base.py", "why": "回调钩子清单，理解框架在哪些生命周期点对外暴露事件"},
+    {"path": "libs/core/langchain_core/callbacks/manager.py", "why": "回调管理器如何聚合 handler 并注入到各 run，是可观测的实现核心"},
+    {"path": "libs/core/langchain_core/language_models/chat_models.py", "why": "聊天模型抽象与工具绑定，模型组件如何接入 Runnable 协议"},
+    {"path": "libs/core/langchain_core/tools/base.py", "why": "工具抽象如何继承 Runnable 并带参数 schema，是扩展工具的关键"},
+    {"path": "libs/langchain_v1/langchain/agents/factory.py", "why": "create_agent 如何把模型与工具组装成 Agent，看清 v1 的高层范式"},
+    {"path": "libs/langchain/langchain_classic/__init__.py", "why": "理解经典包与新版包的边界，避免误把 v0 代码当成当前架构"}
+  ],
+  "extension_points": [
+    "新增可组合组件：继承 Runnable 并实现 invoke，或用 RunnableLambda 直接包装函数，见 libs/core/langchain_core/runnables/base.py",
+    "接入新模型厂商：实现 BaseChatModel 的 _generate 与 _stream，放进 libs/partners 下的新包，参考 libs/partners/openai",
+    "定义新工具：继承 BaseTool 实现 _run 并用 @tool 装饰器，见 libs/core/langchain_core/tools/base.py",
+    "新增输出解析：继承 BaseOutputParser 实现 parse，见 libs/core/langchain_core/output_parsers/base.py",
+    "实现可观测后端：继承 BaseCallbackHandler 订阅运行事件，或写自定义 tracer，见 libs/core/langchain_core/callbacks/base.py",
+    "扩展 Agent 行为：编写 AgentMiddleware 子类覆写 before_model/wrap_tool_call 等钩子，见 libs/langchain_v1/langchain/agents/middleware/types.py",
+    "新增文本切分器：在 libs/text-splitters 下继承 TextSplitter，见 libs/text-splitters/langchain_text_splitters",
+    "为 partner 补标准测试：继承 libs/standard-tests 的基类保证一致性，见 libs/standard-tests/langchain_tests/base.py"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 libs/core/langchain_core/runnables/__init__.py，建立 Runnable 家族的整体认知",
+    "第2步：读 runnables/base.py 的 Runnable 抽象与 __or__/pipe，理解 LCEL 如何把组件串成 Sequence",
+    "第3步：读 runnables/base.py 的 RunnableSequence 与 RunnableLambda/Parallel，掌握组合与并行的执行方式",
+    "第4步：读 runnables/config.py 的 RunnableConfig 与 ensure/patch/merge，理解配置如何在链上传播",
+    "第5步：读 language_models/chat_models.py 与 tools/base.py，看模型与工具如何实现 Runnable 协议",
+    "第6步：读 callbacks/base.py 与 callbacks/manager.py，吃透可观测的回调分发机制",
+    "第7步：读 langchain_v1/langchain/agents/factory.py 的 create_agent 与 middleware/types.py，理解 v1 Agent 范式",
+    "第8步：读 libs/partners/openai 的 chat_models/base.py，看一个真实 partner 如何落地抽象"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户 LCEL 管道符组合组件] --> OR[Runnable.__or__ 生成 Sequence]\n  OR --> SEQ[RunnableSequence 拍平为 first middle last]\n  SEQ --> INV[invoke 或 stream 或 batch]\n  INV --> CFG[ensure_config 补全 RunnableConfig]\n  CFG --> STEP[逐步执行 上一步输出作为下一步输入]\n  STEP --> LLM[BaseChatModel 调用模型]\n  LLM --> CB[CallbackManager 分发事件]\n  CB --> H[BaseCallbackHandler 与 tracer]\n  STEP --> TOOL[BaseTool 校验参数并执行]\n  TOOL --> CB\n  LLM --> PARSE[输出解析器转结构化结果]\n  PARSE --> OUT[返回最终输出]\n  SEQ -.-> AGENT[create_agent 编译为 LangGraph 状态图]\n  AGENT -.-> MW[AgentMiddleware 钩子拦截]\n  PART[partners 实现 BaseChatModel] -.-> LLM",
+  "surprises": [
+    "一切皆 Runnable：模型、提示词、工具、检索器、输出解析器甚至普通函数都被统一到同一协议，这是能用 | 自由组合的根本原因",
+    "LCEL 的 | 不是语法糖而是一等公民：__or__ 直接构造 RunnableSequence，组合结果本身也是 Runnable，可继续组合或嵌套",
+    "回调不是显式传递而是藏在 RunnableConfig 里随链传播，因此任何组件只要走标准 invoke 就自动获得可观测能力",
+    "monorepo 里 langchain 包已分裂：libs/langchain_v1 是当前主线 Agent 实现，libs/langchain/langchain_classic 只是 v0 兼容层，读错包会得出过时结论",
+    "v1 的 Agent 实际上是 LangGraph 的封装：create_agent 返回 CompiledStateGraph，中间件机制建立在图执行之上而非独立循环",
+    "partner 包有强制的标准测试约束：新集成必须通过 libs/standard-tests 的套件，这是生态能保持一致接口的制度保障"
+  ],
+  "confidence": "高"
+}

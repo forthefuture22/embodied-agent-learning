@@ -1,0 +1,93 @@
+{
+  "repo": "All-Hands-AI/OpenHands",
+  "name": "OpenHands Agent Canvas",
+  "one_liner": "自托管的编码智能体控制台前端",
+  "problem": "把编码智能体从命令行里解放出来：用一个自托管的 Web 控制台统一启动、切换本地与云后端，通过事件流实时观察 Agent 的思考与工具调用，并把日常任务编排成可定时或 webhook 触发的自动化。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Backend / ResolvedActiveBackend", "role": "后端抽象：描述 local 或 cloud 类型的 agent-server 连接信息与认证模式，决定请求发往哪里", "file": "src/api/backend-registry/types.ts"},
+    {"name": "AgentServerAdapter", "role": "前后端适配层：把 UI 的启动会话请求翻译成 agent-server 的 wire 请求，并把返回的会话信息归一化为 UI 模型", "file": "src/api/agent-server-adapter.ts"},
+    {"name": "ConversationWebSocketContext", "role": "事件流消费者与发送器：连接会话 WebSocket、接收会话帧、把用户消息作为事件发回 agent-server", "file": "src/contexts/conversation-websocket-context.tsx"},
+    {"name": "EventStore", "role": "事件仓库：按时间戳累积、去重、排序所有 OpenHandsEvent，是 UI 渲染的唯一事件真相源", "file": "src/stores/use-event-store.ts"},
+    {"name": "OpenHandsEvent", "role": "事件基类：承载 id/timestamp/source 等元信息，是 Action 与 Observation 的公共父类型", "file": "src/types/agent-server/core/openhands-event.ts"},
+    {"name": "Action", "role": "动作空间定义：把 Agent 的动作建模为带类型判别符的联合体，如 ExecuteBashAction/FinishAction/ThinkAction", "file": "src/types/agent-server/core/base/action.ts"},
+    {"name": "Observation", "role": "观察空间定义：动作执行后返回给 Agent 的结果，如 MCPToolObservation/FinishObservation", "file": "src/types/agent-server/core/base/observation.ts"},
+    {"name": "SessionFrames", "role": "WebSocket 会话协议帧：sync/durable/transient/item_started/delta 等信封类型，区分已持久化与流式增量", "file": "src/types/agent-server/session-frames.ts"},
+    {"name": "ConversationStateStore", "role": "会话运行状态仓库：按 conversationId 记录执行状态，驱动运行中/空闲等 UI 反馈", "file": "src/stores/conversation-state-store.ts"},
+    {"name": "AgentServerConversationService", "role": "会话生命周期服务：创建会话、发送消息、拉取历史、切换模型与 profile", "file": "src/api/conversation-service/agent-server-conversation-service.api.ts"},
+    {"name": "EventService", "role": "事件 REST 服务：历史事件检索分页、事件计数、确认响应，补齐 WebSocket 之外的持久化历史", "file": "src/api/event-service/event-service.api.ts"},
+    {"name": "AgentServerRuntimeService", "role": "运行时服务：在会话所属的 runtime 沙箱里执行命令、下载文件", "file": "src/api/runtime-service/agent-server-runtime-service.ts"}
+  ],
+  "layers": [
+    {"name": "路由与页面层", "responsibility": "定义会话、设置、自动化等页面路由与整体布局，挂载事件处理与 WebSocket Provider", "modules": ["src/routes"], "files": ["src/routes/conversation.tsx", "src/routes/root-layout.tsx", "src/routes/home.tsx"]},
+    {"name": "前端 API 与服务层", "responsibility": "封装对 agent-server 与云后端的调用，包括会话、事件、运行时、ACP、自动化等各类服务", "modules": ["src/api", "src/services"], "files": ["src/api/agent-server-adapter.ts", "src/api/conversation-service/agent-server-conversation-service.api.ts", "src/api/event-service/event-service.api.ts", "src/services/chat-service.ts"]},
+    {"name": "后端注册与连接层", "responsibility": "维护 local/cloud 后端列表、当前激活后端、认证头与客户端选项，是所有请求的寻址基础", "modules": ["src/api/backend-registry"], "files": ["src/api/backend-registry/types.ts", "src/api/backend-registry/active-store.ts", "src/api/agent-server-client-options.ts"]},
+    {"name": "实时事件通道层", "responsibility": "WebSocket 连接管理、重连、鉴权与会话帧解析，把服务端事件实时送入前端", "modules": ["src/contexts", "src/hooks"], "files": ["src/contexts/conversation-websocket-context.tsx", "src/hooks/use-websocket.ts", "src/hooks/use-handle-ws-events.ts"]},
+    {"name": "状态仓库层", "responsibility": "用 zustand 管理事件列表、会话状态、Agent 状态、指标等全局 UI 状态", "modules": ["src/stores"], "files": ["src/stores/use-event-store.ts", "src/stores/conversation-state-store.ts", "src/stores/event-message-store.ts", "src/stores/agent-store.ts"]},
+    {"name": "事件模型与转换层", "responsibility": "定义 Action/Observation/Event 的类型体系，并把原始事件转换为可渲染的 UI 事件与流式槽位", "modules": ["src/types/agent-server", "src/utils"], "files": ["src/types/agent-server/session-frames.ts", "src/types/agent-server/core/base/action.ts", "src/types/agent-server/core/base/observation.ts", "src/utils/handle-event-for-ui.ts"]},
+    {"name": "对话渲染层", "responsibility": "把事件流渲染为聊天消息、思考、终端输出、浏览器等可视组件，并分组聚合事件", "modules": ["src/components/conversation-events", "src/components/features"], "files": ["src/components/conversation-events/chat/event-message.tsx", "src/components/conversation-events/chat/messages.tsx", "src/components/conversation-events/chat/group-events.ts"]},
+    {"name": "自动化编排层", "responsibility": "管理 automations 的定义、定时或 webhook 触发、与 Slack/GitHub 等外部集成", "modules": ["src/api/automation-service", "src/components/features/automations"], "files": ["src/api/automation-service/automation-service.api.ts", "src/components/features/automations/automation-card.tsx"]},
+    {"name": "CLI 与静态服务层", "responsibility": "agent-canvas 命令拉起 agent-server、自动化后端与静态前端，并提供端口与版本默认配置", "modules": ["bin", "config"], "files": ["bin/agent-canvas.mjs", "config/defaults.json"]}
+  ],
+  "data_flow": [
+    "第1步：用户启动 agent-canvas 命令，bin/agent-canvas.mjs 依据 config/defaults.json 拉起 agent-server、自动化后端与静态前端",
+    "第2步：前端启动后由 backend-registry 决定当前激活后端，用户可在 local 与 cloud 之间切换",
+    "第3步：用户在会话页发起对话，agent-server-adapter 构造启动会话请求，经 agent-server-client-options 得到目标 host 与鉴权头发出",
+    "第4步：会话创建后 ConversationWebSocketProvider 用 websocket-url 拼出会话 WebSocket 地址并连接，携带会话 API key 鉴权",
+    "第5步：服务端先推送 sync 帧声明即将回放的事件区间，再推送 durable 帧即已持久化的历史事件",
+    "第6步：WebSocket 处理器把事件交给 use-event-store，按时间戳去重排序累积，形成事件真相源",
+    "第7步：handle-event-for-ui 把事件转成 UI 事件，流式增量通过 item_started/delta 帧进入流式槽位并逐步拼接",
+    "第8步：会话渲染层把事件分组渲染为消息、思考、终端与浏览器视图，Agent 动作以 Action 联合体类型判别渲染",
+    "第9步：用户输入消息后 sendMessage 通过同一 WebSocket 以 JSON 形式发送并带 run 标记，或回退到 ConversationClient.sendEvent",
+    "第10步：Agent 在服务端沙箱执行，产生的 Observation 作为新事件回推，UI 持续增量更新",
+    "第11步：需要历史或分页时，EventService.searchEvents 走 REST 拉取，与 WebSocket 实时流合并去重",
+    "第12步：自动化触发时，由自动化后端创建会话，UI 以同样的会话与事件模型观察运行结果"
+  ],
+  "entry_points": [
+    {"path": "bin/agent-canvas.mjs", "what": "agent-canvas 命令行入口，默认拉起 agent-server 与自动化后端及静态前端整套栈"},
+    {"path": "src/routes/conversation.tsx", "what": "会话页路由入口，装配事件处理、WebSocket Provider 与对话主视图"},
+    {"path": "src/wrapper/event-handler.tsx", "what": "全局事件处理挂载点，调用 useHandleWSEvents 与 useHandleRuntimeActive"},
+    {"path": "src/contexts/conversation-websocket-context.tsx:sendMessage", "what": "用户消息发送入口，把输入作为事件经 WebSocket 或 REST 发给 agent-server"},
+    {"path": "src/api/agent-server-adapter.ts:buildStartConversationRequest", "what": "构造启动会话请求的枢纽，把 UI 选项翻译为 agent-server 请求体"},
+    {"path": "src/api/conversation-service/agent-server-conversation-service.api.ts:createConversation", "what": "创建会话的服务入口，后续所有对话交互的起点"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立定位：这是自托管的编码 Agent 控制台，可切换本地/云后端并支持多种 ACP Agent"},
+    {"path": "src/types/action-type.tsx", "why": "最直观的动作空间清单，一眼看清 Agent 能做什么"},
+    {"path": "src/types/agent-server/core/base/action.ts", "why": "动作类型的完整定义，理解 Action 联合体与判别符是读懂事件流的前提"},
+    {"path": "src/types/agent-server/core/base/observation.ts", "why": "观察空间定义，与 Action 配对理解 Agent 的闭环"},
+    {"path": "src/types/agent-server/session-frames.ts", "why": "WebSocket 会话协议帧，理解实时流如何区分持久化事件与流式增量"},
+    {"path": "src/contexts/conversation-websocket-context.tsx", "why": "事件流的心脏：连接、帧处理、发送消息与状态更新都在此"},
+    {"path": "src/stores/use-event-store.ts", "why": "事件如何被累积去重排序，是 UI 渲染的真相源"},
+    {"path": "src/api/agent-server-adapter.ts", "why": "前后端边界最厚的一层，看 UI 模型与 wire 模型如何互相翻译"},
+    {"path": "src/api/backend-registry/types.ts", "why": "local 与 cloud 后端抽象，理解多后端切换机制的起点"}
+  ],
+  "extension_points": [
+    "接入新的后端类型：扩展 src/api/backend-registry/types.ts 的 BackendKind 并在 active-store 与 url-selection 中处理寻址",
+    "接入新的 Agent 种类：在 agent-server-adapter 的会话构造与 ACP 相关分支中加入新 ACP CLI，参考 src/api/acp-service/acp-service.api.ts",
+    "新增一种事件或动作的渲染：在 src/components/conversation-events/chat 下新增事件组件并在 event-message 中分发",
+    "新增前端动作类型：扩展 src/types/action-type.tsx 与 core/base/action.ts 的联合体",
+    "自定义事件到 UI 的转换：修改 src/utils/handle-event-for-ui.ts 的 handleEventForUI 与流式槽位逻辑",
+    "新增自动化集成：在 src/api/automation-service/automation-service.api.ts 中扩展触发与外部服务对接",
+    "新增设置项或 profile：参考 src/api/profiles-service 与 src/api/settings-service 的服务封装模式"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 config/defaults.json，明确 Agent Canvas 与 agent-server 的分工与默认端口",
+    "第2步：读 src/types/action-type.tsx 与 core/base/action.ts、observation.ts，建立动作空间与观察空间的概念",
+    "第3步：读 src/api/backend-registry/types.ts 与 src/api/agent-server-client-options.ts，理解请求如何寻址到具体后端",
+    "第4步：读 src/api/agent-server-adapter.ts 的 buildStartConversationRequest，跟进到 agent-server-conversation-service 的 createConversation",
+    "第5步：读 src/contexts/conversation-websocket-context.tsx 与 src/hooks/use-websocket.ts，吃透 WebSocket 连接与帧处理",
+    "第6步：读 src/types/agent-server/session-frames.ts 与 src/stores/use-event-store.ts，理解事件如何被接收与累积",
+    "第7步：读 src/utils/handle-event-for-ui.ts 与 components/conversation-events/chat，理解事件到 UI 的转换与渲染",
+    "第8步：读 src/api/automation-service 与 src/api/event-service，补齐自动化与历史检索两条支线"
+  ],
+  "diagram_mermaid": "graph TD\n  CLI[agent-canvas CLI 启动整套栈] --> AS[agent-server 后端]\n  CLI --> FE[静态前端]\n  FE --> REG[backend-registry 选择后端]\n  FE --> ADP[agent-server-adapter 构造请求]\n  ADP --> CS[conversation-service 创建会话]\n  CS --> WS[conversation-websocket 连接会话]\n  WS --> SYNC[sync 帧声明回放区间]\n  SYNC --> DUR[durable 帧 已持久化事件]\n  SYNC --> DELTA[item_started 与 delta 帧 流式增量]\n  DUR --> STORE[use-event-store 累积去重排序]\n  DELTA --> STORE\n  STORE --> UI[handle-event-for-ui 转 UI 事件]\n  UI --> RENDER[对话渲染 消息 思考 终端 浏览器]\n  FE --> SEND[sendMessage 发送用户事件]\n  SEND --> WS\n  AS --> WS\n  FE -.-> REST[event-service REST 拉取历史]\n  REST -.-> STORE\n  AUT[automation-service 触发自动化] -.-> CS",
+  "surprises": [
+    "这份克隆是 Agent Canvas 前端，不是经典的 Python OpenHands 单体；EventStream/Agent/Runtime 的 Python 实现已被拆到外部 agent-server 与 software-agent-sdk，仓库里几乎没有 Python 代码",
+    "前后端通过 @openhands/typescript-client 交互，本地模式下前端直接访问会话 host，而云模式下事件历史走 App API、实时流走 runtime 沙箱，两条路径鉴权方式不同",
+    "WebSocket 协议用帧信封区分「已持久化事件」与「瞬时流式增量」：durable 帧带 seq 落盘，delta 帧只做增量拼接，因此 UI 必须能容忍事件乱序并去重排序",
+    "Action 与 Observation 是两套平行类型，且动作用判别符而非类继承建模，前端渲染依赖类型判别而非多态方法",
+    "同一个 Agent 会话可跑 OpenHands 自身也可跑 Claude Code/Codex 等 ACP CLI，Agent 实现通过 ACP 协议被外部化，前端只关心统一事件流"
+  ],
+  "confidence": "中"
+}

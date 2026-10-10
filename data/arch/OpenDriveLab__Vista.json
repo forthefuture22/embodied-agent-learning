@@ -1,0 +1,91 @@
+{
+  "repo": "OpenDriveLab/Vista",
+  "name": "Vista",
+  "one_liner": "高保真可多模态动作控制的驾驶世界模型",
+  "problem": "自动驾驶需要能预测未来视频并评估不同动作后果的世界模型，但通用视频模型保真度低、动作可控性差、难以长时延展。Vista 用潜空间扩散加零初始化动作控制分支解决这三点。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "DiffusionEngine", "role": "顶层 LightningModule，组合第一级自编码器、去噪器、条件器与损失，负责训练与采样编排", "file": "vwm/models/diffusion.py"},
+    {"name": "VideoUNet", "role": "视频扩散主干，用时空 ResBlock 与 SpatialVideoTransformer 在潜空间去噪，支持动作控制", "file": "vwm/modules/diffusionmodules/video_model.py"},
+    {"name": "VideoResBlock", "role": "时空残差块，空间分支后接时间 ResBlock 并用 AlphaBlender 混合", "file": "vwm/modules/diffusionmodules/video_model.py"},
+    {"name": "GeneralConditioner", "role": "条件管理器，把文本、首帧、动作等多路嵌入按 vector/crossattn/concat 分组拼接并支持无条件丢弃", "file": "vwm/modules/encoders/modules.py"},
+    {"name": "ConcatTimestepEmbedderND", "role": "把连续动作如轨迹、速度、转角、目标点编码成序列 token，是动作条件建模的入口", "file": "vwm/modules/encoders/modules.py"},
+    {"name": "VideoPredictionEmbedderWithEncoder", "role": "把首帧条件经自编码器编码成潜变量并复制成条件帧序列", "file": "vwm/modules/encoders/modules.py"},
+    {"name": "Denoiser", "role": "EDM 去噪封装，做缩放 c_skip/c_out/c_in 并调用主干网络", "file": "vwm/modules/diffusionmodules/denoiser.py"},
+    {"name": "EulerEDMSampler", "role": "欧拉 EDM 采样器，用 cond_mask 固定条件帧做 inpainting 式长视频延展", "file": "vwm/modules/diffusionmodules/sampling.py"},
+    {"name": "VanillaCFG", "role": "分类器无关引导，把条件与无条件预测做插值放大控制强度", "file": "vwm/modules/diffusionmodules/guiders.py"},
+    {"name": "TrianglePredictionGuider", "role": "三角形尺度引导，沿时间帧做周期变化的引导强度以支持多轮长时延展", "file": "vwm/modules/diffusionmodules/guiders.py"},
+    {"name": "MultiSourceSamplerDataset", "role": "多源数据集采样器，按概率在 YouTube 与 NuScenes 之间随机取样本", "file": "vwm/data/dataset.py"},
+    {"name": "NuScenesDataset", "role": "nuScenes 数据集封装，把帧序列与动作标签组装成训练数据字典", "file": "vwm/data/subsets/nuscenes.py"}
+  ],
+  "layers": [
+    {"name": "配置层", "responsibility": "用 OmegaConf YAML 描述模型、数据、优化器与 Lightning 训练器，三阶段训练配置各不相同", "modules": ["configs"], "files": ["configs/inference/vista.yaml", "configs/training/vista_phase1.yaml", "configs/training/vista_phase2_stage1.yaml"]},
+    {"name": "模型引擎层", "responsibility": "DiffusionEngine 组装各子模块并提供训练步、采样与编解码接口", "modules": ["vwm/models"], "files": ["vwm/models/diffusion.py", "vwm/models/autoencoder.py"]},
+    {"name": "扩散网络层", "responsibility": "实现视频 UNet 主干、时空残差块与注意力块", "modules": ["vwm/modules/diffusionmodules", "vwm/modules/video_attention.py"], "files": ["vwm/modules/diffusionmodules/video_model.py", "vwm/modules/video_attention.py"]},
+    {"name": "去噪与采样层", "responsibility": "EDM 缩放、sigma 离散化、欧拉采样器与各类引导器", "modules": ["vwm/modules/diffusionmodules"], "files": ["vwm/modules/diffusionmodules/denoiser.py", "vwm/modules/diffusionmodules/sampling.py", "vwm/modules/diffusionmodules/guiders.py", "vwm/modules/diffusionmodules/denoiser_scaling.py"]},
+    {"name": "条件编码层", "responsibility": "把文本、首帧图像与多种动作向量编码成扩散条件", "modules": ["vwm/modules/encoders"], "files": ["vwm/modules/encoders/modules.py"]},
+    {"name": "自编码器层", "responsibility": "空间编码器与时间视频解码器把像素压到潜空间再还原，降低扩散计算量", "modules": ["vwm/modules/autoencoding", "vwm/modules/diffusionmodules"], "files": ["vwm/modules/diffusionmodules/model.py", "vwm/modules/autoencoding/temporal_ae.py"]},
+    {"name": "数据层", "responsibility": "封装 YouTube 与 nuScenes 子集并做多源加权采样与动作标注", "modules": ["vwm/data"], "files": ["vwm/data/dataset.py", "vwm/data/subsets/nuscenes.py", "vwm/data/subsets/youtube.py", "vwm/data/subsets/common.py"]},
+    {"name": "训练与推理入口层", "responsibility": "命令行脚本驱动训练循环、采样可视化与奖励计算", "modules": ["."], "files": ["train.py", "sample.py", "sample_utils.py", "reward.py"]}
+  ],
+  "data_flow": [
+    "第1步：训练脚本 train.py 用 OmegaConf 合并 YAML 配置并实例化 DiffusionEngine 与数据模块",
+    "第2步：MultiSourceSamplerDataset 按概率从 YouTube 或 NuScenes 取一段 num_frames 帧序列",
+    "第3步：数据字典包含 img_seq、cond_frames 首帧及动作字段如 trajectory、command、speed、angle、goal",
+    "第4步：encode_first_stage 用空间自编码器把像素序列编码成潜变量 z 并乘 scale_factor",
+    "第5步：GeneralConditioner 把首帧与动作编码成 vector、crossattn、concat 三类条件，并随机丢弃做无条件分支",
+    "第6步：StandardDiffusionLoss 采样 sigma，对 z 加噪并让 VideoUNet 预测速度场，用 VWeighting 加权",
+    "第7步：采样时 EulerEDMSampler 从纯噪声出发，用 cond_mask 固定条件帧逐步去噪",
+    "第8步：VanillaCFG 或 TrianglePredictionGuider 融合条件与无条件预测控制生成强度",
+    "第9步：多轮采样时把上一轮末三帧解码后作为新一轮条件，实现长时延展",
+    "第10步：decode_first_stage 用时间视频解码器把潜变量还原成像素视频并保存"
+  ],
+  "entry_points": [
+    {"path": "train.py", "what": "训练主入口，解析配置并调用 PyTorch Lightning Trainer 跑训练与测试"},
+    {"path": "sample.py", "what": "采样入口，加载 vista.safetensors 对未来视频做多模态动作条件生成"},
+    {"path": "reward.py", "what": "奖励计算入口，在不访问真值动作的情况下评估不同动作的优劣"},
+    {"path": "vwm/models/diffusion.py", "what": "DiffusionEngine，训练步与采样逻辑的核心实现"},
+    {"path": "sample_utils.py", "what": "采样工具集，含模型加载、采样器与引导器构造以及 do_sample 主循环"},
+    {"path": "reward_utils.py", "what": "奖励计算工具集，构造条件并调用模型做动作评估"},
+    {"path": "docs/TRAINING.md", "what": "三阶段训练流程说明，指导如何从预训练权重继续训练"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：世界模型定位、多模态动作控制与奖励能力"},
+    {"path": "configs/inference/vista.yaml", "why": "推理配置最完整，能一次看清主干、条件器、自编码器与动作编码的全部结构"},
+    {"path": "vwm/models/diffusion.py", "why": "DiffusionEngine 是总装配点，理解训练与采样如何被组织"},
+    {"path": "vwm/modules/diffusionmodules/video_model.py", "why": "视频扩散主干与时空残差块，理解世界模型如何建模视频"},
+    {"path": "vwm/modules/encoders/modules.py", "why": "条件编码器，理解动作与首帧如何注入扩散过程"},
+    {"path": "vwm/modules/attention.py", "why": "交叉注意力与动作控制适配器的实现，理解零初始化控制分支"},
+    {"path": "vwm/modules/diffusionmodules/sampling.py", "why": "欧拉 EDM 采样器，理解条件帧固定与长视频延展机制"},
+    {"path": "vwm/modules/diffusionmodules/guiders.py", "why": "各类引导器，理解 CFG 与时间变化尺度如何控制生成"},
+    {"path": "vwm/data/subsets/nuscenes.py", "why": "nuScenes 数据封装，理解驾驶数据集如何对接动作条件"},
+    {"path": "sample_utils.py", "why": "do_sample 主循环，理解多轮采样与条件滚动的完整推理流程"}
+  ],
+  "extension_points": [
+    "想接新数据集：在 vwm/data/subsets 下仿照 nuscenes.py 写子集类，并在 vwm/data/dataset.py 的 dataset_mapping 注册名字",
+    "想加新的动作控制类型：在 vwm/modules/encoders/modules.py 复用 ConcatTimestepEmbedderND 并在配置 conditioner 里加一个 input_key 条目，同时调整 action 编码维度",
+    "想改去噪主干或注意力：修改 vwm/modules/diffusionmodules/video_model.py 与 vwm/modules/video_attention.py",
+    "想换采样器或引导策略：在 vwm/modules/diffusionmodules/sampling.py 与 guiders.py 增加类，并在 sample_utils.py 的工厂函数注册",
+    "想换自编码器或时间解码器：修改 configs 里的 first_stage_config，或在 vwm/modules/autoencoding/temporal_ae.py 扩展 VideoDecoder",
+    "想调整三阶段训练策略：修改 configs/training 下的 phase 配置，控制 slow_spatial_layers、train_peft_adapters 与 action_control 开关"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 docs/SAMPLING.md，搞清世界模型能做什么、如何采样",
+    "第2步：读 configs/inference/vista.yaml，把主干、条件器、自编码器的组件关系看明白",
+    "第3步：读 vwm/models/diffusion.py，理解 DiffusionEngine 如何组装并驱动训练与采样",
+    "第4步：读 vwm/modules/diffusionmodules/video_model.py，理解时空 UNet 主干",
+    "第5步：读 vwm/modules/encoders/modules.py 与 vwm/modules/attention.py，理解动作条件如何注入",
+    "第6步：读 vwm/modules/diffusionmodules/sampling.py 与 guiders.py，理解采样与长视频延展",
+    "第7步：读 sample_utils.py 的 do_sample，把推理链路完整串起来",
+    "第8步：读 vwm/data/subsets/nuscenes.py 与 docs/TRAINING.md，理解数据与训练流程"
+  ],
+  "diagram_mermaid": "graph TD\n  DATA[YouTube 与 NuScenes 帧序列] --> AE[自编码器编码到潜空间]\n  COND[首帧与动作条件编码] --> DENOISE\n  AE --> DENOISE[VideoUNet 潜空间去噪]\n  ACT[动作控制适配器] --> DENOISE\n  DENOISE --> LOSS[标准扩散损失与速度加权]\n  NOISE[纯噪声与条件帧掩码] --> SAMPLER[欧拉 EDM 采样器]\n  SAMPLER --> GUIDE[CFG 与三角引导]\n  GUIDE --> DECODE[时间解码器还原视频]\n  DECODE --> EXTEND[末三帧滚动做长时延展]\n  DECODE --> REWARD[奖励评估不同动作]",
+  "surprises": [
+    "动作控制不是拼进主干输入，而是在交叉注意力里加零初始化的 k/v 适配器，训练初期等价于原模型，避免破坏预训练权重",
+    "长视频不是一次生成，而是把上一轮末三帧当条件帧做 inpainting 式滚动采样，配合三角引导抑制误差累积",
+    "训练分三阶段：先只用 YouTube 数据学慢速空间层，再加动作控制分支，最后混合 nuScenes 数据微调",
+    "条件帧通过 cond_mask 在每一步采样后强制写回，本质是把条件帧当作已知的潜变量做条件修复",
+    "奖励计算无需真值动作，仅靠比较不同动作条件下生成的未来与真值的差异来给动作打分"
+  ],
+  "confidence": "高"
+}

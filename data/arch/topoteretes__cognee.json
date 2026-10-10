@@ -1,0 +1,91 @@
+{
+  "repo": "topoteretes/cognee",
+  "name": "cognee",
+  "one_liner": "把文档与对话变成知识图谱加向量双存储的 AI 记忆平台",
+  "problem": "让 Agent 拥有跨会话的长期记忆：把杂乱的文档、代码与对话经管线抽取成知识图谱与向量，既能按图推理又能按语义召回，供检索与 LLM 复用。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Task", "role": "管线的最小执行单元，包装函数、协程或生成器，并携带 batch_size 等执行配置", "file": "cognee/modules/pipelines/tasks/task.py"},
+    {"name": "GraphDBInterface", "role": "图数据库适配器抽象，统一节点、边、邻域扩展与来源证据的读写", "file": "cognee/infrastructure/databases/graph/graph_db_interface.py"},
+    {"name": "VectorDBInterface", "role": "向量数据库适配器抽象，统一集合、数据点、嵌入与相似度检索", "file": "cognee/infrastructure/databases/vector/vector_db_interface.py"},
+    {"name": "DataPoint", "role": "图与向量共享的数据点模型，字段可标注为可嵌入或去重依据", "file": "cognee/infrastructure/engine/models/DataPoint.py"},
+    {"name": "BaseRetriever", "role": "检索器基类，定义查询到上下文再到补全的统一流程", "file": "cognee/modules/retrieval/base_retriever.py"},
+    {"name": "GraphCompletionRetriever", "role": "图补全检索器，先向量召回种子再沿图扩展三元组并交 LLM 生成答案", "file": "cognee/modules/retrieval/graph_completion_retriever.py"},
+    {"name": "SearchType", "role": "检索类型枚举，把查询意图映射到具体检索器", "file": "cognee/modules/search/types/SearchType.py"},
+    {"name": "extract_graph_and_summarize", "role": "cognify 核心任务，从分块抽取实体关系并生成摘要", "file": "cognee/tasks/graph/extract_graph_and_summarize.py"},
+    {"name": "add_data_points", "role": "把数据点同时写入图数据库与向量数据库，形成双存储", "file": "cognee/tasks/storage/add_data_points.py"},
+    {"name": "get_graph_engine", "role": "图引擎工厂，按配置返回 Kuzu、Neo4j 等适配器并做缓存与重解析", "file": "cognee/infrastructure/databases/graph/get_graph_engine.py"},
+    {"name": "get_vector_engine", "role": "向量引擎工厂，返回可跨缓存失效自恢复的引擎句柄", "file": "cognee/infrastructure/databases/vector/get_vector_engine.py"}
+  ],
+  "layers": [
+    {"name": "公开 API 层", "responsibility": "对外暴露 add、cognify、search 等稳定接口与 FastAPI 路由", "modules": ["cognee/api"], "files": ["cognee/__init__.py", "cognee/api/v1/add/add.py", "cognee/api/v1/cognify/cognify.py"]},
+    {"name": "管线引擎层", "responsibility": "把一串 Task 递归流式执行，负责数据集锁、权限与运行记录", "modules": ["cognee/modules/pipelines"], "files": ["cognee/modules/pipelines/tasks/task.py"]},
+    {"name": "任务实现层", "responsibility": "实现抽取、分块、摘要、入库等具体处理步骤", "modules": ["cognee/tasks"], "files": ["cognee/tasks/graph/extract_graph_and_summarize.py", "cognee/tasks/storage/add_data_points.py"]},
+    {"name": "模块业务层", "responsibility": "搜索、检索、记忆、会话、本体等领域逻辑", "modules": ["cognee/modules"], "files": ["cognee/modules/search/methods/search.py", "cognee/modules/retrieval/base_retriever.py"]},
+    {"name": "检索器层", "responsibility": "提供图补全、混合、三元组、时间等多样检索策略", "modules": ["cognee/modules/retrieval"], "files": ["cognee/modules/retrieval/graph_completion_retriever.py"]},
+    {"name": "基础设施与数据库层", "responsibility": "图、向量、关系与缓存的适配器与工厂，管理连接与配置", "modules": ["cognee/infrastructure/databases"], "files": ["cognee/infrastructure/databases/vector/vector_db_interface.py", "cognee/infrastructure/databases/graph/get_graph_engine.py"]},
+    {"name": "引擎与模型层", "responsibility": "DataPoint 等共享数据模型与图元素定义", "modules": ["cognee/infrastructure/engine"], "files": ["cognee/infrastructure/engine/models/DataPoint.py"]},
+    {"name": "LLM 与嵌入层", "responsibility": "统一 LLM 与嵌入提供方，含本地小模型与远程 API", "modules": ["cognee/infrastructure/llm", "cognee/infrastructure/databases/vector/embeddings"], "files": ["cognee/infrastructure/llm/config.py", "cognee/infrastructure/databases/vector/embeddings/get_embedding_engine.py"]}
+  ],
+  "data_flow": [
+    "第1步：add 阶段，原始数据经摄取任务分类、识别并转成文本文件",
+    "第2步：数据落关系库与对象存储，并登记到数据集",
+    "第3步：cognify 阶段，管线把文档切块为 DocumentChunk",
+    "第4步：LLM 从每个分块抽取实体与关系，生成知识图谱与摘要",
+    "第5步：add_data_points 把节点与边写入图数据库",
+    "第6步：同时把节点与边做嵌入写入向量数据库，形成图加向量双存储",
+    "第7步：search 阶段，按 SearchType 选择对应检索器",
+    "第8步：图补全检索先用向量召回种子节点",
+    "第9步：再沿图扩展邻居与边，收集三元组与分块",
+    "第10步：把图上下文与分块拼成提示，交 LLM 生成补全答案",
+    "第11步：混合检索融合多路候选并重排",
+    "第12步：返回结果并记录操作与来源证据"
+  ],
+  "entry_points": [
+    {"path": "cognee/__init__.py", "what": "包入口，导出 add、cognify、search、memify 等公开接口"},
+    {"path": "cognee/api/v1/add/add.py", "what": "add 接口实现，组装摄取管线并执行"},
+    {"path": "cognee/api/v1/cognify/cognify.py", "what": "cognify 接口实现，组装抽取、摘要与入库任务"},
+    {"path": "cognee/api/v1/search/search.py", "what": "search 接口实现，按类型选择检索器并返回结果"},
+    {"path": "cognee/api/client.py", "what": "FastAPI 应用，暴露 HTTP 服务"},
+    {"path": "cognee/cli/__init__.py", "what": "命令行入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "建立记忆平台定位、快速上手与核心概念认知"},
+    {"path": "cognee/__init__.py", "why": "看公开 API 面，理解 add、cognify、search 的边界"},
+    {"path": "cognee/modules/pipelines/tasks/task.py", "why": "理解 Task、TaskSpec、BoundTask 与管线执行语义"},
+    {"path": "cognee/api/v1/cognify/cognify.py", "why": "看 cognify 如何把任务串成完整管线"},
+    {"path": "cognee/tasks/graph/extract_graph_and_summarize.py", "why": "理解图谱抽取与摘要如何协同 LLM"},
+    {"path": "cognee/tasks/storage/add_data_points.py", "why": "理解图与向量双写这一核心设计"},
+    {"path": "cognee/infrastructure/engine/models/DataPoint.py", "why": "理解图与向量共享的数据模型"},
+    {"path": "cognee/modules/retrieval/graph_completion_retriever.py", "why": "理解图检索与 LLM 如何协同生成答案"},
+    {"path": "cognee/infrastructure/databases/vector/vector_db_interface.py", "why": "理解向量存储的扩展契约"},
+    {"path": "cognee/modules/search/types/SearchType.py", "why": "一张表看清所有检索类型与能力"}
+  ],
+  "extension_points": [
+    "新增数据源连接器：改 cognee/tasks/ingestion/connectors",
+    "新增 LLM 或嵌入提供方：改 cognee/infrastructure/llm 与 cognee/infrastructure/databases/vector/embeddings",
+    "新增图数据库后端：实现 GraphDBInterface 并在 cognee/infrastructure/databases/graph 下加适配器",
+    "新增向量数据库后端：实现 VectorDBInterface 并在 cognee/infrastructure/databases/vector 下加适配器",
+    "自定义数据模型与本体：改 cognee/modules/ontology 与 cognee/tasks/graph",
+    "新增检索策略：在 cognee/modules/retrieval 实现检索器并接入 SearchType",
+    "自定义管线：用 cognee/modules/run_custom_pipeline 与 @task 组合任务"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解记忆平台定位与 add、cognify、search 三段式",
+    "第2步：读 cognee/__init__.py，看公开 API 面与模块划分",
+    "第3步：读 cognee/modules/pipelines/tasks/task.py，吃透管线引擎与 Task 语义",
+    "第4步：读 cognee/api/v1/cognify/cognify.py，看 cognify 如何组装任务",
+    "第5步：读 cognee/tasks/graph/extract_graph_and_summarize.py，理解抽取与摘要",
+    "第6步：读 cognee/tasks/storage/add_data_points.py，理解图加向量双写",
+    "第7步：读 cognee/modules/retrieval/graph_completion_retriever.py，理解图检索与 LLM 协同"
+  ],
+  "diagram_mermaid": "graph TD\n  DATA[原始文档与对话] --> ADD[add 摄取]\n  ADD --> STORE1[关系库与对象存储]\n  STORE1 --> CHUNK[cognify 分块]\n  CHUNK --> EXTRACT[LLM 抽取实体关系]\n  EXTRACT --> GRAPH[写入图数据库]\n  EXTRACT --> VEC[嵌入写入向量数据库]\n  Q[查询] --> PICK[按 SearchType 选检索器]\n  VEC --> PICK\n  GRAPH --> PICK\n  PICK --> EXPAND[沿图扩展三元组]\n  EXPAND --> CTX[拼装上下文]\n  CTX --> LLM[LLM 生成答案]",
+  "surprises": [
+    "代码里 task 有四种含义：执行单元 Task、延迟调用糖 TaskSpec 与 BoundTask、关系库中的 tasks 表、以及 task_summary 装饰器，极易混淆",
+    "存在两个同名 run_pipeline：完整编排器与轻量延迟调用运行器，用途完全不同",
+    "同一份数据必须同时写图与向量两套存储，DataPoint 是两者共享的模型",
+    "管线执行是递归流式的，下游任务可能按上游批次运行多次，batch_size 作用于上游输出",
+    "默认可用本地小模型且无需 API key，开箱即可跑通"
+  ],
+  "confidence": "高"
+}

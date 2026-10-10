@@ -76,6 +76,25 @@
   "warnings": []
  },
  {
+  "file": "All-Hands-AI__OpenHands.json",
+  "repo": "All-Hands-AI/OpenHands",
+  "confidence": "中",
+  "abstractions": 12,
+  "layers": 9,
+  "flow": 12,
+  "key_files": 9,
+  "paths_checked": 55,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "Cinnamon__kotaemon.json",
   "repo": "Cinnamon/kotaemon",
   "confidence": "高",
@@ -171,6 +190,25 @@
   "warnings": []
  },
  {
+  "file": "NVIDIA__Isaac-GR00T.json",
+  "repo": "NVIDIA/Isaac-GR00T",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 54,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "OpenBMB__ChatDev.json",
   "repo": "OpenBMB/ChatDev",
   "confidence": "高",
@@ -247,6 +285,25 @@
   "warnings": []
  },
  {
+  "file": "OpenDriveLab__Vista.json",
+  "repo": "OpenDriveLab/Vista",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 51,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "OpenGVLab__InternVL.json",
   "repo": "OpenGVLab/InternVL",
   "confidence": "高",
@@ -304,6 +361,25 @@
   "warnings": []
  },
  {
+  "file": "RoboTwin-Platform__RoboTwin.json",
+  "repo": "RoboTwin-Platform/RoboTwin",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 48,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "RoboVerseOrg__RoboVerse.json",
   "repo": "RoboVerseOrg/RoboVerse",
   "confidence": "高",
@@ -331,6 +407,25 @@
   "flow": 12,
   "key_files": 9,
   "paths_checked": 49,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "a2aproject__A2A.json",
+  "repo": "a2aproject/A2A",
+  "confidence": "中",
+  "abstractions": 11,
+  "layers": 7,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 40,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -399,6 +494,25 @@
   "warnings": []
  },
  {
+  "file": "crewAIInc__crewAI.json",
+  "repo": "crewAIInc/crewAI",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 10,
+  "flow": 12,
+  "key_files": 9,
+  "paths_checked": 51,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "docling-project__docling.json",
   "repo": "docling-project/docling",
   "confidence": "高",
@@ -407,6 +521,44 @@
   "flow": 10,
   "key_files": 9,
   "paths_checked": 50,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "e2b-dev__E2B.json",
+  "repo": "e2b-dev/E2B",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 7,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 44,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "eosphoros-ai__DB-GPT.json",
+  "repo": "eosphoros-ai/DB-GPT",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 6,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 48,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],
@@ -646,6 +798,25 @@
   "warnings": []
  },
  {
+  "file": "infiniflow__ragflow.json",
+  "repo": "infiniflow/ragflow",
+  "confidence": "高",
+  "abstractions": 10,
+  "layers": 9,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 41,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "isaac-sim__IsaacLab.json",
   "repo": "isaac-sim/IsaacLab",
   "confidence": "高",
@@ -660,6 +831,25 @@
   "skipped": {
    "symbol": 0,
    "command": 1
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "langchain-ai__langchain.json",
+  "repo": "langchain-ai/langchain",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 11,
+  "key_files": 10,
+  "paths_checked": 53,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
   },
   "errors": [],
   "warnings": []
@@ -817,6 +1007,25 @@
   "warnings": []
  },
  {
+  "file": "n8n-io__n8n.json",
+  "repo": "n8n-io/n8n",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 45,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "octo-models__octo.json",
   "repo": "octo-models/octo",
   "confidence": "高",
@@ -893,6 +1102,25 @@
   "warnings": []
  },
  {
+  "file": "ray-project__ray.json",
+  "repo": "ray-project/ray",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 10,
+  "key_files": 10,
+  "paths_checked": 53,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "real-stanford__diffusion_policy.json",
   "repo": "real-stanford/diffusion_policy",
   "confidence": "高",
@@ -931,6 +1159,25 @@
   "warnings": []
  },
  {
+  "file": "stack-of-tasks__pinocchio.json",
+  "repo": "stack-of-tasks/pinocchio",
+  "confidence": "高",
+  "abstractions": 12,
+  "layers": 8,
+  "flow": 9,
+  "key_files": 10,
+  "paths_checked": 64,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "stanfordnlp__dspy.json",
   "repo": "stanfordnlp/dspy",
   "confidence": "高",
@@ -950,6 +1197,25 @@
   "warnings": []
  },
  {
+  "file": "stepjam__RLBench.json",
+  "repo": "stepjam/RLBench",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 52,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
   "file": "thu-ml__RoboticsDiffusionTransformer.json",
   "repo": "thu-ml/RoboticsDiffusionTransformer",
   "confidence": "高",
@@ -958,6 +1224,25 @@
   "flow": 10,
   "key_files": 8,
   "paths_checked": 40,
+  "paths_bad": 0,
+  "path_rate": 1.0,
+  "bad_paths": [],
+  "skipped": {
+   "symbol": 0,
+   "command": 0
+  },
+  "errors": [],
+  "warnings": []
+ },
+ {
+  "file": "topoteretes__cognee.json",
+  "repo": "topoteretes/cognee",
+  "confidence": "高",
+  "abstractions": 11,
+  "layers": 8,
+  "flow": 12,
+  "key_files": 10,
+  "paths_checked": 41,
   "paths_bad": 0,
   "path_rate": 1.0,
   "bad_paths": [],

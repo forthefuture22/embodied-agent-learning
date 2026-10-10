@@ -1,0 +1,90 @@
+{
+  "repo": "infiniflow/ragflow",
+  "name": "RAGFlow",
+  "one_liner": "端到端 RAG 引擎，融合深度文档解析与 Agent 编排",
+  "problem": "把企业里格式杂乱的文档可靠地解析、分块、向量化并入库，再用向量加全文混合检索加多轮智能体检索，为 LLM 提供高保真上下文。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "DocEngine", "role": "可插拔的文档与向量检索引擎接口，统一 chunk store 与 metadata store 的增删改查和检索", "file": "internal/engine/engine.go"},
+    {"name": "MessageQueue", "role": "任务消息队列接口，负责摄取任务下发、消费与知识编译流的租约", "file": "internal/engine/engine.go"},
+    {"name": "Pipeline", "role": "编译后的摄取画布加任务级元数据，驱动 DSL 到画布的执行与进度上报", "file": "internal/ingestion/pipeline/pipeline.go"},
+    {"name": "Canvas", "role": "可视化工作流画布，负责编译、检查点、中断恢复与节点运行追踪", "file": "internal/agent/canvas/canvas.go"},
+    {"name": "Registry", "role": "按类别区分全局组件注册表，Agent 与摄取共用一套组件工厂与元数据", "file": "internal/agent/runtime/registry.go"},
+    {"name": "DeepDoc PDF Parser", "role": "版式分析、OCR、表格识别与跨页合并，产出结构化文本与表格", "file": "internal/deepdoc/parser/pdf/parser.go"},
+    {"name": "RetrievalService", "role": "同时执行向量 KNN 与全文匹配两路检索，并用融合表达式合并分数", "file": "internal/service/nlp/retrieval.go"},
+    {"name": "Reranker", "role": "重排候选，支持重排模型、混合相似度与 KNN 重排", "file": "internal/service/nlp/reranker.go"},
+    {"name": "RAGTools", "role": "智能体式检索循环的入口与运行配置，组织多轮检索、证据与工具调用", "file": "internal/rag/agentic-rag/agentic_rag.go"},
+    {"name": "Chunker", "role": "分块算子库，按模板与分隔符把解析结果切成检索单元", "file": "internal/parser/chunk/split.go"}
+  ],
+  "layers": [
+    {"name": "入口与引导层", "responsibility": "按 api/admin/ingestor/syncer 等模式装配并启动服务", "modules": ["cmd", "internal/server"], "files": ["cmd/ragflow_server.go", "internal/server/config.go"]},
+    {"name": "HTTP 接口层", "responsibility": "注册路由并把请求分发到处理器", "modules": ["internal/router", "internal/handler"], "files": ["internal/router/router.go"]},
+    {"name": "业务服务层", "responsibility": "数据集、文档、会话、检索与重排等高层业务逻辑", "modules": ["internal/service"], "files": ["internal/service/nlp/retrieval.go", "internal/service/nlp/reranker.go"]},
+    {"name": "摄取管线层", "responsibility": "把 DSL 编译成画布，按组件顺序执行解析、分块、向量化与入库", "modules": ["internal/ingestion"], "files": ["internal/ingestion/pipeline/pipeline.go", "internal/ingestion/component/parser.go"]},
+    {"name": "解析层", "responsibility": "对 PDF、Office、HTML 等格式做结构化解析与分块算子执行", "modules": ["internal/parser", "internal/deepdoc"], "files": ["internal/deepdoc/parser/pdf/parser.go", "internal/parser/parser/docx_parser.go"]},
+    {"name": "检索与 RAG 层", "responsibility": "混合检索、重排与智能体式多轮检索", "modules": ["internal/rag", "internal/agentic_rag"], "files": ["internal/rag/agentic-rag/agentic_rag.go", "internal/agentic_rag/agent.go"]},
+    {"name": "Agent 运行时层", "responsibility": "画布执行、组件工厂、工具绑定与工作流辅助", "modules": ["internal/agent"], "files": ["internal/agent/runtime/registry.go", "internal/agent/canvas/canvas.go"]},
+    {"name": "存储引擎层", "responsibility": "对接 Elasticsearch、Infinity、OceanBase 等检索引擎与对象存储", "modules": ["internal/engine", "internal/storage"], "files": ["internal/engine/elasticsearch/client.go", "internal/engine/infinity/infinity.go"]},
+    {"name": "数据访问层", "responsibility": "实体定义与持久化访问，MySQL 元数据与迁移", "modules": ["internal/dao", "internal/entity"], "files": ["internal/dao/database.go", "internal/entity/document.go"]}
+  ],
+  "data_flow": [
+    "第1步：用户经 API 上传文档并创建数据集，元数据写入 MySQL",
+    "第2步：原始文件落到 MinIO/S3 等对象存储",
+    "第3步：摄取任务经 MessageQueue 下发给 ingestor 服务",
+    "第4步：Pipeline 把摄取 DSL 编译成 Canvas，按组件顺序执行",
+    "第5步：DeepDoc Parser 做版式分析、OCR 与表格识别，产出结构化文本",
+    "第6步：Chunker 按模板分块，Tokenizer 统计 token，Embedding 生成向量",
+    "第7步：chunk 写入 DocEngine 的 chunk store，文档元数据写 metadata store",
+    "第8步：查询时 RetrievalService 同时发起向量 KNN 与全文匹配两路检索",
+    "第9步：用融合表达式合并两路分数，取 topn 候选",
+    "第10步：Reranker 用重排模型或混合相似度重排候选",
+    "第11步：结果交 LLM 生成答案，或进入 agentic_rag 多轮检索循环",
+    "第12步：Agent 画布按节点编排工具与检索，输出带引用的最终答案"
+  ],
+  "entry_points": [
+    {"path": "cmd/ragflow_server.go", "what": "Go 服务主入口，支持 --api/--admin/--ingestor/--syncer 等模式"},
+    {"path": "cmd/ragflow-cli.go", "what": "Go 命令行客户端入口"},
+    {"path": "internal/router/router.go", "what": "HTTP 路由注册，所有 API 的挂载点"},
+    {"path": "build.sh", "what": "构建原生库与 Go 服务、跑分层测试的统一脚本"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "建立整体定位、特性与系统架构认知"},
+    {"path": "AGENTS.md", "why": "当前代码库的权威操作指南，说明 Go/Python 双栈现状与迁移方向"},
+    {"path": "cmd/ragflow_server.go", "why": "看服务如何装配各模式与依赖，理解运行时全貌"},
+    {"path": "internal/engine/engine.go", "why": "DocEngine 与 MessageQueue 两大核心接口，扩展存储的入口"},
+    {"path": "internal/ingestion/pipeline/pipeline.go", "why": "理解摄取管线如何把 DSL 编译成画布并执行"},
+    {"path": "internal/deepdoc/parser/pdf/parser.go", "why": "DeepDoc 解析核心，看版式/OCR/表格如何工作"},
+    {"path": "internal/service/nlp/retrieval.go", "why": "混合检索与融合表达式的实现"},
+    {"path": "internal/rag/agentic-rag/agentic_rag.go", "why": "智能体检索循环如何叠加在 RAG 之上"},
+    {"path": "internal/agent/runtime/registry.go", "why": "组件注册表，理解 Agent 与摄取如何共用组件"},
+    {"path": "conf/service_conf.yaml", "why": "服务参数体系：数据库、对象存储、检索引擎等配置"}
+  ],
+  "extension_points": [
+    "接入新的向量或文档引擎：实现 internal/engine/engine.go 的 DocEngine 接口，在 internal/engine 下新增包",
+    "接入新的消息队列后端：实现 engine.go 的 MessageQueue 接口",
+    "新增文档格式解析器：改 internal/parser/parser 并注册到 internal/ingestion/component/parser_dispatch.go",
+    "新增分块策略：改 internal/ingestion/component/chunker 下的分块算子",
+    "新增 Agent 或摄取组件：在 internal/agent/component 实现并注册到 internal/agent/runtime/registry.go",
+    "调整向量与全文融合权重：改 internal/service/nlp/retrieval.go 的 buildRetrievalFusionExpr",
+    "调整重排策略：改 internal/service/nlp/reranker.go",
+    "调整智能体检索深度与策略：改 internal/rag/agentic-rag/policy.go 与 agentic_rag.go"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 AGENTS.md，明确定位、特性与 Go/Python 双栈现状",
+    "第2步：读 cmd/ragflow_server.go，看服务如何按模式装配依赖",
+    "第3步：读 internal/engine/engine.go，吃透 DocEngine 与 MessageQueue 接口",
+    "第4步：读 internal/ingestion/pipeline/pipeline.go 与 internal/agent/canvas/canvas.go，理解 DSL 到画布的编译执行",
+    "第5步：读 internal/deepdoc/parser/pdf/parser.go，理解 DeepDoc 深度解析",
+    "第6步：读 internal/service/nlp/retrieval.go 与 reranker.go，理解混合检索与重排",
+    "第7步：读 internal/rag/agentic-rag/agentic_rag.go，理解智能体检索如何叠加在 RAG 之上"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户上传文档] --> API[HTTP 接口层]\n  API --> MQ[消息队列下发任务]\n  MQ --> PIPE[摄取管线 Pipeline]\n  PIPE --> CANVAS[画布与组件注册表]\n  CANVAS --> DEEPDOC[DeepDoc 解析]\n  DEEPDOC --> CHUNK[分块与向量化]\n  CHUNK --> ENGINE[DocEngine 检索引擎]\n  Q[用户提问] --> RET[混合检索 向量加全文]\n  ENGINE --> RET\n  RET --> FUSE[融合与重排]\n  FUSE --> LLM[LLM 生成答案]\n  FUSE --> AGENT[智能体多轮检索]\n  AGENT --> LLM",
+  "surprises": [
+    "该克隆已是 Go 重写中的 RAGFlow，主体实现是 Go 代码，与常见的 Python 项目认知相反",
+    "遗留的 Python 目录 api/、rag/、deepdoc/、agent/ 在本克隆中大多已删除，只有少量 Python 测试与下载脚本保留",
+    "摄取管线与 Agent 共用同一套组件注册表和画布，管线本质上就是一张编译后的 Agent 画布",
+    "DeepDoc 在 Go 侧通过 CGO 绑定 C++ 原生库与 .ort 模型实现，不再是 Python 进程",
+    "同一份 MySQL schema 由 Go 与 Python 双方共同拥有，索引命名规则不同但按列集合对齐"
+  ],
+  "confidence": "高"
+}

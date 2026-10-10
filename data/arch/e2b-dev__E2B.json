@@ -1,0 +1,86 @@
+{
+  "repo": "e2b-dev/E2B",
+  "name": "E2B",
+  "one_liner": "在云端 microVM 安全隔离环境里运行 AI 生成代码的开源沙箱基础设施",
+  "problem": "解决「让 AI 生成的不可信代码安全跑起来」的问题：提供隔离的云端 Linux 沙箱，支持执行命令、读写文件、运行代码与访问网络，并通过 SDK 让 Agent 能创建、连接、暂停与恢复沙箱，代码与状态可跨调用持久化。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Sandbox / AsyncSandbox", "role": "用户面向的沙箱句柄：暴露 commands/files/pty/git 子模块，封装 create/connect/kill/pause/fork/set_timeout 等生命周期方法", "file": "packages/python-sdk/e2b/sandbox_async/main.py"},
+    {"name": "SandboxApi", "role": "控制平面操作实现：把 create/kill/pause/connect/fork/set_timeout/update_network 翻译成对 API 的 REST 调用", "file": "packages/python-sdk/e2b/sandbox_async/sandbox_api.py"},
+    {"name": "SandboxBase", "role": "沙箱基类：持有 sandbox_id/domain/envd 版本与访问令牌，负责拼装 envd 访问 URL 与文件上传下载签名 URL", "file": "packages/python-sdk/e2b/sandbox/main.py"},
+    {"name": "ConnectionConfig", "role": "连接配置与鉴权：解析 API Key、domain、代理、重试与超时，构造控制平面 URL 与沙箱子域 URL", "file": "packages/python-sdk/e2b/connection_config.py"},
+    {"name": "envd API 客户端", "role": "沙箱内 envd 守护进程的 HTTP 客户端与错误码映射，负责健康检查与传输层异常分类", "file": "packages/python-sdk/e2b/envd/api.py"},
+    {"name": "envd RPC 错误处理", "role": "把 ConnectRPC 的 gRPC 状态码映射为 SDK 异常，并在连接中断时探测沙箱是否已死", "file": "packages/python-sdk/e2b/envd/rpc.py"},
+    {"name": "Commands", "role": "命令执行模块：通过 envd 的 process RPC 服务启动/列出/杀死进程，流式接收 stdout/stderr 与退出码", "file": "packages/python-sdk/e2b/sandbox_async/commands/command.py"},
+    {"name": "Filesystem", "role": "文件系统模块：通过 envd 的 filesystem RPC 服务读写/移动/监视沙箱内文件", "file": "packages/python-sdk/e2b/sandbox_async/filesystem/filesystem.py"},
+    {"name": "Template", "role": "模板定义与构建：用 Dockerfile 与启动命令描述沙箱镜像，编译成可复用的沙箱模板", "file": "packages/python-sdk/e2b/template_sync/main.py"},
+    {"name": "Volume", "role": "持久化存储卷：独立于沙箱生命周期的可挂载卷，用于跨沙箱保留数据", "file": "packages/python-sdk/e2b/volume/volume_async.py"},
+    {"name": "CodeInterpreter Sandbox", "role": "代码解释器扩展：在基础沙箱上叠加 Jupyter，提供 runCode 执行代码并回传结果、图表与错误", "file": "packages/code-interpreter-python/e2b_code_interpreter/code_interpreter_async.py"}
+  ],
+  "layers": [
+    {"name": "公共 SDK API 层", "responsibility": "面向用户的 Sandbox 句柄与生命周期方法，同步与异步两套实现", "modules": ["packages/python-sdk/e2b/sandbox_async", "packages/python-sdk/e2b/sandbox_sync"], "files": ["packages/python-sdk/e2b/sandbox_async/main.py", "packages/python-sdk/e2b/sandbox_async/sandbox_api.py", "packages/python-sdk/e2b/sandbox/main.py"]},
+    {"name": "控制平面客户端层", "responsibility": "由 OpenAPI 生成的 REST 客户端与工厂函数，负责请求控制平面 API 并处理重试与错误", "modules": ["packages/python-sdk/e2b/api"], "files": ["packages/python-sdk/e2b/api/client_async/__init__.py", "packages/python-sdk/e2b/api/client_sync/__init__.py", "packages/python-sdk/e2b/api/metadata.py"]},
+    {"name": "沙箱数据平面层", "responsibility": "与沙箱内 envd 守护进程通信，走 ConnectRPC 执行进程与文件操作，并做版本与错误映射", "modules": ["packages/python-sdk/e2b/envd"], "files": ["packages/python-sdk/e2b/envd/api.py", "packages/python-sdk/e2b/envd/rpc.py", "packages/python-sdk/e2b/envd/versions.py"]},
+    {"name": "模板构建层", "responsibility": "定义并构建沙箱模板，把 Dockerfile 与就绪检查编译成可复用镜像", "modules": ["packages/python-sdk/e2b/template_sync", "packages/python-sdk/e2b/template_async", "packages/cli/src"], "files": ["packages/python-sdk/e2b/template_sync/main.py", "packages/cli/src/index.ts"]},
+    {"name": "持久化与身份层", "responsibility": "提供跨沙箱的持久卷与工作负载身份令牌能力", "modules": ["packages/python-sdk/e2b/volume", "packages/python-sdk/e2b/secret"], "files": ["packages/python-sdk/e2b/volume/volume_async.py", "packages/python-sdk/e2b/sandbox/iam.py"]},
+    {"name": "规格与代码生成层", "responsibility": "存放 OpenAPI 与 envd 的 proto 规格，作为各语言 SDK 的单一事实来源，由上游同步而来", "modules": ["spec"], "files": ["spec/openapi.yml", "spec/envd/envd.yaml"]},
+    {"name": "多语言 SDK 层", "responsibility": "基于同一规格提供 JavaScript、代码解释器与桌面控制等 SDK", "modules": ["packages/js-sdk", "packages/code-interpreter-js", "packages/desktop-js"], "files": ["packages/js-sdk/src/index.ts", "packages/js-sdk/src/sandbox/index.ts", "packages/js-sdk/src/envd/rpc.ts"]}
+  ],
+  "data_flow": [
+    "第1步：用户调用 Sandbox.create()，进入 AsyncSandbox.create，合并默认模板并调用内部 _create",
+    "第2步：_create 调用 SandboxApi._create_sandbox，把 template、timeout、metadata、envs、network、iam、lifecycle、volume_mounts 组装成请求",
+    "第3步：构造 NewSandboxV2 请求体，由生成的 REST 客户端 post_v2_sandboxes 发往控制平面 api.<domain>",
+    "第4步：控制平面在 Firecracker microVM 中拉起沙箱，返回 sandbox_id、sandbox_domain、envd_version 与 envd_access_token",
+    "第5步：SDK 用返回信息构建 ConnectionConfig，注入 E2b-Sandbox-Id 与 X-Access-Token 等沙箱请求头",
+    "第6步：沙箱内 envd 守护进程监听 49983 端口，通过形如 https://49983-sandboxid.domain 的子域路由被外部访问",
+    "第7步：commands.run() 经 ConnectRPC 的 process 服务把命令发给 envd 执行，流式回传 stdout/stderr 与退出码",
+    "第8步：files.read/write 经 ConnectRPC 的 filesystem 服务读写沙箱内文件，大文件走带签名的直传 URL",
+    "第9步：kill/pause/connect/fork/set_timeout 等生命周期操作走控制平面 REST 接口",
+    "第10步：pause 会把沙箱内存与文件系统快照持久化，connect/resume 时从快照恢复",
+    "第11步：沙箱结束或超时后 microVM 被销毁，挂载的 Volume 中的持久数据保留下来"
+  ],
+  "entry_points": [
+    {"path": "packages/python-sdk/e2b/sandbox_async/main.py:create", "what": "异步创建沙箱的主入口，是最常用的起点"},
+    {"path": "packages/python-sdk/e2b/sandbox_sync/main.py", "what": "同步版 Sandbox，with 语句用法，见 README 示例"},
+    {"path": "packages/python-sdk/e2b/sandbox_async/sandbox_api.py:_create_sandbox", "what": "控制平面创建沙箱的具体实现，请求体组装在这里"},
+    {"path": "packages/cli/src/index.ts", "what": "e2b 命令行入口，可 create/exec/connect/pause/kill 沙箱"},
+    {"path": "packages/code-interpreter-python/e2b_code_interpreter/code_interpreter_async.py", "what": "代码解释器 SDK 入口，提供 runCode 执行代码"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：这是 SDK monorepo，运行时在 e2b-dev/runtime，SDK 分 JS 与 Python"},
+    {"path": "packages/python-sdk/e2b/sandbox_async/main.py", "why": "沙箱句柄与 create/connect/kill/pause/fork 全生命周期，理解系统骨架的第一站"},
+    {"path": "packages/python-sdk/e2b/sandbox_async/sandbox_api.py", "why": "控制平面调用与请求体组装，看清 SDK 到底发了什么请求"},
+    {"path": "packages/python-sdk/e2b/sandbox/main.py", "why": "SandboxBase 定义 envd URL 与文件签名 URL 的拼装方式"},
+    {"path": "packages/python-sdk/e2b/connection_config.py", "why": "域名、端口、鉴权头、重试与超时的统一配置，理解寻址机制"},
+    {"path": "packages/python-sdk/e2b/envd/api.py", "why": "沙箱内 envd 的 HTTP 接口与健康检查，理解数据平面"},
+    {"path": "packages/python-sdk/e2b/envd/rpc.py", "why": "ConnectRPC 错误如何映射成 SDK 异常，是理解容错设计的关键"},
+    {"path": "packages/python-sdk/e2b/sandbox_async/commands/command.py", "why": "命令如何通过 process RPC 执行并流式接收输出"},
+    {"path": "spec/openapi.yml", "why": "控制平面 API 契约的单一事实来源，所有 SDK 由它生成"},
+    {"path": "packages/js-sdk/src/index.ts", "why": "对照 TypeScript SDK 的入口，理解多语言如何共享同一规格"}
+  ],
+  "extension_points": [
+    "新增控制平面接口：先改 spec/openapi.yml，再跑 make codegen 重新生成各语言客户端，不要手改生成代码",
+    "新增沙箱内文件或进程能力：改 spec/envd 下的 filesystem/process proto，重新生成 envd RPC 客户端",
+    "自定义沙箱运行环境：用 Template 定义 Dockerfile 与启动命令，参考 packages/python-sdk/e2b/template_sync/main.py",
+    "接入新的持久化存储：参考 packages/python-sdk/e2b/volume 实现新的卷后端",
+    "新增一种语言 SDK：参照 packages/js-sdk 目录结构，用同一套 spec 生成客户端"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，明确这是 SDK monorepo、运行时在另一个仓库、有 JS 与 Python 两套 SDK",
+    "第2步：读 sandbox_async/main.py，抓住 create/connect/kill/pause/fork 的沙箱生命周期",
+    "第3步：读 sandbox_async/sandbox_api.py 与 sandbox/main.py，理解控制平面调用与 URL 拼装",
+    "第4步：读 connection_config.py，理解鉴权头、子域寻址与重试超时参数体系",
+    "第5步：读 envd/api.py 与 envd/rpc.py，理解与沙箱内 envd 的数据平面通信",
+    "第6步：读 sandbox_async/commands/command.py 与 filesystem/filesystem.py，理解命令与文件如何落地",
+    "第7步：读 spec/openapi.yml，理解 API 契约与代码生成的来源"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户代码] --> S[Sandbox.create]\n  S --> A[SandboxApi._create_sandbox]\n  A --> B[组装 NewSandboxV2 请求体]\n  B --> C[生成式 REST 客户端]\n  C --> P[控制平面 API]\n  P --> V[Firecracker microVM 沙箱]\n  V --> E[envd 守护进程]\n  S --> D[ConnectionConfig 注入请求头]\n  D --> E\n  U --> X[commands.run]\n  X --> R[ConnectRPC process 服务]\n  R --> E\n  U --> F[files.read]\n  F --> G[ConnectRPC filesystem 服务]\n  G --> E\n  U --> K[kill pause connect fork]\n  K --> P",
+  "surprises": [
+    "Firecracker microVM 的编排与运行时不在本仓库：本仓库只是 SDK 客户端与 API 规格，真正实现位于 e2b-dev/runtime，规格文件经 Copybara 同步到 spec 目录",
+    "两套协议并存：沙箱生命周期走 OpenAPI 生成的 REST 客户端，而沙箱内的命令与文件操作走 envd 的 ConnectRPC 即 gRPC over HTTP 服务",
+    "沙箱通过子域路由寻址，形如 https://49983-sandboxid.domain，端口号直接作为子域前缀，而不是常规的 host:port",
+    "SDK 会校验沙箱内 envd 版本，模板过旧会直接抛错，创建路径上甚至会先 kill 掉刚建好的沙箱再报错",
+    "spec 目录下多数文件由上游仓库同步而来，仓库内明确标注不要手改，改契约必须回到源仓库"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,90 @@
+{
+  "repo": "RoboTwin-Platform/RoboTwin",
+  "name": "RoboTwin",
+  "one_liner": "基于 SAPIEN 的双臂操作数据生成器与强域随机化基准平台",
+  "problem": "双臂精细操作真机数据昂贵、任务多样。RoboTwin 用脚本化示教在仿真里批量生成带语言标注的轨迹，并用强域随机化提升策略的视觉与语言鲁棒性。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Base_Task", "role": "所有任务的基类，继承 gym.Env，负责建场景、加载机器人/相机、提供 grasp_actor / place_actor / move 等原子动作与数据落盘", "file": "envs/_base_task.py"},
+    {"name": "任务类约定", "role": "每个任务一个文件、类名等于文件名，实现 load_actors 摆物体、play_once 编排示教动作、check_success 判成功", "file": "envs/beat_block_hammer.py"},
+    {"name": "Robot", "role": "双臂 embodiment 封装，管理左右臂关节、夹爪、URDF/驱动参数与运动规划器调用", "file": "envs/robot/robot.py"},
+    {"name": "MplibPlanner", "role": "基于 mplib 的运动规划器，提供 plan_pose / plan_screw / plan_path / plan_grippers", "file": "envs/robot/planner.py"},
+    {"name": "Camera", "role": "多相机管理，采集 head / 双 wrist 相机的 RGB、深度、分割与点云", "file": "envs/camera/camera.py"},
+    {"name": "Action 与 ArmTag", "role": "动作原语 move / gripper 与左右臂标签的轻量值对象，贯穿 move 与 grasp/place 的返回", "file": "envs/utils/action.py"},
+    {"name": "任务配置", "role": "每个 task_config 一个 YAML，定义 episode_num、域随机化开关、相机与 data_type、保存路径", "file": "env_cfg/task_config/demo_randomized.yml"},
+    {"name": "全局配置", "role": "集中定义资产/配置/描述路径常量与抓取方向四元数字典", "file": "envs/_GLOBAL_CONFIGS.py"},
+    {"name": "轨迹转换器", "role": "把逐帧 pkl 缓存合并成 XPolicyLab 格式 HDF5 并生成视频与语言指令", "file": "envs/utils/pkl2hdf5.py"},
+    {"name": "语言指令生成", "role": "基于占位符模板与场景信息，为每条 episode 生成 seen / unseen 指令", "file": "description/utils/generate_episode_instructions.py"}
+  ],
+  "layers": [
+    {"name": "任务定义层", "responsibility": "用纯 Python 类描述每个操作任务的物体摆放、示教动作序列与成功判据", "modules": ["envs"], "files": ["envs/beat_block_hammer.py", "envs/adjust_bottle.py", "envs/handover_block.py"]},
+    {"name": "仿真环境基类层", "responsibility": "封装 SAPIEN 场景、桌面与墙、光照、稳定性检查，并提供双臂原子动作 API", "modules": ["envs"], "files": ["envs/_base_task.py", "envs/_GLOBAL_CONFIGS.py"]},
+    {"name": "机器人层", "responsibility": "加载双臂 embodiment、管理关节与夹爪、调用运动规划生成关节轨迹", "modules": ["envs/robot"], "files": ["envs/robot/robot.py", "envs/robot/planner.py", "envs/robot/ik.py"]},
+    {"name": "感知层", "responsibility": "管理 head 与双 wrist 相机，输出 RGB / 深度 / 分割 / 点云观测", "modules": ["envs/camera"], "files": ["envs/camera/camera.py", "envs/camera/__init__.py"]},
+    {"name": "数据采集与格式层", "responsibility": "种子搜索、示教回放、逐帧缓存与合并为 HDF5 视频", "modules": ["scripts", "envs/utils"], "files": ["scripts/collect_data.py", "envs/utils/pkl2hdf5.py", "envs/utils/save_file.py"]},
+    {"name": "配置层", "responsibility": "任务配置、embodiment 配置、相机配置与评测步数上限", "modules": ["env_cfg"], "files": ["env_cfg/task_config/demo_randomized.yml", "env_cfg/task_config/_embodiment_config.yml", "env_cfg/task_config/_camera_config.yml"]},
+    {"name": "语言指令层", "responsibility": "用模板与占位符替换生成 seen / unseen 自然语言指令", "modules": ["description"], "files": ["description/utils/generate_episode_instructions.py", "description/utils/generate_task_description.py"]},
+    {"name": "评测编排层", "responsibility": "通过 XPolicyLab 调度策略服务器与仿真器，做单任务 / 多任务多 GPU 评测", "modules": ["scripts", "env_cfg/eval"], "files": ["scripts/eval_policy.sh", "scripts/eval_policy_multitask.py", "env_cfg/eval/all_tasks.yml"]}
+  ],
+  "data_flow": [
+    "第1步：bash collect_data.sh <task> <config> <gpu> 启动，collect_data.py 的 class_decorator 按任务名动态 import envs.<task> 并实例化同名类",
+    "第2步：main() 读取 env_cfg/task_config/<config>.yml 与 _embodiment_config.yml，解析 embodiment 与左右机器人文件",
+    "第3步：run() 进入种子搜索阶段，逐 seed 调用 setup_demo 建场景并 play_once 跑一遍示教",
+    "第4步：play_once 内用 grasp_actor / place_actor / move 生成 Action 序列，经运动规划得到左右臂关节轨迹并驱动仿真",
+    "第5步：若 plan_success 且 check_success 通过且关节轨迹合法，则该 seed 记入 seed.txt，并 save_traj_data 存关节路径",
+    "第6步：进入数据采集阶段，逐 episode 用已保存 seed 重放，need_plan=False 直接复用关节路径避免重规划",
+    "第7步：回放时 _take_picture 每帧把 get_obs 的观测写入 .cache/episode<N>/<frame>.pkl",
+    "第8步：play_once 返回 info，写入 scene_info.json，并由 generate_episode_descriptions 生成 seen/unseen 语言指令",
+    "第9步：merge_pkl_to_hdf5_video 把缓存合并为 data/episode_xxxxxxx.hdf5 与 video/*.mp4，并写入指令",
+    "第10步：remove_data_cache 清理缓存，随后 check_success 断言采集正确",
+    "第11步：训练侧可直接用 XPolicyLab 格式 HDF5，或经 XPolicyLab/scripts 转成 LeRobot 数据集",
+    "第12步：评测时 scripts/eval_policy.sh 调度策略服务器与仿真器，在 env_cfg/eval/all_tasks.yml 列出的任务上 rollout"
+  ],
+  "entry_points": [
+    {"path": "collect_data.sh", "what": "数据采集入口脚本，转发到 scripts/collect_data.py 并清理缓存"},
+    {"path": "scripts/collect_data.py", "what": "采集主程序，含 class_decorator、main、run 三阶段逻辑"},
+    {"path": "scripts/eval_policy.sh", "what": "评测总入口，按 multitask / serve 等子命令分派"},
+    {"path": "scripts/eval_policy_multitask.py", "what": "多任务多 GPU 评测调度器，为每个任务起策略服务器与仿真器"},
+    {"path": "scripts/eval_policy_server.py", "what": "远端策略服务器，供本地仿真器远程调用策略推理"},
+    {"path": "scripts/download_xpolicylab_data.sh", "what": "并行下载并解压官方预采集轨迹"},
+    {"path": "scripts/eval_policy_xpolicylab.py", "what": "对接 XPolicyLab 的策略评测适配脚本"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：数据下载、采集、LeRobot 转换、XPolicyLab 评测四条主线"},
+    {"path": "scripts/collect_data.py", "why": "唯一数据生成入口，理解种子搜索与回放两阶段流程"},
+    {"path": "envs/_base_task.py", "why": "任务基类，理解场景搭建、原子动作与数据落盘的全部公共逻辑"},
+    {"path": "envs/beat_block_hammer.py", "why": "最短的完整任务示例，看清 load_actors / play_once / check_success 三件套"},
+    {"path": "envs/robot/robot.py", "why": "双臂机器人封装，理解关节、夹爪与规划器如何被任务调用"},
+    {"path": "envs/robot/planner.py", "why": "运动规划抽象，理解笛卡尔位姿如何变成关节轨迹"},
+    {"path": "envs/camera/camera.py", "why": "多相机观测实现，理解采集到的视觉数据从哪来"},
+    {"path": "env_cfg/task_config/demo_randomized.yml", "why": "配置体系样例，理解域随机化与 data_type 如何控制采集"},
+    {"path": "envs/utils/pkl2hdf5.py", "why": "轨迹格式转换核心，理解最终 HDF5 的数据结构"},
+    {"path": "envs/_GLOBAL_CONFIGS.py", "why": "路径与抓取方向常量，读任务代码时反复出现"}
+  ],
+  "extension_points": [
+    "想加新任务：在 envs/ 下新建 <task_name>.py，类名与文件名一致并继承 Base_Task，实现 load_actors / play_once / check_success，setup_demo 调 _init_task_env_",
+    "想加新语言指令模板：在 description/task_instruction/<task_name>.json 增加 seen / unseen 模板，占位符由 scene_info 填充",
+    "想接入新机器人 embodiment：在 env_cfg/task_config/_embodiment_config.yml 注册条目，并在 assets/embodiments 下准备 urdf 与 curobo.yml",
+    "想改域随机化强度：编辑 env_cfg/task_config/*.yml 的 domain_randomization 段",
+    "想采集新观测类型：在 envs/_base_task.py 的 get_obs 与 envs/camera/camera.py 增加对应读取",
+    "想换运动规划器：在 envs/robot/planner.py 增加规划器类，并在 embodiment 配置里切换 planner 字段"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，弄清数据生成、LeRobot 转换与 XPolicyLab 评测三条主线",
+    "第2步：读 scripts/collect_data.py，理解 class_decorator 的动态导入约定与 run 的两阶段流程",
+    "第3步：读 envs/beat_block_hammer.py，用最小任务建立对任务三件套的直觉",
+    "第4步：读 envs/_base_task.py，掌握场景搭建、原子动作与数据落盘的公共实现",
+    "第5步：读 envs/robot/robot.py 与 envs/robot/planner.py，理解双臂控制与运动规划",
+    "第6步：读 env_cfg/task_config/demo_randomized.yml 与 envs/utils/pkl2hdf5.py，理解配置如何影响采集与最终数据格式",
+    "第7步：读 scripts/eval_policy.sh 与 scripts/eval_policy_multitask.py，理解评测如何调度策略与仿真"
+  ],
+  "diagram_mermaid": "graph TD\n  CLI[collect_data.sh 命令行] --> ENTRY[scripts collect_data.py]\n  ENTRY --> REG[class_decorator 按任务名动态导入]\n  REG --> TASK[任务类 play_once 编排动作]\n  CFG[task_config YAML 域随机化] --> ENTRY\n  TASK --> ACT[grasp place move 原子动作]\n  ACT --> ROBOT[Robot 双臂控制]\n  ROBOT --> PLAN[MplibPlanner 运动规划]\n  PLAN --> SIM[SAPIEN 场景步进]\n  SIM --> SEED[种子搜索与合法性校验]\n  SEED --> REPLAY[按种子回放采集]\n  REPLAY --> CACHE[逐帧 pkl 缓存]\n  CACHE --> HDF5[pkl2hdf5 合成 HDF5 与视频]\n  HDF5 --> LANG[语言指令 seen unseen]\n  HDF5 --> EVAL[XPolicyLab 评测]\n  EVAL --> RESULT[成功率结果]",
+  "surprises": [
+    "任务注册不靠装饰器也不靠注册表，而是约定「文件名 = 类名」，collect_data.py 用 importlib 动态导入后 getattr 取类，名字对不上直接报 No such task",
+    "数据采集分两阶段：先搜索并保存能成功的 seed，再按 seed 回放且 need_plan=False 复用关节路径，避免重规划带来的不确定性",
+    "抓取/放置不是直接指定关节角，而是把笛卡尔位姿交给运动规划器生成轨迹，任务代码只描述「抓哪个物体的哪个功能点」",
+    "图像以编码位存储且历史上有 channel 反序的 legacy 格式，必须统一走 decode_image_bit，自行用 cv2.imdecode 会在部分数据上红蓝颠倒",
+    "XPolicyLab 以 git submodule 形式内嵌，fresh checkout 必须加 --recurse-submodules，否则评测相关代码为空"
+  ],
+  "confidence": "高"
+}

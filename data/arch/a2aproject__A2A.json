@@ -1,0 +1,88 @@
+{
+  "repo": "a2aproject/A2A",
+  "name": "Agent2Agent Protocol",
+  "one_liner": "让不同框架的智能体互相发现、通信与协作的开放协议规范",
+  "problem": "不同公司、不同框架、跑在各自服务器上的智能体无法互通，A2A 用统一的发现与交互协议让它们在不暴露内部状态的前提下互相调用与协作。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "AgentCard", "role": "智能体的自描述清单，声明身份、能力、技能、接口与安全要求，用于发现", "file": "specification/a2a.proto"},
+    {"name": "AgentInterface", "role": "一条传输绑定的端点描述，含 URL、协议绑定、租户与协议版本", "file": "specification/a2a.proto"},
+    {"name": "Task", "role": "A2A 的核心动作单元，有唯一 ID、状态、产物与历史，支持多轮长任务", "file": "specification/a2a.proto"},
+    {"name": "TaskState", "role": "任务生命周期状态枚举，含终态与中断态", "file": "specification/a2a.proto"},
+    {"name": "Message", "role": "客户端与智能体之间的一轮通信，携带角色与内容", "file": "specification/a2a.proto"},
+    {"name": "Part", "role": "消息与产物中的内容容器，承载文本、文件引用或结构化数据", "file": "specification/a2a.proto"},
+    {"name": "Artifact", "role": "智能体在任务中产出的具体结果，如文档、图片或结构化数据", "file": "specification/a2a.proto"},
+    {"name": "A2AService", "role": "抽象操作层，定义发消息、取任务、取消、订阅、推送配置等十一个 RPC", "file": "specification/a2a.proto"},
+    {"name": "AgentExtension", "role": "协议扩展声明，用 URI 标识扩展并声明是否必选", "file": "specification/a2a.proto"},
+    {"name": "SecurityScheme", "role": "安全方案联合类型，含 API Key、OAuth2、OpenID 与双向 TLS 等", "file": "specification/a2a.proto"},
+    {"name": "TaskStatusUpdateEvent", "role": "流式状态更新事件，任务状态变化的增量通知", "file": "specification/a2a.proto"}
+  ],
+  "layers": [
+    {"name": "规范文本层", "responsibility": "以规范性语言定义协议的操作、数据模型、绑定与安全要求", "modules": ["docs"], "files": ["docs/specification.md", "docs/definitions.md"]},
+    {"name": "规范数据模型层", "responsibility": "用 Protocol Buffers 定义唯一的规范数据模型与服务接口", "modules": ["specification"], "files": ["specification/a2a.proto", "specification/buf.yaml"]},
+    {"name": "绑定层", "responsibility": "把抽象操作映射到 JSON-RPC、gRPC、HTTP+JSON 三种传输，并规定自定义绑定要求", "modules": ["docs/topics"], "files": ["docs/topics/custom-protocol-bindings.md"]},
+    {"name": "概念与主题文档层", "responsibility": "讲解核心概念、任务生命周期、发现、流式、多租户等主题", "modules": ["docs/topics"], "files": ["docs/topics/key-concepts.md", "docs/topics/life-of-a-task.md", "docs/topics/agent-discovery.md"]},
+    {"name": "扩展与治理层", "responsibility": "定义协议扩展与绑定治理、RFC 决策记录", "modules": ["docs/topics", "adrs"], "files": ["docs/topics/extensions.md", "docs/topics/extension-and-binding-governance.md", "adrs/adr-001-protojson-serialization.md"]},
+    {"name": "SDK 指引层", "responsibility": "指向各语言的官方 SDK 仓库与示例，本仓库不实现 SDK", "modules": ["docs/sdk"], "files": ["docs/sdk/index.md"]},
+    {"name": "构建与发布层", "responsibility": "从 proto 生成 JSON Schema、构建文档站点与跑校验脚本", "modules": ["scripts"], "files": ["scripts/proto_to_json_schema.sh", "mkdocs.yml"]}
+  ],
+  "data_flow": [
+    "第1步：客户端从已知 URI 获取远程智能体的 AgentCard",
+    "第2步：解析 supportedInterfaces，按顺序选择首个自身支持的传输绑定",
+    "第3步：按 securityRequirements 与 securitySchemes 完成认证",
+    "第4步：客户端发送 SendMessage，携带 Message 与 Part 内容",
+    "第5步：服务端创建 Task 并返回任务或流式响应",
+    "第6步：任务从 SUBMITTED 进入 WORKING 状态",
+    "第7步：长任务通过 SSE 流式推送状态与产物更新事件",
+    "第8步：或经 push notification 回调客户端提供的 webhook",
+    "第9步：若需更多信息，任务进入 INPUT_REQUIRED 或 AUTH_REQUIRED 中断态",
+    "第10步：产出以 Artifact 形式累积在任务上，多轮对话进 history",
+    "第11步：任务到达 COMPLETED、FAILED、CANCELED 或 REJECTED 终态",
+    "第12步：客户端可 GetTask、ListTasks 查询或 CancelTask 取消"
+  ],
+  "entry_points": [
+    {"path": "specification/a2a.proto", "what": "规范数据模型与服务的唯一真源，所有绑定由此派生"},
+    {"path": "docs/specification.md", "what": "规范性规范文本，含操作、数据模型、绑定与安全"},
+    {"path": "docs/topics/key-concepts.md", "what": "核心概念入门，理解各构建块的最佳起点"},
+    {"path": "scripts/proto_to_json_schema.sh", "what": "从 proto 生成 JSON Schema 构建产物"},
+    {"path": "mkdocs.yml", "what": "文档站点配置，决定规范与主题文档的组织方式"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "建立 A2A 的定位、目标与生态认知"},
+    {"path": "docs/topics/key-concepts.md", "why": "用一张表讲清 Agent Card、Task、Message、Part、Artifact"},
+    {"path": "specification/a2a.proto", "why": "规范数据模型与服务接口的唯一真源"},
+    {"path": "docs/specification.md", "why": "完整规范，操作与数据模型的权威定义"},
+    {"path": "docs/topics/life-of-a-task.md", "why": "理解任务生命周期与 contextId 的分组语义"},
+    {"path": "docs/topics/agent-discovery.md", "why": "理解 Agent Card 如何被发布与发现"},
+    {"path": "docs/topics/streaming-and-async.md", "why": "理解流式与推送通知两种异步模式"},
+    {"path": "docs/topics/custom-protocol-bindings.md", "why": "扩展新传输绑定的权威指引"},
+    {"path": "adrs/adr-001-protojson-serialization.md", "why": "理解为何以 ProtoJSON 作为 JSON 序列化规范"},
+    {"path": "specification/json/README.md", "why": "说明 JSON Schema 是构建产物而非规范源"}
+  ],
+  "extension_points": [
+    "新增传输绑定：按 docs/topics/custom-protocol-bindings.md 在 AgentCard 的 supportedInterfaces 声明，并满足规范第 5 与第 12 章要求",
+    "新增协议扩展：按 docs/topics/extensions.md 用 AgentExtension 声明 URI 与必选性",
+    "新增安全方案：扩展 specification/a2a.proto 中的 SecurityScheme 联合类型",
+    "修改数据模型：改 specification/a2a.proto 后重新生成 JSON Schema",
+    "新增智能体能力或技能：扩展 AgentCapabilities 与 AgentSkill 字段",
+    "新增操作：在 A2AService 中增加 RPC，并在各绑定中同步实现"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，理解 A2A 定位与 JSON-RPC、gRPC、HTTP+JSON 三绑定",
+    "第2步：读 docs/topics/key-concepts.md，掌握核心概念与角色",
+    "第3步：读 specification/a2a.proto，看数据模型与服务接口全貌",
+    "第4步：读 docs/specification.md 第 3 与第 4 章，理解操作与数据模型",
+    "第5步：读 docs/topics/life-of-a-task.md，理解任务生命周期与状态机",
+    "第6步：读 docs/topics/agent-discovery.md 与 streaming-and-async.md，理解发现与异步",
+    "第7步：读 docs/topics/custom-protocol-bindings.md，理解如何扩展新绑定"
+  ],
+  "diagram_mermaid": "graph TD\n  CLIENT[客户端智能体] --> DISCOVER[获取 Agent Card]\n  DISCOVER --> PICK[选择传输绑定]\n  PICK --> AUTH[完成认证]\n  AUTH --> SEND[发送 Message 与 Part]\n  SEND --> SERVER[远程智能体]\n  SERVER --> TASK[创建 Task]\n  TASK --> WORK[进入 WORKING 状态]\n  WORK --> STREAM[流式推送状态与产物]\n  WORK --> PUSH[推送通知回调]\n  WORK --> ART[累积 Artifact]\n  TASK --> DONE[到达终态]\n  DONE --> FETCH[GetTask 或 ListTasks 查询]",
+  "surprises": [
+    "这不是常规代码仓库，没有可运行的应用，主体是规范性规范文本与 proto 定义",
+    "JSON Schema 是构建产物，故意不纳入版本控制，唯一真源是 specification/a2a.proto",
+    "本仓库几乎不含 SDK 实现代码，官方 Python、Go、Java 等 SDK 都在独立仓库，这里只有指引文档",
+    "协议操作是抽象层，同一套操作可映射到 JSON-RPC、gRPC、HTTP+JSON 三种绑定",
+    "规范强调远程智能体对客户端是不透明黑盒，不得暴露内部状态、记忆与工具"
+  ],
+  "confidence": "中"
+}

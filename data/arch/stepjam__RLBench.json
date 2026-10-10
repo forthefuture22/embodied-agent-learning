@@ -1,0 +1,94 @@
+{
+  "repo": "stepjam/RLBench",
+  "name": "RLBench",
+  "one_liner": "基于 CoppeliaSim 的 100+ 机器人操作任务学习基准环境",
+  "problem": "机器人操作研究缺少统一、可复现且带大量专家演示的评测平台。RLBench 把 100 多个任务抽象成统一 Task 接口，支持 RL / 模仿学习 / 多任务与少样本评测。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Task", "role": "所有任务的基类，规定 init_task / init_episode / variation_count 三个必须实现的方法，并负责注册成功条件、可抓取物体与 waypoint", "file": "rlbench/backend/task.py"},
+    {"name": "TaskEnvironment", "role": "面向算法的单任务环境，封装 reset / step / sample_variation / get_demos，是 RL 与 IL 直接交互的对象", "file": "rlbench/task_environment.py"},
+    {"name": "Environment", "role": "全局环境，负责启动 PyRep / CoppeliaSim、组装 Scene 与 Robot、按任务类返回 TaskEnvironment", "file": "rlbench/environment.py"},
+    {"name": "Scene", "role": "场景管理核心，负责任务的随机摆放、初始化 episode、采集观测与沿 waypoint 生成专家演示", "file": "rlbench/backend/scene.py"},
+    {"name": "Observation", "role": "统一观测容器，聚合五路相机的 RGB / 深度 / 掩码 / 点云与关节、夹爪、任务低维状态", "file": "rlbench/backend/observation.py"},
+    {"name": "Condition 家族", "role": "成功与失败判据的组合子，如 JointCondition、GraspedCondition、ConditionSet、OrConditions", "file": "rlbench/backend/conditions.py"},
+    {"name": "ActionMode", "role": "动作空间抽象，把算法输出的向量翻译成机械臂与夹爪控制，如 MoveArmThenGripper", "file": "rlbench/action_modes/action_mode.py"},
+    {"name": "Waypoint 与 Point", "role": "演示路径的抽象，从场景中的 waypoint dummy 取路径并支持 open/close gripper 等扩展指令", "file": "rlbench/backend/waypoints.py"},
+    {"name": "ObservationConfig", "role": "声明要采集哪些相机与低维量、分辨率与噪声模型，控制观测的开关与形状", "file": "rlbench/observation_config.py"},
+    {"name": "任务集 Task Sets", "role": "在 tasks 包中定义 FS10/MT100 等少样本与多任务训练测试划分", "file": "rlbench/tasks/__init__.py"},
+    {"name": "Gym 封装", "role": "RLBenchEnv 把任务包装成 gymnasium 环境，并在包导入时批量 register 所有任务", "file": "rlbench/gym.py"}
+  ],
+  "layers": [
+    {"name": "任务定义层", "responsibility": "每个任务一个文件，用 Task 子类声明变化、成功条件与语言描述", "modules": ["rlbench/tasks"], "files": ["rlbench/tasks/open_drawer.py", "rlbench/tasks/reach_target.py", "rlbench/tasks/__init__.py"]},
+    {"name": "后端核心层", "responsibility": "任务基类、观测、条件、场景、机器人、waypoint 等仿真无关的抽象", "modules": ["rlbench/backend"], "files": ["rlbench/backend/task.py", "rlbench/backend/observation.py", "rlbench/backend/conditions.py", "rlbench/backend/scene.py", "rlbench/backend/waypoints.py", "rlbench/backend/robot.py"]},
+    {"name": "环境与接口层", "responsibility": "启动仿真、构建场景、暴露 reset/step 接口与演示读取", "modules": ["rlbench"], "files": ["rlbench/environment.py", "rlbench/task_environment.py"]},
+    {"name": "动作空间层", "responsibility": "把算法动作向量映射为关节速度/位置、末端位姿规划或夹爪离散动作", "modules": ["rlbench/action_modes"], "files": ["rlbench/action_modes/action_mode.py", "rlbench/action_modes/arm_action_modes.py", "rlbench/action_modes/gripper_action_modes.py"]},
+    {"name": "观测配置层", "responsibility": "声明相机开关、分辨率、噪声模型与低维量选择", "modules": ["rlbench"], "files": ["rlbench/observation_config.py", "rlbench/noise_model.py"]},
+    {"name": "演示与数据层", "responsibility": "Demo 容器、磁盘演示读取与批量数据集生成脚本", "modules": ["rlbench"], "files": ["rlbench/demo.py", "rlbench/utils.py", "rlbench/dataset_generator.py"]},
+    {"name": "域随机化层", "responsibility": "提供视觉与动力学随机化，用于 sim-to-real 鲁棒性研究", "modules": ["rlbench/sim2real"], "files": ["rlbench/sim2real/domain_randomization.py", "rlbench/sim2real/domain_randomization_scene.py"]},
+    {"name": "Gym 适配层", "responsibility": "把任务注册为 gymnasium 环境 id 并提供标准 reset/step/render", "modules": ["rlbench"], "files": ["rlbench/gym.py", "rlbench/__init__.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户构造 ActionMode 与 ObservationConfig，创建 Environment 并调用 launch 启动 PyRep 与 CoppeliaSim",
+    "第2步：launch 按 robot_setup 加载机械臂与夹爪，构建 Robot 与 Scene 或 DomainRandomizationScene",
+    "第3步：env.get_task(TaskClass) 卸载旧场景、实例化任务并返回 TaskEnvironment",
+    "第4步：可选 task.sample_variation 或 set_variation 选定一个变化索引",
+    "第5步：task.reset 触发 Scene.init_episode，任务 init_episode(index) 按变化摆放物体、注册成功条件并返回语言描述",
+    "第6步：reset 同时把任务随机摆放到工作空间并让物体静止，返回描述列表与首个 Observation",
+    "第7步：算法调用 task.step(action)，ActionMode 把动作应用到机械臂与夹爪并推进仿真一步",
+    "第8步：Scene.get_observation 汇总五路相机与低维量生成 Observation，Task.success 用条件集合计算成功与终止",
+    "第9步：TaskEnvironment 依据 success 给出 reward 与 terminate，返回给算法循环",
+    "第10步：需要专家演示时 task.get_demos 调用 Scene.get_demo，沿 waypoint 路径驱动机械臂并逐帧记录 Observation",
+    "第11步：Scene.get_demo 在到达 waypoint 时执行 close_gripper / open_gripper 等扩展指令并抓取可抓取物体",
+    "第12步：生成的 Demo 可直接用于模仿学习，或经 dataset_generator 落盘为图像加 pickle 的数据集"
+  ],
+  "entry_points": [
+    {"path": "rlbench/environment.py", "what": "Environment 类，launch / get_task / get_demos 的对外入口"},
+    {"path": "rlbench/task_environment.py", "what": "TaskEnvironment，reset / step / sample_variation 的算法交互入口"},
+    {"path": "rlbench/gym.py", "what": "RLBenchEnv，gymnasium 适配入口"},
+    {"path": "rlbench/dataset_generator.py", "what": "多进程批量生成任务演示数据集的命令行脚本"},
+    {"path": "examples/single_task_rl.py", "what": "单任务强化学习最小示例，串起 Environment 与 TaskEnvironment"},
+    {"path": "examples/imitation_learning.py", "what": "模仿学习示例，演示 get_demos 与行为克隆数据流"},
+    {"path": "tools/task_builder.py", "what": "交互式任务构建工具，生成 ttm 与任务模板"},
+    {"path": "tools/task_validator.py", "what": "任务校验工具，检查 waypoint 与场景是否合法"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：任务集划分、动作模式、RL / IL / sim-to-real 用法与坑点"},
+    {"path": "rlbench/environment.py", "why": "全局环境入口，理解仿真如何被启动与任务如何被实例化"},
+    {"path": "rlbench/task_environment.py", "why": "算法交互层，理解 reset / step / variation / demo 的语义"},
+    {"path": "rlbench/backend/task.py", "why": "任务基类，理解 100+ 任务共享的契约与注册机制"},
+    {"path": "rlbench/tasks/open_drawer.py", "why": "最短任务示例，看清 init_task / init_episode / variation_count 三件套"},
+    {"path": "rlbench/backend/conditions.py", "why": "成功判据如何被组合，理解任务成功的定义方式"},
+    {"path": "rlbench/backend/scene.py", "why": "场景核心，理解随机摆放、观测采集与 waypoint 演示生成"},
+    {"path": "rlbench/action_modes/action_mode.py", "why": "动作抽象，理解算法动作如何映射到机器人控制"},
+    {"path": "rlbench/backend/observation.py", "why": "观测容器，理解一次观测包含哪些字段"},
+    {"path": "rlbench/tasks/__init__.py", "why": "任务集划分，理解少样本与多任务评测如何组织"}
+  ],
+  "extension_points": [
+    "想加新任务：在 rlbench/tasks/ 下新建 <snake_name>.py，定义继承 Task 的驼峰命名类并实现 init_task / init_episode / variation_count，同时在 rlbench/task_ttms/ 放同名 .ttm 模型",
+    "想加新变化：在任务的 init_episode(index) 里按 index 分支，并让 variation_count 返回变化总数",
+    "想加新成功判据：在 rlbench/backend/conditions.py 增加 Condition 子类，并在任务中 register_success_conditions",
+    "想加新动作空间：在 rlbench/action_modes/arm_action_modes.py 或 gripper_action_modes.py 增加 ArmActionMode / GripperActionMode 子类",
+    "想改观测：编辑 rlbench/observation_config.py 的 CameraConfig，并在 rlbench/backend/scene.py 的 get_observation 中接线",
+    "想加新任务集：在 rlbench/tasks/__init__.py 里新增 FS / MT 划分字典",
+    "想加新机械臂：在 rlbench/const.py 的 SUPPORTED_ROBOTS 注册并在 rlbench/robot_ttms/ 放对应 ttm"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 examples/single_task_rl.py，建立 Environment 到 TaskEnvironment 的调用直觉",
+    "第2步：读 rlbench/environment.py 与 rlbench/task_environment.py，理解仿真启动与算法接口",
+    "第3步：读 rlbench/backend/task.py 与 rlbench/tasks/open_drawer.py，掌握任务三件套与 variation 机制",
+    "第4步：读 rlbench/backend/conditions.py，理解成功与失败如何被条件组合表达",
+    "第5步：读 rlbench/backend/scene.py 的 init_episode 与 get_demo，理解随机摆放与专家演示生成",
+    "第6步：读 rlbench/action_modes/action_mode.py 与 arm_action_modes.py，理解动作空间如何定义",
+    "第7步：读 rlbench/backend/observation.py 与 rlbench/observation_config.py，理解观测的字段与开关",
+    "第8步：读 rlbench/dataset_generator.py，理解如何批量产出可训练数据集"
+  ],
+  "diagram_mermaid": "graph TD\n  USER[算法代码] --> ENV[Environment launch 启动仿真]\n  ENV --> SCENE[Scene 加载任务与机器人]\n  ENV --> GETTASK[get_task 返回 TaskEnvironment]\n  GETTASK --> RESET[reset 触发 init_episode]\n  TASKCLASS[Task 子类定义变化与成功条件] --> RESET\n  RESET --> PLACE[Scene 随机摆放并静止物体]\n  RESET --> OBS[Observation 观测]\n  OBS --> ALGO[算法推理动作]\n  ALGO --> STEP[task.step 应用 ActionMode]\n  STEP --> ACT[机械臂与夹爪控制]\n  ACT --> SUCCESS[Task success 计算条件]\n  SUCCESS --> REWARD[返回 reward 与 terminate]\n  TASKCLASS --> DEMO[get_demo 沿 waypoint 生成演示]\n  DEMO --> DATA[Demo 数据集]\n  DATA --> IL[模仿学习]\n  DATA --> DSGEN[dataset_generator 落盘]",
+  "surprises": [
+    "任务没有注册表：环境用文件名去掉 .py 再转成驼峰类名动态导入，包导入时还会遍历 tasks 目录把所有任务批量 gym.register",
+    "variation 机制本质只是一个整数索引：init_episode(index) 按索引分支，variation_count 可以动态计算，sample_variation 只是随机取一个索引",
+    "专家演示不是写死的轨迹，而是机器人沿着 .ttm 模型里预置的 waypoint dummy 逐段规划运动，抓放动作靠 waypoint 名字里内嵌的 close_gripper() 等字符串触发",
+    "README 明确警告低维状态观测不应对标 toy 任务：物体滑出工作空间后低维值会 out-of-distribution，而图像观测没有该问题",
+    "整个基准依赖外部 CoppeliaSim 4.1 与 PyRep，且渲染需要 X server，headless 机器要先按文档配置虚拟显示"
+  ],
+  "confidence": "高"
+}

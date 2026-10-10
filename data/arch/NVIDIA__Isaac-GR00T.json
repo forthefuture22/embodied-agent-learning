@@ -1,0 +1,90 @@
+{
+  "repo": "NVIDIA/Isaac-GR00T",
+  "name": "GR00T N1.7",
+  "one_liner": "跨具身人形机器人视觉-语言-动作基础模型",
+  "problem": "机器人的数据、动作空间、本体各不相同，难以训练通用操作策略。GR00T 用统一 VLM 主干加扩散动作头，把多具身示教和人类视频映射到同一动作空间，实现零样本与微调后的人形操作。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Gr00tN1d7", "role": "顶层 VLA 模型，继承 HF PreTrainedModel，组合 Qwen3-VL 主干与动作头，暴露 forward 与 get_action", "file": "gr00t/model/gr00t_n1d7/gr00t_n1d7.py"},
+    {"name": "Gr00tN1d7ActionHead", "role": "流匹配扩散动作头，含状态/动作编码器、DiT 去噪主干、动作解码器，负责预测动作 chunk", "file": "gr00t/model/gr00t_n1d7/gr00t_n1d7.py"},
+    {"name": "Qwen3Backbone", "role": "视觉-语言主干，加载 Cosmos-Reason2-2B 并截断到 select_layer，输出多模态 token 特征", "file": "gr00t/model/modules/qwen3_backbone.py"},
+    {"name": "AlternateVLDiT", "role": "交错视觉-语言 DiT，在交叉注意力中交替关注图像 token 与非图像 token", "file": "gr00t/model/modules/dit.py"},
+    {"name": "EmbodimentTag", "role": "具身标签枚举，决定使用哪套状态/动作键与归一化配置，是跨具身统一的锚点", "file": "gr00t/data/embodiment_tags.py"},
+    {"name": "ModalityConfig", "role": "模态配置，声明每个模态的 delta_indices 采样窗口与 modality_keys 字段划分", "file": "gr00t/data/types.py"},
+    {"name": "Gr00tN1d7Processor", "role": "输入输出处理器，负责图像增强、语言模板化、状态动作归一化与动作反归一化", "file": "gr00t/model/gr00t_n1d7/processing_gr00t_n1d7.py"},
+    {"name": "StateActionProcessor", "role": "统一的状态动作处理，做 min/max、mean/std、sin/cos 归一化与绝对/相对动作互转", "file": "gr00t/data/state_action/state_action_processor.py"},
+    {"name": "Gr00tPolicy", "role": "推理策略，校验观测格式、调用 processor 与模型、解码动作为物理单位", "file": "gr00t/policy/gr00t_policy.py"},
+    {"name": "ShardedMixtureDataset", "role": "多数据集混合的 IterableDataset，按权重调度分片并合并归一化统计", "file": "gr00t/data/dataset/sharded_mixture_dataset.py"},
+    {"name": "PolicyServer", "role": "基于 ZMQ 的策略服务端，把策略推理暴露给仿真与真机客户端", "file": "gr00t/policy/server_client.py"},
+    {"name": "Gr00tN1d7Config", "role": "模型超参配置，定义主干、动作头、扩散与训练相关的全部参数", "file": "gr00t/configs/model/gr00t_n1d7.py"}
+  ],
+  "layers": [
+    {"name": "配置层", "responsibility": "用 dataclass 与注册表定义模型、数据、训练超参，供 CLI 与 checkpoint 加载", "modules": ["gr00t/configs"], "files": ["gr00t/configs/model/gr00t_n1d7.py", "gr00t/configs/finetune_config.py", "gr00t/configs/data/embodiment_configs.py"]},
+    {"name": "模型层", "responsibility": "实现 VLM 主干、DiT 扩散动作头与具身条件 MLP 等神经网络模块", "modules": ["gr00t/model"], "files": ["gr00t/model/gr00t_n1d7/gr00t_n1d7.py", "gr00t/model/modules/qwen3_backbone.py", "gr00t/model/modules/dit.py", "gr00t/model/modules/embodiment_conditioned_mlp.py"]},
+    {"name": "数据处理层", "responsibility": "定义数据格式、具身标签、模态配置与状态动作归一化，提供分片混合数据集", "modules": ["gr00t/data"], "files": ["gr00t/data/embodiment_tags.py", "gr00t/data/types.py", "gr00t/data/state_action/state_action_processor.py", "gr00t/data/dataset/sharded_mixture_dataset.py"]},
+    {"name": "策略与推理层", "responsibility": "封装策略接口、输入校验、动作解码以及服务端客户端通信", "modules": ["gr00t/policy"], "files": ["gr00t/policy/gr00t_policy.py", "gr00t/policy/policy.py", "gr00t/policy/server_client.py"]},
+    {"name": "训练编排层", "responsibility": "组装数据集、模型、优化器，跑微调与训练循环并保存 checkpoint", "modules": ["gr00t/experiment"], "files": ["gr00t/experiment/launch_finetune.py", "gr00t/experiment/launch_train.py", "gr00t/experiment/experiment.py"]},
+    {"name": "评估层", "responsibility": "提供开环评估、策略回放与仿真环境适配，比较预测与真值或跑闭环 rollout", "modules": ["gr00t/eval"], "files": ["gr00t/eval/open_loop_eval.py", "gr00t/eval/run_gr00t_server.py", "gr00t/eval/sim/env_utils.py"]},
+    {"name": "部署层", "responsibility": "提供 ONNX/TensorRT 导出、独立推理脚本与各平台安装脚本", "modules": ["gr00t/deployment", "scripts/deployment"], "files": ["scripts/deployment/standalone_inference_script.py", "gr00t/deployment/modes.py"]},
+    {"name": "示例层", "responsibility": "面向各基准与自建具身的可复现微调、评估与配置样例", "modules": ["examples", "getting_started"], "files": ["examples/SO100/so100_config.py", "getting_started/finetune_new_embodiment.md", "getting_started/policy.md"]}
+  ],
+  "data_flow": [
+    "第1步：数据以 LeRobot v2 格式存放，meta/modality.json 把拼接的状态动作数组切成具名字段",
+    "第2步：launch_finetune.py 解析 FinetuneConfig，注册用户 modality_config 并构建默认训练配置",
+    "第3步：DatasetFactory 依据配置构建 ShardedMixtureDataset，按权重混合多数据集并合并统计量",
+    "第4步：processor 对每个样本做状态归一化、动作绝对转相对与图像增强，并把语言与图像拼成 VLM 输入",
+    "第5步：collator 把状态、动作、embodiment_id、action_mask 与 tokenized VLM 输入打包成 batch",
+    "第6步：Qwen3Backbone 前向得到多模态 token 特征，并附加视觉语言自注意力",
+    "第7步：动作头把状态特征与加噪动作特征拼接，经 AlternateVLDiT 交叉注意力去噪",
+    "第8步：训练时对速度场做 MSE 损失并反传；推理时用欧拉积分迭代 num_inference_timesteps 步得到动作",
+    "第9步：processor 对预测动作反归一化并把相对动作转回绝对，输出物理单位动作 chunk",
+    "第10步：真机或仿真通过 PolicyClient 向 PolicyServer 发送观测并接收动作，闭环执行"
+  ],
+  "entry_points": [
+    {"path": "gr00t/experiment/launch_finetune.py", "what": "微调主入口，用 tyro 解析 FinetuneConfig 后调用 experiment.run 启动训练"},
+    {"path": "gr00t/experiment/launch_train.py", "what": "更完整的训练入口，支持从配置文件启动训练"},
+    {"path": "gr00t/experiment/experiment.py", "what": "run 函数，训练流水线的编排核心"},
+    {"path": "gr00t/eval/run_gr00t_server.py", "what": "启动策略服务端，加载模型后通过 ZMQ 对外提供推理"},
+    {"path": "gr00t/eval/open_loop_eval.py", "what": "开环评估客户端，比较预测动作与数据集真值"},
+    {"path": "scripts/deployment/standalone_inference_script.py", "what": "独立推理脚本，在 demo 数据集上做零样本或微调推理"},
+    {"path": "getting_started/GR00T_inference.ipynb", "what": "交互式笔记本，逐步演示加载模型并从观测预测动作"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：模型架构、数据格式、推理与微调工作流"},
+    {"path": "gr00t/data/embodiment_tags.py", "why": "理解跨具身统一的关键：具身标签如何划分预训练、后训练与微调类别"},
+    {"path": "gr00t/configs/model/gr00t_n1d7.py", "why": "模型全部超参，理解主干维度、动作维度、扩散与流匹配参数"},
+    {"path": "gr00t/model/gr00t_n1d7/gr00t_n1d7.py", "why": "核心模型实现：主干加动作头的组合、训练前向与流匹配推理"},
+    {"path": "gr00t/model/modules/dit.py", "why": "扩散去噪主干与交错视觉语言注意力，理解动作生成机制"},
+    {"path": "gr00t/model/gr00t_n1d7/processing_gr00t_n1d7.py", "why": "处理器实现，理解观测到模型输入、模型输出到动作的完整变换"},
+    {"path": "gr00t/data/state_action/state_action_processor.py", "why": "状态动作归一化与绝对相对动作互转，是跨具身动作统一的核心"},
+    {"path": "gr00t/policy/gr00t_policy.py", "why": "推理策略，理解观测校验、批处理与动作解码的契约"},
+    {"path": "gr00t/experiment/launch_finetune.py", "why": "微调入口，理解配置如何组装并驱动训练"},
+    {"path": "examples/SO100/so100_config.py", "why": "最小可用的新具身配置样例，理解如何定义自己的模态与动作表示"}
+  ],
+  "extension_points": [
+    "想接新机器人具身：在 gr00t/data/embodiment_tags.py 增加 EmbodimentTag，并在 processing_gr00t_n1d7.py 的 _PROJECTOR_INDEX_GROUPS 里分配一个新的 projector index",
+    "想自定义模态与动作空间：仿照 examples/SO100/so100_config.py 写 ModalityConfig 并用 register_modality_config 注册，再用 --modality-config-path 传入",
+    "想改动作头或扩散结构：修改 gr00t/model/modules/dit.py 的 DiT 与 AlternateVLDiT，或在 Gr00tN1d7ActionHead 中替换去噪主干",
+    "想换 VLM 主干：改 gr00t/configs/model/gr00t_n1d7.py 的 model_name 与 gr00t/model/gr00t_n1d7/gr00t_n1d7.py 的 get_backbone_cls 分支",
+    "想加新仿真基准：在 gr00t/eval/sim/env_utils.py 的 ENV_PREFIX_TO_EMBODIMENT_TAG 增加前缀到具身标签的映射",
+    "想加新的输入预处理或图像增强：修改 gr00t/model/gr00t_n1d7/image_augmentations.py 与 processor 的 _get_vlm_inputs"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 getting_started/policy.md，搞清数据格式、具身标签与推理接口",
+    "第2步：读 gr00t/data/embodiment_tags.py 与 gr00t/data/types.py，理解具身与模态配置这两个核心概念",
+    "第3步：读 gr00t/configs/model/gr00t_n1d7.py，掌握模型的全部超参与默认值",
+    "第4步：读 gr00t/model/gr00t_n1d7/gr00t_n1d7.py，重点看 forward 的流匹配损失与 get_action 的欧拉积分",
+    "第5步：读 gr00t/model/modules/dit.py 与 gr00t/model/modules/qwen3_backbone.py，理解主干与去噪网络",
+    "第6步：读 gr00t/data/state_action/state_action_processor.py，理解动作空间如何跨具身统一",
+    "第7步：读 gr00t/experiment/launch_finetune.py 与 gr00t/data/dataset/factory.py，把微调链路串起来"
+  ],
+  "diagram_mermaid": "graph TD\n  DATA[LeRobot 数据集与 modality.json] --> FACTORY[DatasetFactory 构建混合数据集]\n  FACTORY --> PROC[Processor 归一化与图像语言处理]\n  PROC --> COLL[Collator 打包 batch]\n  COLL --> BACKBONE[Qwen3Backbone 多模态主干]\n  BACKBONE --> HEAD[扩散动作头 AlternateVLDiT]\n  HEAD --> TRAIN[训练时速度场 MSE 损失]\n  HEAD --> INFER[推理时欧拉积分去噪]\n  INFER --> DECODE[反归一化与相对转绝对]\n  DECODE --> POLICY[Gr00tPolicy 输出动作 chunk]\n  POLICY --> SERVER[PolicyServer ZMQ 服务]\n  SERVER --> ROBOT[真机或仿真环境闭环]",
+  "surprises": [
+    "跨具身统一靠两件事：EmbodimentTag 选配置，以及一个 projector index 映射，多个标签可共享同一 index 表示同一物理具身",
+    "动作表示统一为相对末端执行器空间，是模型能把人类视频先验迁移到机器人的关键，而不是单纯的数据堆量",
+    "动作头默认只跑 4 步流匹配去噪即可推理，远比常规扩散少，且支持 RTC 用上一段动作做 inpainting 保持时序连贯",
+    "状态输入默认以 0.8 概率被置零做 dropout，模型被刻意训练成不过度依赖本体感知",
+    "主干必须加载 gated 的 nvidia/Cosmos-Reason2-2B，没申请 HF 权限时连基座模型都会直接加载失败"
+  ],
+  "confidence": "高"
+}

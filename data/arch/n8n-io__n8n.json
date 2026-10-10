@@ -1,0 +1,91 @@
+{
+  "repo": "n8n-io/n8n",
+  "name": "n8n",
+  "one_liner": "可视化搭建 AI Agent 与自动化工作流的开源平台",
+  "problem": "把 1500+ 系统集成、AI 模型与自定义代码编排成可视化工作流：用画布定义节点与连接，执行引擎按图调度节点，AI Agent 节点可调用 LLM 与工具完成多步任务。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Workflow", "role": "工作流图模型：持有 nodes 与 connections，提供 getStartNode/getParentNodes/getChildNodes 等图算法，并挂载 nodeTypes", "file": "packages/workflow/src/workflow.ts"},
+    {"name": "WorkflowExecute", "role": "执行引擎：维护 nodeExecutionStack，主循环逐节点弹出执行，负责 runNode/executeNode/重试/取消/挂起", "file": "packages/core/src/execution-engine/workflow-execute.ts"},
+    {"name": "INodeType", "role": "节点协议：description 声明输入输出与参数，execute/supplyData/poll/trigger/webhook 定义节点行为，methods 提供动态选项", "file": "packages/workflow/src/interfaces.ts"},
+    {"name": "ExecuteContext", "role": "节点执行上下文：注入 workflow、节点、additionalData 与参数求值能力，作为 IExecuteFunctions 的 this", "file": "packages/core/src/execution-engine/execution-context.service.ts"},
+    {"name": "DirectoryLoader", "role": "节点与凭证加载基类：扫描目录、隔离加载类、按 package.json 的 n8n 字段建立节点类型表", "file": "packages/core/src/nodes-loader/directory-loader.ts"},
+    {"name": "PackageDirectoryLoader", "role": "按包加载节点：读取包的 n8n 字段清单，装载 nodes 与 credentials 及其源码路径", "file": "packages/core/src/nodes-loader/package-directory-loader.ts"},
+    {"name": "WorkflowDataProxy", "role": "表达式数据代理：为 $json/$node/$item 等提供运行时取值，是表达式引擎的数据来源", "file": "packages/workflow/src/workflow-data-proxy.ts"},
+    {"name": "Expression", "role": "表达式引擎：解析并求值 ={{ }} 表达式与固定集合，支持沙箱化执行", "file": "packages/workflow/src/expression.ts"},
+    {"name": "WorkflowRunner", "role": "单次执行编排器：构造 additionalData、实例化 WorkflowExecute 并驱动 processRunExecutionData", "file": "packages/cli/src/workflow-runner.ts"},
+    {"name": "ActiveWorkflowManager", "role": "触发器生命周期管理：为激活的工作流注册 webhook、定时与轮询触发器", "file": "packages/cli/src/active-workflow-manager.ts"},
+    {"name": "RoutingNode", "role": "声明式节点的 HTTP 请求路由：按 requestDefaults 与参数组装请求并解析响应", "file": "packages/core/src/execution-engine/routing-node.ts"},
+    {"name": "AgentV3", "role": "AI Agent 节点：组合语言模型、记忆、工具与输出解析器，返回 EngineRequest 交引擎调度工具", "file": "packages/@n8n/nodes-langchain/nodes/agents/Agent/Agent.node.ts"}
+  ],
+  "layers": [
+    {"name": "工作流模型层", "responsibility": "定义 Workflow 图结构与 INodeType/连接类型等核心协议，被引擎与前端共享", "modules": ["packages/workflow/src"], "files": ["packages/workflow/src/workflow.ts", "packages/workflow/src/interfaces.ts"]},
+    {"name": "执行引擎层", "responsibility": "按执行栈调度节点、执行 execute/supplyData、处理错误重试与声明式请求", "modules": ["packages/core/src/execution-engine"], "files": ["packages/core/src/execution-engine/workflow-execute.ts", "packages/core/src/execution-engine/routing-node.ts", "packages/core/src/execution-engine/execution-context.service.ts"]},
+    {"name": "节点加载层", "responsibility": "从目录与包清单发现并加载节点和凭证类型，支持懒加载与自定义节点", "modules": ["packages/core/src/nodes-loader"], "files": ["packages/core/src/nodes-loader/directory-loader.ts", "packages/core/src/nodes-loader/package-directory-loader.ts"]},
+    {"name": "表达式层", "responsibility": "解析与求值工作流表达式，向节点提供 $json/$node 等运行时数据", "modules": ["packages/workflow/src"], "files": ["packages/workflow/src/workflow-data-proxy.ts", "packages/workflow/src/expression.ts"]},
+    {"name": "服务端与调度层", "responsibility": "HTTP 服务、执行编排、触发器激活、队列与凭证管理", "modules": ["packages/cli/src"], "files": ["packages/cli/src/workflow-runner.ts", "packages/cli/src/active-workflow-manager.ts", "packages/cli/src/index.ts"]},
+    {"name": "内置节点层", "responsibility": "提供大量内置集成节点与凭证定义", "modules": ["packages/nodes-base/nodes"], "files": ["packages/nodes-base/nodes/OpenAi/OpenAi.node.ts"]},
+    {"name": "AI 节点层", "responsibility": "基于 LangChain 的 LLM、Agent、链、工具、向量库、记忆等 AI 节点", "modules": ["packages/@n8n/nodes-langchain/nodes"], "files": ["packages/@n8n/nodes-langchain/nodes/agents/Agent/Agent.node.ts", "packages/@n8n/nodes-langchain/nodes/agents/Agent/agents/ToolsAgent/V3/execute.ts", "packages/@n8n/nodes-langchain/nodes/llms/LMChatOpenAi/LmChatOpenAi.node.ts"]},
+    {"name": "前端编辑层", "responsibility": "可视化画布编辑器与运行调试界面", "modules": ["packages/frontend/editor-ui"], "files": ["packages/frontend/editor-ui/package.json"]}
+  ],
+  "data_flow": [
+    "第1步：触发器产生执行请求，可能是 webhook 回调、定时任务或手动运行，由服务端接管",
+    "第2步：WorkflowRunner 构造 IWorkflowExecuteAdditionalData，注入凭证、助手函数与执行 ID",
+    "第3步：实例化 WorkflowExecute 并调用 processRunExecutionData，以起始节点初始化 nodeExecutionStack",
+    "第4步：进入执行主循环，每轮从栈中弹出一个 executionData，跳过被过滤或禁用节点",
+    "第5步：为该节点创建 ExecuteContext，作为 this 传入节点",
+    "第6步：调用 nodeType.execute 或 customOperation，节点内读取参数并执行实际操作",
+    "第7步：参数求值经 Expression 与 WorkflowDataProxy 解析 ={{ $json }} 等表达式",
+    "第8步：节点返回 INodeExecutionData[][]，引擎按连接把输出推入后续节点继续执行",
+    "第9步：AI Agent 节点若需调用工具，返回 EngineRequest，引擎调度工具节点执行后带 EngineResponse 恢复该节点",
+    "第10步：每步结果写入 runExecutionData.resultData.runData 并推送给前端展示",
+    "第11步：出错时按节点的 onError 策略重试、继续或中止，并记录错误",
+    "第12步：执行结束或进入等待状态，结果持久化到数据库并更新执行状态"
+  ],
+  "entry_points": [
+    {"path": "packages/cli/bin/n8n", "what": "n8n 命令行可执行入口，start/worker/webhook 等子命令"},
+    {"path": "packages/cli/src/index.ts", "what": "服务端主入口，装配依赖注入容器与各服务"},
+    {"path": "packages/cli/src/workflow-runner.ts", "what": "执行编排入口，负责把一次执行交给 WorkflowExecute"},
+    {"path": "packages/core/src/execution-engine/workflow-execute.ts:processRunExecutionData", "what": "执行引擎主循环，理解系统骨架的核心入口"},
+    {"path": "packages/core/src/execution-engine/workflow-execute.ts:runNode", "what": "单节点执行入口，决定走 execute/poll/trigger/webhook 哪条路径"},
+    {"path": "packages/frontend/editor-ui/package.json", "what": "前端编辑器包的入口定义，可视化画布所在"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：fair-code 平台，AI 原生自动化，1500+ 集成"},
+    {"path": "packages/workflow/src/workflow.ts", "why": "工作流图模型与图算法，是理解节点与连接关系的第一站"},
+    {"path": "packages/workflow/src/interfaces.ts", "why": "INodeType 节点协议定义，决定节点能做什么"},
+    {"path": "packages/core/src/execution-engine/workflow-execute.ts", "why": "执行引擎主循环与 runNode/executeNode，系统运行的核心"},
+    {"path": "packages/core/src/nodes-loader/directory-loader.ts", "why": "节点如何被发现与注册，理解扩展机制的关键"},
+    {"path": "packages/cli/src/workflow-runner.ts", "why": "服务端如何编排一次执行并驱动引擎"},
+    {"path": "packages/@n8n/nodes-langchain/nodes/agents/Agent/Agent.node.ts", "why": "AI Agent 节点定义，看 AI 能力如何接入工作流"},
+    {"path": "packages/@n8n/nodes-langchain/nodes/agents/Agent/agents/ToolsAgent/V3/execute.ts", "why": "Agent 工具调用循环与 EngineRequest 机制，最具巧思的一环"},
+    {"path": "packages/workflow/src/workflow-data-proxy.ts", "why": "表达式数据来源，理解节点参数如何动态求值"},
+    {"path": "packages/nodes-base/package.json", "why": "节点包的 n8n 字段清单，理解节点如何被声明与加载"}
+  ],
+  "extension_points": [
+    "加一个普通节点：在 packages/nodes-base/nodes 下新建目录，实现 INodeType 的 description 与 execute，并在 package.json 的 n8n 字段登记",
+    "加一个 AI 节点：在 packages/@n8n/nodes-langchain/nodes 下添加，LLM 节点用 supplyData 返回模型，工具节点用 description 声明输入",
+    "打包自定义节点：按 package.json 的 n8n 字段约定发布，运行时会从自定义目录加载",
+    "改执行语义：修改 WorkflowExecute 的执行循环与 runNode 的分派逻辑",
+    "新增触发器：在节点中实现 trigger/poll/webhook 方法，由 ActiveWorkflowManager 负责激活",
+    "新增表达式能力：扩展 WorkflowDataProxy 提供的变量与 Expression 的求值规则"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，明确这是可视化自动化平台与 AI Agent 平台",
+    "第2步：读 workflow.ts，理解 Workflow 图结构、节点与连接",
+    "第3步：读 interfaces.ts 的 INodeType，理解节点的统一协议",
+    "第4步：读 workflow-execute.ts，抓住执行栈主循环与 runNode/executeNode",
+    "第5步：读 nodes-loader 的 DirectoryLoader 与 PackageDirectoryLoader，理解节点如何注册",
+    "第6步：读 workflow-runner.ts，理解服务端如何编排一次执行",
+    "第7步：读 AgentV3 与 ToolsAgent execute，理解 AI Agent 与工具调用的引擎协作"
+  ],
+  "diagram_mermaid": "graph TD\n  T[触发器 Webhook 定时 手动] --> R[WorkflowRunner.run]\n  R --> A[构造 additionalData]\n  A --> E[WorkflowExecute.processRunExecutionData]\n  E --> S[初始化执行栈 nodeExecutionStack]\n  S --> L{执行栈非空}\n  L --> P[弹出节点 创建 ExecuteContext]\n  P --> N[调用 nodeType.execute]\n  N --> X[参数求值 WorkflowDataProxy]\n  X --> N\n  N --> O[输出按连接推入后续节点]\n  O --> L\n  N --> Q[返回 EngineRequest 请求工具]\n  Q --> W[引擎调度工具节点]\n  W --> N\n  L --> D[写入 resultData 并更新状态]",
+  "surprises": [
+    "AI Agent 的工具调用不是节点内部循环：节点把 EngineRequest 交回引擎，引擎调度工具节点执行后再用 EngineResponse 恢复该节点的执行",
+    "语言模型、记忆、工具等以子节点形式接入而非参数：通过 ai_languageModel/ai_tool/ai_memory 等非 main 连接，节点用 supplyData 提供依赖",
+    "执行顺序有 legacy 与 v1 两种模式，由 workflow.settings.executionOrder 决定，同一张图可能得到不同执行顺序",
+    "社区与自定义节点包通过 package.json 的 n8n 字段声明节点与凭证的相对路径，运行时按该清单加载",
+    "execute 方法被当作 this 绑定到 ExecuteContext 上调用，节点函数与上下文是解耦的，不是继承关系"
+  ],
+  "confidence": "高"
+}

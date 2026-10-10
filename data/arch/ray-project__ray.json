@@ -1,0 +1,90 @@
+{
+  "repo": "ray-project/ray",
+  "name": "Ray",
+  "one_liner": "统一扩展 Python 与 AI 应用的分布式运行时",
+  "problem": "单机 Python 无法承载大规模 ML 计算。Ray 用 Task、Actor、Object 三种核心抽象把任意 Python 代码透明扩展到集群，并在其上构建 RLlib 等分布式 AI 库。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "RemoteFunction", "role": "无状态远程任务抽象，装饰函数后用 .remote 提交异步执行并返回 ObjectRef", "file": "python/ray/remote_function.py"},
+    {"name": "ActorClass", "role": "有状态远程对象抽象，把类包装成可远程实例化的 actor，每个 actor 独占一个工作进程", "file": "python/ray/actor.py"},
+    {"name": "CoreWorker", "role": "Cython 实现的核心工作进程，负责任务调度、对象管理、actor 生命周期与 raylet 通信", "file": "python/ray/_raylet.pyx"},
+    {"name": "Algorithm", "role": "RLlib 算法基类，编排采样与训练循环，持有 EnvRunnerGroup 与 LearnerGroup", "file": "python/ray/rllib/algorithms/algorithm.py"},
+    {"name": "AlgorithmConfig", "role": "算法配置基类，用链式 API 定义环境、采样器、学习器与资源，并提供各类 build 工厂", "file": "python/ray/rllib/algorithms/algorithm_config.py"},
+    {"name": "EnvRunner", "role": "环境交互执行单元，在 actor 内跑环境、用 RLModule 采样并返回 episode 与指标", "file": "python/ray/rllib/env/env_runner.py"},
+    {"name": "EnvRunnerGroup", "role": "一组 EnvRunner 的管理器，负责并行采样、权重同步与容错", "file": "python/ray/rllib/env/env_runner_group.py"},
+    {"name": "Learner", "role": "学习器基类，负责前向、损失计算、反向传播与优化器更新", "file": "python/ray/rllib/core/learner/learner.py"},
+    {"name": "LearnerGroup", "role": "一组 Learner 的管理器，支持本地或远程多卡训练与状态同步", "file": "python/ray/rllib/core/learner/learner_group.py"},
+    {"name": "RLModule", "role": "策略网络的统一抽象，定义 forward_train、forward_exploration、forward_inference 三个接口", "file": "python/ray/rllib/core/rl_module/rl_module.py"},
+    {"name": "ConnectorPipelineV2", "role": "连接器流水线，把环境数据到模块输入、模块输出到环境动作做可组合变换", "file": "python/ray/rllib/connectors/connector_pipeline_v2.py"},
+    {"name": "RLModuleSpec", "role": "模块规格描述，声明模块类、模型配置与观测动作空间，是算法与模块解耦的关键", "file": "python/ray/rllib/core/rl_module/rl_module.py"}
+  ],
+  "layers": [
+    {"name": "Ray Core 分布式运行时层", "responsibility": "提供 Task、Actor、Object 三种原语与 GCS、raylet、对象存储等底层调度", "modules": ["python/ray"], "files": ["python/ray/remote_function.py", "python/ray/actor.py", "python/ray/_raylet.pyx", "python/ray/_private/worker.py"]},
+    {"name": "RLlib 算法编排层", "responsibility": "定义 Algorithm 与 AlgorithmConfig 基类及各具体算法，编排采样与训练循环", "modules": ["python/ray/rllib/algorithms"], "files": ["python/ray/rllib/algorithms/algorithm.py", "python/ray/rllib/algorithms/algorithm_config.py", "python/ray/rllib/algorithms/ppo/ppo.py", "python/ray/rllib/algorithms/registry.py"]},
+    {"name": "RLlib 环境执行层", "responsibility": "EnvRunner 与 EnvRunnerGroup 在 actor 中并行跑环境并采集 episode", "modules": ["python/ray/rllib/env"], "files": ["python/ray/rllib/env/env_runner.py", "python/ray/rllib/env/env_runner_group.py", "python/ray/rllib/env/single_agent_env_runner.py"]},
+    {"name": "RLlib 学习器层", "responsibility": "Learner 与 LearnerGroup 负责损失计算、梯度更新与多卡训练", "modules": ["python/ray/rllib/core/learner"], "files": ["python/ray/rllib/core/learner/learner.py", "python/ray/rllib/core/learner/learner_group.py"]},
+    {"name": "RLlib 模块层", "responsibility": "RLModule 与 MultiRLModule 定义策略网络接口与模型装配", "modules": ["python/ray/rllib/core/rl_module"], "files": ["python/ray/rllib/core/rl_module/rl_module.py", "python/ray/rllib/core/rl_module/multi_rl_module.py", "python/ray/rllib/core/rl_module/apis/value_function_api.py"]},
+    {"name": "RLlib 连接器层", "responsibility": "用可组合连接器流水线做环境到模块、模块到环境与学习器侧的数据变换", "modules": ["python/ray/rllib/connectors"], "files": ["python/ray/rllib/connectors/connector_pipeline_v2.py", "python/ray/rllib/connectors/env_to_module/env_to_module_pipeline.py", "python/ray/rllib/connectors/learner/learner_connector_pipeline.py"]},
+    {"name": "RLlib 执行工具层", "responsibility": "提供并行采样、训练算子与回放缓冲等执行原语", "modules": ["python/ray/rllib/execution"], "files": ["python/ray/rllib/execution/rollout_ops.py", "python/ray/rllib/execution/train_ops.py"]},
+    {"name": "其他 AI 库层", "responsibility": "在 Ray Core 之上提供数据、训练、调参与服务等库", "modules": ["python/ray/data", "python/ray/train", "python/ray/tune", "python/ray/serve"], "files": ["python/ray/data/__init__.py", "python/ray/train/__init__.py", "python/ray/tune/__init__.py", "python/ray/serve/__init__.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户用 @ray.remote 装饰函数或类，生成 RemoteFunction 或 ActorClass，调用 .remote 提交任务",
+    "第2步：提交产生 ObjectRef 并在 CoreWorker 中登记，raylet 负责把任务调度到有空闲资源的工作节点",
+    "第3步：工作进程执行任务，结果写入分布式对象存储，ObjectRef 作为跨节点引用被后续任务消费",
+    "第4步：RLlib 侧，AlgorithmConfig.build 依据配置构造 Algorithm、EnvRunnerGroup 与 LearnerGroup",
+    "第5步：Algorithm.training_step 调用 synchronous_parallel_sample 在所有 EnvRunner 上并行采样",
+    "第6步：每个 EnvRunner 在环境里跑 rollout，经 env_to_module 连接器处理后由 RLModule.forward_exploration 选动作",
+    "第7步：采集到的 episode 汇聚成 train batch，交给 LearnerGroup.update 触发学习",
+    "第8步：每个 Learner 经 learner 连接器处理 batch，调用 RLModule.forward_train 与 compute_loss_for_module 计算损失",
+    "第9步：Learner 反向传播并更新优化器权重，更新后的权重序列号递增",
+    "第10步：Algorithm 调用 EnvRunnerGroup.sync_weights 把新权重同步回所有 EnvRunner，进入下一轮迭代"
+  ],
+  "entry_points": [
+    {"path": "python/ray/rllib/algorithms/algorithm.py", "what": "Algorithm 基类，training_step 与 setup 是整条 RL 训练循环的编排核心"},
+    {"path": "python/ray/rllib/algorithms/ppo/ppo.py", "what": "PPO 算法实现，展示如何用 EnvRunnerGroup 采样并驱动 LearnerGroup 更新"},
+    {"path": "python/ray/rllib/algorithms/registry.py", "what": "算法注册表，把字符串算法名映射到具体类与默认配置"},
+    {"path": "python/ray/rllib/examples/algorithms/vpg_custom_algorithm.py", "what": "新增自定义算法的最小可运行范例"},
+    {"path": "python/ray/remote_function.py", "what": "Task 入口，理解 @ray.remote 如何把函数变成远程任务"},
+    {"path": "python/ray/actor.py", "what": "Actor 入口，理解有状态远程对象如何被创建与调用"}
+  ],
+  "key_files": [
+    {"path": "README.rst", "why": "先建立整体认知：Ray Core 三原语与 Data、Train、Tune、RLlib、Serve 五大库"},
+    {"path": "python/ray/remote_function.py", "why": "Task 抽象，理解无状态远程函数的定义与提交"},
+    {"path": "python/ray/actor.py", "why": "Actor 抽象，理解有状态远程对象的生命周期"},
+    {"path": "python/ray/rllib/algorithms/algorithm.py", "why": "Algorithm 基类，理解 RLlib 采样加训练的主循环"},
+    {"path": "python/ray/rllib/algorithms/algorithm_config.py", "why": "配置与工厂，理解算法各组件如何被按配置构造"},
+    {"path": "python/ray/rllib/algorithms/ppo/ppo.py", "why": "一个完整算法的实现，对照基类看差异与扩展点"},
+    {"path": "python/ray/rllib/env/env_runner.py", "why": "EnvRunner 抽象，理解环境交互与采样如何并行化"},
+    {"path": "python/ray/rllib/core/learner/learner.py", "why": "Learner 基类，理解损失、梯度与更新的分层结构"},
+    {"path": "python/ray/rllib/core/rl_module/rl_module.py", "why": "RLModule 接口，理解策略网络必须实现的三个 forward"},
+    {"path": "python/ray/rllib/examples/algorithms/classes/vpg.py", "why": "自定义算法类，最直观的新增算法模板"}
+  ],
+  "extension_points": [
+    "想加新 RL 算法：新建 python/ray/rllib/algorithms/<name>/ 目录，写继承 AlgorithmConfig 与 Algorithm 的类，实现 training_step，并在 registry.py 注册",
+    "想加新策略网络：写继承 RLModule 的类实现 forward_train、forward_exploration、forward_inference，再用 RLModuleSpec 通过 config.rl_module 注入",
+    "想加新 Learner 逻辑：继承 Learner 或 TorchLearner 并重写 compute_loss_for_module，在 AlgorithmConfig.get_default_learner_class 返回它",
+    "想加新的数据处理步骤：在 python/ray/rllib/connectors 下写 ConnectorV2 子类并加入 env_to_module 或 learner 流水线",
+    "想加自定义环境：用 config.environment 传入 env creator 或注册名，EnvRunner 会在 actor 内实例化",
+    "想扩展 Ray Core 原语：在 python/ray/_raylet.pyx 的 CoreWorker 与 C++ 层修改调度与对象管理逻辑"
+  ],
+  "learning_path": [
+    "第1步：读 README.rst，搞清 Ray Core 三原语与五大 AI 库的分工",
+    "第2步：读 python/ray/remote_function.py 与 python/ray/actor.py，掌握 Task 与 Actor 两种原语",
+    "第3步：读 python/ray/rllib/algorithms/algorithm.py 的 setup 与 training_step，理解训练主循环",
+    "第4步：读 python/ray/rllib/algorithms/algorithm_config.py 的 build 系列方法，理解组件如何被构造",
+    "第5步：读 python/ray/rllib/algorithms/ppo/ppo.py 与 ppo_learner.py，对照具体算法看 PPO 的采样与损失",
+    "第6步：读 python/ray/rllib/env/env_runner.py 与 python/ray/rllib/core/learner/learner.py，理解采样与训练两端",
+    "第7步：读 python/ray/rllib/core/rl_module/rl_module.py，理解策略网络接口",
+    "第8步：读 python/ray/rllib/examples/algorithms/classes/vpg.py，把新增算法的完整套路走一遍"
+  ],
+  "diagram_mermaid": "graph TD\n  USER[用户 Python 代码] --> TASK[Task 无状态远程函数]\n  USER --> ACTOR[Actor 有状态远程对象]\n  TASK --> CW[CoreWorker 与 Raylet 调度]\n  ACTOR --> CW\n  CW --> OBJ[分布式对象存储 ObjectRef]\n  ALGO[RLlib Algorithm 编排] --> ERG[EnvRunnerGroup 并行采样]\n  ALGO --> LG[LearnerGroup 分布式训练]\n  ALGO --> CFG[AlgorithmConfig 配置]\n  ERG --> ER[EnvRunner 环境交互]\n  LG --> LRN[Learner 计算损失更新]\n  LRN --> MOD[RLModule 策略前向]\n  ER --> MOD\n  LRN --> SYNC[权重同步回 EnvRunner]",
+  "surprises": [
+    "Ray 的核心理念是同一份 Python 代码从笔记本到集群无需改动，分布式细节被 Task 与 Actor 原语隐藏",
+    "RLlib 已经迁移到新 API 栈，算法与策略网络彻底解耦：Algorithm 只编排，策略逻辑在 RLModule，损失在 Learner",
+    "旧 API 栈里的 RolloutWorker 已被 EnvRunner 取代，采样单元从 SampleBatch 改为 Episode 对象",
+    "连接器流水线是纯函数式可组合的，环境到模块与模块到环境两个方向对称，学习器侧还有一条独立流水线",
+    "权重同步用序列号而非内容比较，Learner 每更新一次权重序列号加一，避免无谓的参数传输"
+  ],
+  "confidence": "高"
+}

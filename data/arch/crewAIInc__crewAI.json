@@ -1,0 +1,95 @@
+{
+  "repo": "crewAIInc/crewAI",
+  "name": "CrewAI",
+  "one_liner": "用角色与任务建模的多智能体协作框架",
+  "problem": "让开发者用「角色-目标-背景故事」的 Agent 和「描述-期望输出」的 Task 快速组装多智能体团队，按顺序或层级流程自动协作完成复杂任务，无需手写编排逻辑。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Agent", "role": "自主执行者：携带 role/goal/backstory 人设与 llm/tools/memory，负责执行分配到的任务", "file": "lib/crewai/src/crewai/agent/core.py"},
+    {"name": "BaseAgent", "role": "Agent 的抽象基类，定义 role/goal/backstory/tools/tools_handler 等公共字段与 execute_task 契约", "file": "lib/crewai/src/crewai/agents/agent_builder/base_agent.py"},
+    {"name": "Task", "role": "工作单元：描述、期望输出、绑定的 agent、context 依赖、guardrail 与输出格式，负责真正驱动一次执行", "file": "lib/crewai/src/crewai/task.py"},
+    {"name": "Crew", "role": "编排容器：持有 agents 与 tasks，按 process 调度，负责 kickoff、上下文传递、结果聚合与检查点", "file": "lib/crewai/src/crewai/crew.py"},
+    {"name": "Process", "role": "执行策略枚举：sequential 顺序执行、hierarchical 由 manager agent 分派任务", "file": "lib/crewai/src/crewai/process.py"},
+    {"name": "CrewAgentExecutor", "role": "Agent 的 ReAct 执行循环：组装 prompt、调用 LLM、解析动作、执行工具、判断是否结束", "file": "lib/crewai/src/crewai/agents/crew_agent_executor.py"},
+    {"name": "BaseTool", "role": "工具抽象基类：统一 name/description/args_schema 与 _run 契约，是所有工具的挂载点", "file": "lib/crewai/src/crewai/tools/base_tool.py"},
+    {"name": "ToolUsage", "role": "工具调用管理器：把 LLM 输出解析成工具调用、校验参数、执行并回填结果", "file": "lib/crewai/src/crewai/tools/tool_usage.py"},
+    {"name": "Flow", "role": "事件驱动编排 DSL：用 @start/@listen/@router 装饰器把函数节点连成可控工作流，可与 Crew 混用", "file": "lib/crewai/src/crewai/flow/flow.py"},
+    {"name": "BaseLLM", "role": "LLM 抽象基类：统一 call/stream 接口并内置事件发射、重试与 token 计量", "file": "lib/crewai/src/crewai/llms/base_llm.py"},
+    {"name": "crewai_event_bus", "role": "全局事件总线单例：Agent/Task/Tool/LLM 各阶段发射事件，支撑日志、追踪与第三方监听", "file": "lib/crewai/src/crewai/events/event_bus.py"},
+    {"name": "Memory", "role": "统一记忆系统：统一 short/long/entity 记忆的 remember/recall 接口", "file": "lib/crewai/src/crewai/memory/unified_memory.py"}
+  ],
+  "layers": [
+    {"name": "用户 API 层", "responsibility": "导出 Agent/Task/Crew/Flow/Process 等顶层对象与装饰器，是用户 import 的入口", "modules": ["lib/crewai/src/crewai"], "files": ["lib/crewai/src/crewai/__init__.py", "lib/crewai/src/crewai/process.py"]},
+    {"name": "编排层", "responsibility": "Crew 按 process 调度任务、维护上下文依赖、创建 manager agent、聚合输出与检查点恢复", "modules": ["lib/crewai/src/crewai/crew.py", "lib/crewai/src/crewai/crews"], "files": ["lib/crewai/src/crewai/crew.py", "lib/crewai/src/crewai/crews/crew_output.py"]},
+    {"name": "Agent 执行层", "responsibility": "Agent 与 CrewAgentExecutor 组成 ReAct 循环：prompt 组装、LLM 调用、动作解析、工具执行与迭代控制", "modules": ["lib/crewai/src/crewai/agent", "lib/crewai/src/crewai/agents"], "files": ["lib/crewai/src/crewai/agent/core.py", "lib/crewai/src/crewai/agents/crew_agent_executor.py", "lib/crewai/src/crewai/agents/agent_builder/base_agent.py"]},
+    {"name": "任务层", "responsibility": "Task 承载描述与期望输出，负责同步/异步执行、上下文拼接、guardrail 校验与输出转换", "modules": ["lib/crewai/src/crewai/tasks", "lib/crewai/src/crewai/task.py"], "files": ["lib/crewai/src/crewai/task.py", "lib/crewai/src/crewai/tasks/task_output.py", "lib/crewai/src/crewai/tasks/conditional_task.py"]},
+    {"name": "工具层", "responsibility": "BaseTool 定义工具契约，ToolUsage 负责解析与执行工具调用，crewai-tools 提供大量现成工具", "modules": ["lib/crewai/src/crewai/tools", "lib/crewai-tools/src/crewai_tools"], "files": ["lib/crewai/src/crewai/tools/base_tool.py", "lib/crewai/src/crewai/tools/tool_usage.py", "lib/crewai-tools/src/crewai_tools/__init__.py"]},
+    {"name": "LLM 层", "responsibility": "BaseLLM 抽象统一各厂商模型接入，create_llm 负责按字符串或配置构造实例", "modules": ["lib/crewai/src/crewai/llms", "lib/crewai/src/crewai/llm.py"], "files": ["lib/crewai/src/crewai/llms/base_llm.py", "lib/crewai/src/crewai/utilities/llm_utils.py"]},
+    {"name": "记忆与知识层", "responsibility": "统一记忆的存取、RAG 知识库检索与文件上下文注入", "modules": ["lib/crewai/src/crewai/memory", "lib/crewai/src/crewai/knowledge", "lib/crewai/src/crewai/rag"], "files": ["lib/crewai/src/crewai/memory/unified_memory.py", "lib/crewai/src/crewai/knowledge/knowledge.py"]},
+    {"name": "Flow 事件驱动层", "responsibility": "用 @start/@listen/@router 装饰器构建事件驱动工作流，与 Crew 组合实现精确控制", "modules": ["lib/crewai/src/crewai/flow"], "files": ["lib/crewai/src/crewai/flow/flow.py", "lib/crewai/src/crewai/flow/__init__.py"]},
+    {"name": "事件与可观测层", "responsibility": "全局事件总线发射各阶段事件，驱动日志格式化、追踪与外部监听", "modules": ["lib/crewai/src/crewai/events", "lib/crewai/src/crewai/telemetry"], "files": ["lib/crewai/src/crewai/events/event_bus.py", "lib/crewai/src/crewai/events/base_events.py"]},
+    {"name": "项目脚手架与 CLI 层", "responsibility": "@CrewBase 装饰器按约定装配 agents/tasks，CLI 提供 crewai run/create/train 等命令", "modules": ["lib/crewai/src/crewai/project", "lib/cli/src/crewai_cli"], "files": ["lib/crewai/src/crewai/project/crew_base.py", "lib/cli/src/crewai_cli/cli.py", "lib/cli/src/crewai_cli/run_crew.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户定义 Agent 人设与 tools，定义 Task 并绑定 agent，最后把 agents/tasks 传入 Crew 并指定 process",
+    "第2步：调用 crew.kickoff()，Crew 校验输入、初始化 memory/knowledge，并按 process 选择顺序或层级执行路径",
+    "第3步：hierarchical 时 _create_manager_agent 创建一个带 delegation 工具的 manager agent，由它分派任务",
+    "第4步：_execute_tasks 遍历 tasks，为每个 task 组装 context 依赖（前序 TaskOutput）并通过 _prepare_tools 注入委托/记忆/MCP 等工具",
+    "第5步：task.execute_sync 调用绑定 agent 的 execute_task，Agent 先组装 task_prompt 并做知识检索",
+    "第6步：Agent 通过 create_agent_executor 构造 CrewAgentExecutor，进入 ReAct 循环",
+    "第7步：executor 组装系统提示词与工具描述，调用 LLM（经 BaseLLM 统一接口，发射 LLMCallStarted/Completed 事件）",
+    "第8步：解析 LLM 输出为 AgentAction 或 AgentFinish；若是动作则交给 ToolUsage 校验参数并执行对应 BaseTool",
+    "第9步：工具结果作为观察值回填到消息历史，循环继续直到产出最终答案或达到 max_iterations",
+    "第10步：Task 对结果做 guardrail 校验与 output 格式转换，生成 TaskOutput 并写回 task.output",
+    "第11步：Crew 聚合所有 TaskOutput 为 CrewOutput 返回，同时按需写入检查点与记忆",
+    "第12步：若用 Flow，则事件驱动函数节点按 @start/@listen/@router 声明的关系依次触发，可内部调用 Crew 完成子任务"
+  ],
+  "entry_points": [
+    {"path": "lib/crewai/src/crewai/crew.py:kickoff", "what": "Crew 的主执行入口，校验输入并启动整个多智能体流程"},
+    {"path": "lib/crewai/src/crewai/crew.py:_execute_tasks", "what": "任务调度核心，顺序/并发地驱动每个 task 执行并聚合结果"},
+    {"path": "lib/crewai/src/crewai/agent/core.py:execute_task", "what": "Agent 执行单个任务的主入口，组装 prompt 后进入 executor"},
+    {"path": "lib/crewai/src/crewai/agents/crew_agent_executor.py", "what": "ReAct 执行循环实现，LLM 调用与工具执行的真正发生地"},
+    {"path": "lib/crewai/src/crewai/flow/flow.py", "what": "Flow 类与 start/listen/router 装饰器定义处，事件驱动编排入口"},
+    {"path": "lib/cli/src/crewai_cli/cli.py:crewai", "what": "crewai 命令行入口，提供 run/create/train 等子命令"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体定位：Crews 管自主协作、Flows 管事件驱动精确控制，二者可组合"},
+    {"path": "lib/crewai/src/crewai/process.py", "why": "最小文件却定义核心调度策略，先看清 sequential/hierarchical 两种模式"},
+    {"path": "lib/crewai/src/crewai/crew.py", "why": "编排中枢：kickoff、_execute_tasks、_create_manager_agent 揭示任务如何被调度与委托"},
+    {"path": "lib/crewai/src/crewai/task.py", "why": "理解 Task 如何绑定 agent、拼接 context、执行并产出 TaskOutput"},
+    {"path": "lib/crewai/src/crewai/agent/core.py", "why": "Agent 主体，看 execute_task 如何把任务变成一次 executor 调用"},
+    {"path": "lib/crewai/src/crewai/agents/crew_agent_executor.py", "why": "ReAct 循环与工具调用最密集处，理解 Agent 如何思考-行动"},
+    {"path": "lib/crewai/src/crewai/tools/base_tool.py", "why": "工具契约与参数 schema 的统一定义，扩展自定义工具的起点"},
+    {"path": "lib/crewai/src/crewai/events/event_bus.py", "why": "事件总线，理解框架如何做可观测与解耦的关键"},
+    {"path": "lib/crewai/src/crewai/flow/flow.py", "why": "Flow 事件驱动 DSL，理解与 Crew 互补的另一半编排范式"}
+  ],
+  "extension_points": [
+    "加自定义工具：继承 BaseTool 并实现 _run 与 args_schema，见 lib/crewai/src/crewai/tools/base_tool.py",
+    "接入新模型厂商：继承 BaseLLM 实现 call/stream，或扩展 create_llm 的分支，见 lib/crewai/src/crewai/utilities/llm_utils.py",
+    "定制 Agent 执行逻辑：继承 BaseAgentExecutor 覆写循环，或替换 CrewAgentExecutor",
+    "新增执行流程模式：扩展 Process 枚举并在 crew.py 增加 _run_xxx_process 与对应调度分支",
+    "接入新记忆/知识后端：实现 unified_memory 的存储接口或新增 rag 后端，见 lib/crewai/src/crewai/memory/unified_memory.py",
+    "监听运行事件：通过 crewai_event_bus 注册 handler 订阅 events/types 下的事件类",
+    "构建事件驱动工作流：用 @start/@listen/@router 装饰器在 Flow 中编排函数节点，见 lib/crewai/src/crewai/flow/flow.py",
+    "用声明式方式装配团队：用 @CrewBase 装饰器按约定方法命名自动组装 agents/tasks，见 lib/crewai/src/crewai/project/crew_base.py"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，区分 Crews 自主协作与 Flows 事件驱动两条主线",
+    "第2步：读 process.py 与 crews/crew_output.py，先掌握 Process 枚举与输出结构",
+    "第3步：读 crew.py 的 kickoff 与 _execute_tasks，理解任务如何被顺序/层级调度",
+    "第4步：读 task.py 的 execute_sync 与 _execute_core，理解任务如何绑定 agent 并拼接上下文",
+    "第5步：读 agent/core.py 的 execute_task，跟进到 agents/crew_agent_executor.py 吃透 ReAct 循环",
+    "第6步：读 tools/base_tool.py 与 tools/tool_usage.py，掌握工具契约与调用解析",
+    "第7步：读 events/event_bus.py 理解事件如何驱动日志与可观测",
+    "第8步：读 flow/flow.py 与 project/crew_base.py，掌握 Flow 编排与声明式团队装配"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户定义 Agent 与 Task] --> C[Crew 构造并 kickoff]\n  C --> P{Process 选择}\n  P -->|sequential| S[顺序遍历 tasks]\n  P -->|hierarchical| M[创建 manager agent 分派]\n  S --> E[Task 执行并拼接 context]\n  M --> E\n  E --> A[Agent execute_task 组装 prompt]\n  A --> X[CrewAgentExecutor ReAct 循环]\n  X --> L[BaseLLM 调用模型]\n  L --> D{输出是动作还是答案}\n  D -->|动作| T[ToolUsage 解析并执行 BaseTool]\n  T --> X\n  D -->|答案| G[Task guardrail 校验与输出转换]\n  G --> O[CrewOutput 聚合返回]\n  X -.-> B[event_bus 发射事件]\n  C -.-> F[Flow 事件驱动可选编排]",
+  "surprises": [
+    "Agent 只是「人设 + 资源」的声明对象，真正的思考循环在 CrewAgentExecutor 里；把 Agent 当执行体去读会找不到主循环",
+    "Task 而非 Crew 才是执行的基本单位：任务自己持有 agent 引用并驱动执行，Crew 主要做调度与上下文拼接",
+    "hierarchical 模式下 manager agent 不允许带任何工具，框架会直接抛异常强制清空，因为它的职责是委托而非执行",
+    "工具绑定发生在 Task 执行前的 _prepare_tools 阶段而非 Agent 构造时：委托工具、记忆工具、MCP 工具都是动态注入的",
+    "Crews 与 Flows 是两套并行范式：Crews 追求自主协作，Flows 追求事件驱动精确控制，且可在 Flow 中调用 Crew"
+  ],
+  "confidence": "高"
+}
