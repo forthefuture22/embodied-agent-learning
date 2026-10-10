@@ -1,0 +1,83 @@
+{
+  "repo": "Farama-Foundation/Gymnasium",
+  "name": "Gymnasium",
+  "one_liner": "强化学习环境与算法之间的标准 Python 接口库",
+  "problem": "用统一 API 描述环境与智能体的交互，让不同 RL 算法与不同环境可以互相替换并公平比较，同时提供一批标准环境和可复用的包装器。",
+  "difficulty": "入门",
+  "core_abstractions": [
+    {"name": "Env", "role": "最核心接口，定义 step/reset/render/close 与 action_space/observation_space，所有环境都必须实现它", "file": "gymnasium/core.py"},
+    {"name": "Wrapper", "role": "装饰器基类，以对象组合方式模块化改造环境行为而不改原代码，是全部包装器的父类", "file": "gymnasium/core.py"},
+    {"name": "ObservationWrapper / RewardWrapper / ActionWrapper", "role": "针对观测、奖励、动作三类数据的专项包装器基类，分别重写 observation/reward/action 变换", "file": "gymnasium/core.py"},
+    {"name": "EnvSpec + register/make", "role": "环境注册表与工厂：register 把 id 映射到 entry_point 与元信息，make 据此动态构造并自动装配包装器", "file": "gymnasium/envs/registration.py"},
+    {"name": "Space", "role": "动作空间与观测空间的抽象，提供 sample/contains 等，是接口契约的数值载体", "file": "gymnasium/spaces/space.py"},
+    {"name": "VectorEnv / SyncVectorEnv / AsyncVectorEnv", "role": "批量环境抽象与同步/异步两种实现，把单环境接口扩展成对多环境的批量 step/reset", "file": "gymnasium/vector/vector_env.py"},
+    {"name": "PassiveEnvChecker / OrderEnforcing / TimeLimit / Autoreset", "role": "make 时自动施加的标准包装器，分别做规范校验、调用顺序检查、时间截断与 episode 自动重置", "file": "gymnasium/wrappers/common.py"},
+    {"name": "env_checker", "role": "独立的环境规范校验器，用确定性、seed、返回类型等检查帮助用户写出合规的自定义环境", "file": "gymnasium/utils/env_checker.py"}
+  ],
+  "layers": [
+    {"name": "核心接口层", "responsibility": "定义环境与包装器的最小契约，是整个库不依赖具体环境的稳定内核", "modules": ["gymnasium/core.py"], "files": ["gymnasium/core.py"]},
+    {"name": "空间定义层", "responsibility": "定义 Box/Discrete/Dict/MultiDiscrete 等动作与观测空间及其采样与合法性判断", "modules": ["gymnasium/spaces"], "files": ["gymnasium/spaces/space.py", "gymnasium/spaces/box.py"]},
+    {"name": "注册与工厂层", "responsibility": "维护全局 registry，实现 register/spec/make/make_vec 与 EnvSpec 序列化", "modules": ["gymnasium/envs/registration.py"], "files": ["gymnasium/envs/registration.py"]},
+    {"name": "内置环境层", "responsibility": "提供 classic control、box2d、toy text、mujoco、tabular、phys2d 等标准环境并在导入时自动注册", "modules": ["gymnasium/envs"], "files": ["gymnasium/envs/__init__.py", "gymnasium/envs/classic_control/cartpole.py"]},
+    {"name": "包装器层", "responsibility": "提供通用、观测/动作/奖励变换、有状态、渲染与 Atari 预处理等大量可复用包装器", "modules": ["gymnasium/wrappers"], "files": ["gymnasium/wrappers/common.py", "gymnasium/wrappers/transform_observation.py"]},
+    {"name": "向量化层", "responsibility": "把单环境接口扩展为批量环境接口，提供同步与基于多进程的异步实现", "modules": ["gymnasium/vector"], "files": ["gymnasium/vector/sync_vector_env.py", "gymnasium/vector/async_vector_env.py"]},
+    {"name": "工具与校验层", "responsibility": "提供环境规范校验、step API 兼容转换、回放、录制、随机种子等辅助能力", "modules": ["gymnasium/utils"], "files": ["gymnasium/utils/env_checker.py", "gymnasium/utils/play.py", "gymnasium/utils/step_api_compatibility.py"]}
+  ],
+  "data_flow": [
+    "第1步：import gymnasium 时，gymnasium/envs/__init__.py 通过大量 register 调用把内置环境写入全局 registry",
+    "第2步：用户调用 gym.make('CartPole-v1')，进入 envs/registration.py 的 make 函数",
+    "第3步：_find_spec 按 id 从 registry 取出 EnvSpec，其中含 entry_point、max_episode_steps、additional_wrappers",
+    "第4步：load_env_creator 动态导入 entry_point 字符串（如 classic_control.cartpole:CartPoleEnv）得到环境类",
+    "第5步：用合并后的 kwargs 调用 env_creator(**kwargs) 实例化底层环境，并校验它继承自 gymnasium.Env",
+    "第6步：把精简后的 EnvSpec 写回 env.unwrapped.spec，作为环境的元信息",
+    "第7步：按固定顺序套标准包装器：PassiveEnvChecker → OrderEnforcing → TimeLimit → additional_wrappers → 渲染相关",
+    "第8步：返回包装后的环境，用户调用 env.reset(seed=...) 得到 (observation, info)",
+    "第9步：循环调用 env.step(action) 得到 (observation, reward, terminated, truncated, info)",
+    "第10步：当 terminated 或 truncated 为真时调用 env.reset() 开始新 episode，全部结束后 env.close() 释放资源"
+  ],
+  "entry_points": [
+    {"path": "gymnasium.make / gymnasium.make_vec", "what": "创建单环境或向量化环境的主入口"},
+    {"path": "gymnasium.register", "what": "注册自定义环境到 registry，供 make 使用"},
+    {"path": "gymnasium.Env", "what": "自定义环境时继承的基类，需实现 step/reset 等"},
+    {"path": "gymnasium.Wrapper", "what": "自定义包装器时继承的基类"},
+    {"path": "gymnasium.utils.env_checker.check_env", "what": "校验一个环境是否符合 Gymnasium API 规范"},
+    {"path": "gymnasium.utils.play", "what": "键盘交互式回放环境，便于调试"},
+    {"path": "gymnasium.wrappers.RecordVideo", "what": "录制环境视频"},
+    {"path": "docs/introduction/create_custom_env.md", "what": "官方自定义环境教程，含 gym.register 完整示例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立定位认知：它是接口标准而非算法库，并提供一批标准环境"},
+    {"path": "gymnasium/core.py", "why": "读 Env 与 Wrapper 的 step/reset 契约，这是整个生态的稳定接口"},
+    {"path": "gymnasium/envs/registration.py", "why": "理解 register/spec/make 如何把 id 变成自动装配好包装器的环境实例"},
+    {"path": "gymnasium/__init__.py", "why": "看清对外暴露的公共 API 与内置环境的自动注册时机"},
+    {"path": "gymnasium/envs/classic_control/cartpole.py", "why": "一个最小但完整的真实环境实现，对照接口理解 reset/step 写法"},
+    {"path": "gymnasium/wrappers/common.py", "why": "理解 TimeLimit/Autoreset/PassiveEnvChecker/RecordEpisodeStatistics 这些自动包装器"},
+    {"path": "gymnasium/vector/vector_env.py", "why": "理解批量环境接口与 AutoresetMode，向量化是训练提速的关键"},
+    {"path": "gymnasium/utils/env_checker.py", "why": "了解环境规范的具体检查项，写自定义环境前先看它"}
+  ],
+  "extension_points": [
+    "想加新环境：继承 gymnasium.Env，实现 step/reset/render/close 并定义 action_space/observation_space，再用 gym.register(id=..., entry_point=...) 注册",
+    "想改已有环境行为：继承 gymnasium.Wrapper（或 Observation/Reward/ActionWrapper）并重写对应方法，用对象组合叠加",
+    "想加观测/奖励/动作变换：直接用 wrappers 里的 TransformObservation/TransformReward/ClipAction 等，或继承对应专项 Wrapper",
+    "想在注册时自动附加包装器：在 register 的 additional_wrappers 传入 WrapperSpec",
+    "想批量训练：用 gym.make_vec 或直接构造 SyncVectorEnv/AsyncVectorEnv，也可继承 VectorEnv",
+    "想加新空间类型：继承 gymnasium.spaces.Space 并实现 sample/contains",
+    "写完环境自检：调用 gymnasium.utils.env_checker.check_env 做合规校验"
+  ],
+  "learning_path": [
+    "第1步：读 README 与 docs/introduction/basic_usage.md，跑通 make→reset→step→close 循环",
+    "第2步：读 core.py 的 Env，牢记 step 返回五元组、reset 返回二元组这两个契约",
+    "第3步：读 registration.py 的 register/make，理解注册表与包装器自动装配顺序",
+    "第4步：读 cartpole.py，把一个真实环境的实现与接口对应起来",
+    "第5步：读 wrappers/common.py，掌握 TimeLimit/Autoreset/RecordEpisodeStatistics 的用途",
+    "第6步：按 docs/introduction/create_custom_env.md 动手实现并注册一个自定义环境"
+  ],
+  "diagram_mermaid": "graph TD\n  A[用户调用 gym.make] --> B[从 registry 取 EnvSpec]\n  B --> C[动态导入 entry_point 环境类]\n  C --> D[实例化底层 Env]\n  D --> E[写入 env.unwrapped.spec]\n  E --> F[PassiveEnvChecker 校验]\n  F --> G[OrderEnforcing 顺序检查]\n  G --> H[TimeLimit 时间截断]\n  H --> I[additional_wrappers 追加]\n  I --> J[返回包装后的 env]\n  J --> K[reset 返回 obs 与 info]\n  K --> L[step 返回 obs reward terminated truncated info]\n  L --> K",
+  "surprises": [
+    "自 v0.26 起 step 返回 terminated 与 truncated 两个布尔值取代单个 done，用于区分 MDP 终止与外部时间截断，直接影响 bootstrap 写法",
+    "reset 返回 (obs, info) 元组而非单个 obs，很多旧教程仍按旧接口写",
+    "make 会自动套上 PassiveEnvChecker、OrderEnforcing、TimeLimit，用户无需手动添加，重复添加反而可能出错",
+    "Autoreset 现在是一个显式包装器而非向量环境的隐式行为，且向量环境用 AutoresetMode 枚举来控制重置语义"
+  ],
+  "confidence": "高"
+}

@@ -9,10 +9,12 @@
 | 页面 | 链接 | 内容 |
 |---|---|---|
 | 交互式思维导图 | [mindmap.html](https://forthefuture22.github.io/embodied-agent-learning/mindmap.html) | 25 分支 / 134 节点，点击展开、搜索、跳转仓库 |
-| **项目可视化看板** | [projects.html](https://forthefuture22.github.io/embodied-agent-learning/projects.html) | 109 个项目，逐个呈现功能全景 / 模块架构 / 技术栈 / 运行流程 |
+| **项目浏览器** | [projects.html](https://forthefuture22.github.io/embodied-agent-learning/projects.html) | 入口树 + 逐级索引：总览 → 板块 → 分支 → 项目详情 |
 | 文字版学习地图 | [learning-map.md](./learning-map.md) | 分支说明 + 项目表 + 12 周计划 + 避坑提示 |
+| **任务设计文档** | [docs/TASK-DESIGN.md](./docs/TASK-DESIGN.md) | 语义架构图批次规划 · 网页工具改造选型 · 子 agent 并行方案 |
 
 直达某个板块：`?tab=embodied` · `?tab=agent` · `?tab=cross`
+项目浏览器支持深链接：`#/embodied/3/huggingface__lerobot` 可直接分享某个项目的架构分析
 
 ---
 
@@ -41,22 +43,43 @@
 .
 ├── README.md                 # 本文件
 ├── mindmap.html              # 交互式思维导图（单文件，双击即用）
-├── projects.html             # 项目可视化看板（单文件，内含全部分析数据）
+├── projects.html             # 项目浏览器（入口树 + 逐级索引）
 ├── learning-map.md           # 文字版学习地图
+├── docs/
+│   └── TASK-DESIGN.md        # 任务设计：批次规划 / 选型模型 / 并行方案
 ├── data/
 │   ├── manifest.json         # 从导图提取的树结构 + 109 个仓库清单
 │   ├── repos-meta.json       # GitHub 元数据（体积/语言/许可证/活跃度）
-│   ├── analysis.json         # 109 个项目的代码扫描结果
+│   ├── analysis.json         # 109 个项目的结构级扫描结果
+│   ├── priority.json         # 109 个项目的双任务优先级评分
+│   ├── arch/                 # 语义级架构分析（子 agent 产出）
+│   │   └── *.json            #   每份 15 字段：核心抽象/分层/数据流/Mermaid 图/阅读顺序
 │   └── stars.json            # star 数据快照
 └── scripts/
     ├── build_manifest.js     # 从 mindmap.html 提取仓库清单
     ├── fetch_meta.py         # 拉取 GitHub 元数据
     ├── fetch_stars.py        # 刷新 star 数据
     ├── clone_all.py          # 批量浅克隆到 D:\github
-    ├── analyze_repos.py      # 代码结构分析（断点续跑）
+    ├── analyze_repos.py      # 结构级分析（断点续跑）
+    ├── score_projects.py     # 双任务优先级评分
     ├── build_dashboard.py    # 生成 projects.html
-    └── verify_dashboard.js   # 看板功能级校验
+    └── verify_dashboard.js   # 浏览器功能级校验
 ```
+
+---
+
+## 信息架构
+
+项目浏览器从「一屏平铺 109 张卡片」重构为**入口树 + 四级下钻**：
+
+| 层级 | 路由 | 呈现内容 |
+|---|---|---|
+| L0 总览 | `#/` | 统计 + 全景树图 + 3 个板块 |
+| L1 板块 | `#/embodied` | 9 个分支卡片 |
+| L2 分支 | `#/embodied/3` | 项目紧凑表格（可横向比较） |
+| L3 项目 | `#/embodied/3/huggingface__lerobot` | 完整详情（语义架构 + 结构四维） |
+
+侧栏树自动展开当前路径并高亮；做过语义架构分析的项目带 `◆` 标记。首屏信息量从 435 KB 降到 28 KB。
 
 ---
 
@@ -153,11 +176,15 @@ node scripts/verify_dashboard.js
 
 ## TODO
 
+完整规划见 [docs/TASK-DESIGN.md](./docs/TASK-DESIGN.md)。
+
+- [x] 挑核心项目做语义级深读（**第 1 批 9 个已完成**：LeRobot · π0 · Diffusion Policy · Isaac Lab · Gymnasium · Genesis · LangGraph · MetaGPT · mem0）
+- [ ] 第 2 批语义架构（8 个项目，名单已排定）
+- [ ] 架构质量校验脚本 `verify_arch.py`（字段齐全 + 路径真实性）
+- [ ] 网页工具改造试点（优先 A 类：gpt-engineer · SWE-agent · Docling 等无需 GPU 的项目）
 - [ ] 补充每个分支的必读论文清单（带链接）
 - [ ] 为 VLA 主线补一张演进时间线
 - [ ] 把 star 刷新与 HTML 打通，避免手工同步
-- [ ] 挑 5-10 个核心项目做人工深读，补真正的架构图（当前是结构扫描，非语义架构）
-- [ ] 按视频思路，把若干命令行项目改造成中文网页工具
 
 ---
 

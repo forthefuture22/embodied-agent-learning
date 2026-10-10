@@ -1,0 +1,84 @@
+{
+  "repo": "Genesis-Embodied-AI/Genesis",
+  "name": "Genesis World",
+  "one_liner": "面向具身智能的统一多物理与可微仿真平台",
+  "problem": "用一套 Python 接口统一刚体、FEM、MPM、SPH、PBD 等多种物理求解器与渲染，让机器人仿真可跨 CPU/GPU 大规模并行并支持可微。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "Scene", "role": "全局中心对象，聚合配置、Simulator 与 Visualizer，对外提供 add_entity/build/step/reset 与状态存取", "file": "genesis/engine/scene.py"},
+    {"name": "Simulator", "role": "仿真调度器，持有求解器与耦合器，负责 substep 循环、时间步、传感器更新与状态/梯度管理", "file": "genesis/engine/simulator.py"},
+    {"name": "Solver", "role": "所有物理求解器的抽象基类，定义 build/process_input/substep 等接口", "file": "genesis/engine/solvers/base_solver.py"},
+    {"name": "Entity / RigidEntity", "role": "场景中实体的抽象与其刚体实现，提供 set_dofs_position/control_dofs_position 等控制接口", "file": "genesis/engine/entities/base_entity.py"},
+    {"name": "Morph", "role": "描述实体几何来源的配置，如 MJCF/URDF/USD/Box/Plane，决定资产如何被解析成实体", "file": "genesis/options/morphs.py"},
+    {"name": "Material", "role": "定义实体所属的物理模型，决定它由哪个求解器与哪种 entity 类处理", "file": "genesis/engine/materials/base.py"},
+    {"name": "Options", "role": "所有 gs.options.* 配置类的基类，基于 Pydantic BaseModel 做严格校验", "file": "genesis/options/options.py"},
+    {"name": "Coupler", "role": "多求解器耦合抽象，在同一步内交换不同物理域的状态，如 LegacyCoupler/SAPCoupler/IPCCoupler", "file": "genesis/engine/couplers/legacy_coupler.py"},
+    {"name": "Sensor", "role": "传感器抽象基类，涵盖相机、IMU、接触力、触觉、激光雷达等，由 SensorManager 统一更新", "file": "genesis/engine/sensors/base_sensor.py"},
+    {"name": "Visualizer / RendererOptions", "role": "可视化与渲染入口，支持 Nyx/Luisa/Pyrender 与 BatchRenderer 多条渲染路径", "file": "genesis/vis/visualizer.py"}
+  ],
+  "layers": [
+    {"name": "顶层 API 与初始化层", "responsibility": "提供 gs.init/destroy、公开命名空间与 gs 命令行工具", "modules": ["genesis/__init__.py", "genesis/_main.py"], "files": ["genesis/__init__.py", "genesis/_main.py"]},
+    {"name": "配置层", "responsibility": "以 Pydantic 模型声明仿真、各求解器、morph、material、surface、渲染与传感器参数", "modules": ["genesis/options"], "files": ["genesis/options/options.py", "genesis/options/solvers.py", "genesis/options/morphs.py"]},
+    {"name": "场景与调度层", "responsibility": "Scene 聚合一切并驱动 Simulator，Simulator 调度求解器与耦合器完成 substep 循环", "modules": ["genesis/engine"], "files": ["genesis/engine/scene.py", "genesis/engine/simulator.py", "genesis/engine/interactive_scene.py"]},
+    {"name": "实体层", "responsibility": "按材质提供刚体、FEM、MPM、SPH、PBD、SF、混合、工具等实体类型及其几何/关节描述", "modules": ["genesis/engine/entities"], "files": ["genesis/engine/entities/rigid_entity/rigid_entity.py", "genesis/engine/entities/base_entity.py"]},
+    {"name": "物理求解器与耦合层", "responsibility": "实现各物理域求解器并支持跨求解器耦合", "modules": ["genesis/engine/solvers", "genesis/engine/couplers"], "files": ["genesis/engine/solvers/rigid", "genesis/engine/solvers/mpm_solver.py", "genesis/engine/couplers/sap_coupler.py"]},
+    {"name": "状态与可微层", "responsibility": "管理仿真状态缓存与 checkpoint，并通过 grad 模块提供可微仿真与反向传播", "modules": ["genesis/engine/states", "genesis/grad", "genesis/datatypes.py"], "files": ["genesis/grad/creation_ops.py", "genesis/engine/states/cache.py"]},
+    {"name": "传感器与记录层", "responsibility": "提供各类传感器实现与数据录制", "modules": ["genesis/engine/sensors", "genesis/recorders"], "files": ["genesis/engine/sensors/sensor_manager.py", "genesis/engine/sensors/camera.py"]},
+    {"name": "可视化与渲染层", "responsibility": "提供 viewer、光栅化/光线追踪/批渲染后端与 GUI 插件", "modules": ["genesis/vis"], "files": ["genesis/vis/visualizer.py", "genesis/vis/viewer.py", "genesis/vis/raytracer.py"]}
+  ],
+  "data_flow": [
+    "第1步：调用 gs.init(backend=...) 选择 CPU/CUDA/AMDGPU/Metal 后端并初始化全局状态与 Quadrants 编译器",
+    "第2步：构造 gs.Scene(...)，内部创建 Simulator 与 Visualizer，并把各项 options 汇成统一的 SceneOptions",
+    "第3步：scene.add_entity(morph, material, surface) 添加实体，Simulator._add_entity 依据 material 选择对应求解器与 entity 类",
+    "第4步：可选地 scene.add_sensor / add_camera / add_force_field / add_recorder 扩展场景",
+    "第5步：scene.build(n_envs=...) 并行化环境、solver.build()、编译内核并做首次 reset",
+    "第6步：用户通过实体接口设置控制量，如 franka.set_dofs_kp / control_dofs_position",
+    "第7步：进入主循环反复调用 scene.step()",
+    "第8步：Simulator.step 按 substeps 循环执行 process_input 与 substep，substep 内部为 pre_coupling → coupler.couple → post_coupling",
+    "第9步：每步末尾 SensorManager.step 更新传感器，Visualizer.update 刷新渲染与录像",
+    "第10步：用户读取状态与传感器（get_state / read_sensors）用于 RL 训练或数据生成，scene.backward 支持可微反向传播"
+  ],
+  "entry_points": [
+    {"path": "gs (console script -> genesis._main:main)", "what": "命令行工具，提供 gs launch/view 打开 viewer 或导出场景"},
+    {"path": "examples/tutorials/control_your_robot.py", "what": "最小可运行示例：init→Scene→add_entity→build→step→控制机器人"},
+    {"path": "examples/", "what": "覆盖 rigid/deformable/coupling/sensors/rendering 等全部能力的示例目录"},
+    {"path": "genesis/__init__.py (init/Scene/Mesh/options)", "what": "编程入口，导入即得全部公开 API"},
+    {"path": "tests/", "what": "按 core/coupling/deformable/grad 等分类的测试，可作为行为参考"},
+    {"path": "examples/speed_benchmark", "what": "性能基准，了解并行与后端差异"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立四层认知：Simulation Interface、Physics、Render、Compiler"},
+    {"path": "genesis/__init__.py", "why": "看清 init/destroy 全局生命周期与对外暴露的 API 边界"},
+    {"path": "examples/tutorials/control_your_robot.py", "why": "最快跑通一次完整流程，形成直观印象"},
+    {"path": "genesis/options/options.py", "why": "理解基于 Pydantic 的严格配置体系，这是所有参数的入口"},
+    {"path": "genesis/engine/scene.py", "why": "掌握中心对象 Scene 的 add_entity/build/step/reset 与状态接口"},
+    {"path": "genesis/engine/simulator.py", "why": "理解求解器调度、substep 循环与耦合器插入点"},
+    {"path": "genesis/engine/solvers/base_solver.py", "why": "掌握求解器抽象，是加新物理域的起点"},
+    {"path": "genesis/engine/entities/rigid_entity/rigid_entity.py", "why": "刚体实体控制 API 的完整实现，机器人操作都落在这里"}
+  ],
+  "extension_points": [
+    "想加新机器人/物体：用 gs.morphs.MJCF/URDF/USD/Box/Plane 等 morph，直接 scene.add_entity",
+    "想加新物理模型：在 genesis/engine/materials 下新增 Material 子类（并配套 options），让 entity/solver 支持它",
+    "想加新求解器：继承 genesis/engine/solvers/base_solver.py 的 Solver，实现 build/substep 并在 Simulator 注册",
+    "想加多求解器耦合：继承 genesis/engine/couplers 下的 coupler（LegacyCoupler/SAPCoupler/IPCCoupler）并实现 couple",
+    "想加新传感器：继承 genesis/engine/sensors/base_sensor.py 的 Sensor，并在 genesis/options/sensors 增加对应 options",
+    "想加新渲染器：继承 genesis/options/renderers.py 的 RendererOptions，在 vis 中接入",
+    "想加新配置组：继承 genesis/options/options.py 的 Options（Pydantic BaseModel）声明字段"
+  ],
+  "learning_path": [
+    "第1步：读 README 与文档，记住四层架构与统一多物理引擎的定位",
+    "第2步：跑 examples/tutorials/control_your_robot.py，形成 init→Scene→add_entity→build→step 的肌肉记忆",
+    "第3步：读 genesis/__init__.py，理解全局初始化与公开 API",
+    "第4步：读 genesis/options/options.py 与 solvers.py，掌握严格配置体系与各求解器参数",
+    "第5步：读 genesis/engine/scene.py，理解 Scene 如何聚合与驱动整个仿真",
+    "第6步：读 genesis/engine/simulator.py 与 solvers/base_solver.py，深入 substep 循环与求解器扩展，再按兴趣深挖 rigid_entity 控制、couplers 多物理耦合或 grad 可微仿真"
+  ],
+  "diagram_mermaid": "graph TD\n  A[gs.init 初始化后端] --> B[构造 gs.Scene]\n  B --> C[add_entity 添加实体]\n  C --> D[Simulator 按材质选求解器]\n  D --> E[scene.build 并行化与编译内核]\n  E --> F[设置实体控制量]\n  F --> G[scene.step 主循环]\n  G --> H[Simulator.step 子步循环]\n  H --> I[求解器 substep 更新状态]\n  I --> J[Coupler 耦合多求解器]\n  J --> K[SensorManager 更新传感器]\n  K --> L[Visualizer 渲染与录像]\n  L --> G\n  G --> M[get_state 读取状态用于训练]",
+  "surprises": [
+    "项目已从 Genesis 更名为 Genesis World 仓库 genesis-world，但 Python 包名仍是 genesis，导入方式不变",
+    "配置体系用 Pydantic BaseModel 而非普通 dataclass，且 strict=True、extra='forbid'，字段名或类型写错会直接抛错",
+    "底层编译器 Quadrants 是 Taichi 的 fork，把 Python 内核代码降到 CUDA/ROCm/Metal/Vulkan/x86/ARM64",
+    "同一个 Scene 内可让多种物理求解器耦合（如刚体+MPM+SPH+IPC），并支持可微仿真的 backward 反向传播"
+  ],
+  "confidence": "高"
+}

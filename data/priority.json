@@ -1,0 +1,5655 @@
+{
+ "ARISE-Initiative/robomimic": {
+  "repo": "ARISE-Initiative/robomimic",
+  "name": "robomimic",
+  "star": "1.6k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "④ 示教 · 模仿学习 · 数据"
+  ],
+  "loc": 39962,
+  "file_count": 200,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 58.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 8.5,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 25.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -30.8
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "ARISE-Initiative/robosuite": {
+  "repo": "ARISE-Initiative/robosuite",
+  "name": "robosuite",
+  "star": "2.6k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "③ 操作 / 导航基准环境"
+  ],
+  "loc": 60388,
+  "file_count": 1332,
+  "language": "Python",
+  "license": "NOASSERTION",
+  "arch_score": 52.7,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 9.1,
+   "代码可读性": 20.0,
+   "资料完整度": 8.6,
+   "架构清晰度": 15
+  },
+  "tool_score": 31.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -38.2
+  },
+  "signals": {
+   "dep_count": 4,
+   "dep_keys": [
+    "-e .",
+    "extend-exclude",
+    "profile",
+    "py_version"
+   ],
+   "has_docs": true,
+   "license_ok": 0.15
+  }
+ },
+ "AgentOps-AI/agentops": {
+  "repo": "AgentOps-AI/agentops",
+  "name": "AgentOps（可观测）",
+  "star": "5.9k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑪ 平台与工作流"
+  ],
+  "loc": 180116,
+  "file_count": 1481,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 60.1,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 10.1,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 32.9,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -40.1
+  },
+  "signals": {
+   "dep_count": 12,
+   "dep_keys": [
+    "addopts",
+    "asyncio_default_fixture_loop_scope",
+    "asyncio_mode",
+    "build-backend",
+    "description",
+    "homepage",
+    "issues",
+    "log_cli_level",
+    "name",
+    "requires-python",
+    "resolution",
+    "version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "Aider-AI/aider": {
+  "repo": "Aider-AI/aider",
+  "name": "Aider",
+  "star": "49k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑩ 编码智能体"
+  ],
+  "loc": 220292,
+  "file_count": 676,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 53.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.5,
+   "代码可读性": 20.0,
+   "资料完整度": 6,
+   "架构清晰度": 15
+  },
+  "tool_score": 70.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 8,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 3
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "aider",
+    "click",
+    "prompt-toolkit",
+    "rich"
+   ],
+   "web_framework": [
+    "aiohttp",
+    "fastapi"
+   ],
+   "dep_count": 116,
+   "dep_keys": [
+    "aider",
+    "aiohappyeyeballs",
+    "aiohttp",
+    "aiosignal",
+    "annotated-doc",
+    "annotated-types",
+    "anyio",
+    "asgiref",
+    "attrs",
+    "audioop-lts",
+    "backoff",
+    "beautifulsoup4"
+   ],
+   "license_ok": 1.0
+  }
+ },
+ "All-Hands-AI/OpenHands": {
+  "repo": "All-Hands-AI/OpenHands",
+  "name": "OpenHands",
+  "star": "90k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑩ 编码智能体"
+  ],
+  "loc": 452414,
+  "file_count": 2460,
+  "language": "TypeScript",
+  "license": "MIT",
+  "arch_score": 48.0,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 13.2,
+   "代码可读性": 10.8,
+   "资料完整度": 15,
+   "架构清晰度": 9
+  },
+  "tool_score": 69.0,
+  "tool_detail": {
+   "CLI 可包装": 22,
+   "改造空间": 0,
+   "依赖轻量": 8,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "agent-canvas"
+   ],
+   "has_bin": true,
+   "web_framework": [
+    "react"
+   ],
+   "web_dirs": [
+    "public"
+   ],
+   "dep_count": 97,
+   "dep_keys": [
+    "@eslint/eslintrc",
+    "@eslint/js",
+    "@heroui/react",
+    "@microlink/react-json-view",
+    "@monaco-editor/react",
+    "@openhands/extensions",
+    "@openhands/typescript-client",
+    "@playwright/test",
+    "@react-router/dev",
+    "@react-router/node",
+    "@react-router/serve",
+    "@shadcn/lint"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "BerriAI/litellm": {
+  "repo": "BerriAI/litellm",
+  "name": "LiteLLM（模型网关）",
+  "star": "61k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑬ 模型服务与微调"
+  ],
+  "loc": 4142224,
+  "file_count": 12588,
+  "language": "Python",
+  "license": "NOASSERTION",
+  "arch_score": 33.4,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.8,
+   "代码可读性": 9.0,
+   "资料完整度": 7.6,
+   "架构清晰度": 4
+  },
+  "tool_score": 62.5,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "litellm",
+    "lite",
+    "litellm-proxy"
+   ],
+   "web_dirs": [
+    "ui"
+   ],
+   "dep_count": 30,
+   "dep_keys": [
+    "@testing-library/jest-dom",
+    "@testing-library/react",
+    "@types/react-copy-to-clipboard",
+    "asyncio_default_fixture_loop_scope",
+    "asyncio_mode",
+    "bindings",
+    "build-backend",
+    "description",
+    "documentation",
+    "editable-profile",
+    "exclude-newer",
+    "homepage"
+   ],
+   "has_examples": true,
+   "has_docker": true,
+   "has_makefile": true,
+   "license_ok": 0.15
+  }
+ },
+ "Cinnamon/kotaemon": {
+  "repo": "Cinnamon/kotaemon",
+  "name": "kotaemon",
+  "star": "26k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑧ RAG 与向量库"
+  ],
+  "loc": 58093,
+  "file_count": 405,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 57.8,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.8,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 21.6,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -26.4
+  },
+  "signals": {
+   "web_dirs": [
+    "templates"
+   ],
+   "web_files": [
+    "app.py"
+   ],
+   "heavy_imports": [
+    "paddle"
+   ],
+   "dep_count": 13,
+   "dep_keys": [
+    "build-backend",
+    "check-filenames",
+    "description",
+    "dev_template",
+    "dirty_template",
+    "documentation",
+    "homepage",
+    "ignore-words-list",
+    "name",
+    "repository",
+    "requires-python",
+    "skip"
+   ],
+   "has_docs": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "DLR-RM/stable-baselines3": {
+  "repo": "DLR-RM/stable-baselines3",
+  "name": "Stable-Baselines3",
+  "star": "14k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "① 深度学习与强化学习地基"
+  ],
+  "loc": 34600,
+  "file_count": 175,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 60.1,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 11.1,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 29.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -35.8
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 3,
+   "dep_keys": [
+    "exclude",
+    "follow_imports",
+    "target-version"
+   ],
+   "has_docs": true,
+   "has_docker": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "Farama-Foundation/Gymnasium": {
+  "repo": "Farama-Foundation/Gymnasium",
+  "name": "Gymnasium",
+  "star": "13k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "① 深度学习与强化学习地基"
+  ],
+  "loc": 76355,
+  "file_count": 716,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 71.0,
+  "arch_detail": {
+   "主线核心度": 20,
+   "社区热度": 11.0,
+   "代码可读性": 20.0,
+   "资料完整度": 5.0,
+   "架构清晰度": 15
+  },
+  "tool_score": 6.5,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -26.4,
+   "非工具型降权": -15.1
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_imports": [
+    "jax",
+    "torch"
+   ],
+   "dep_count": 20,
+   "dep_keys": [
+    "build-backend",
+    "convention",
+    "description",
+    "documentation",
+    "homepage",
+    "invalid-argument-type",
+    "invalid-assignment",
+    "invalid-method-override",
+    "invalid-return-type",
+    "missing-argument",
+    "name",
+    "python-platform"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "Firecrawl/firecrawl": {
+  "repo": "Firecrawl/firecrawl",
+  "name": "Firecrawl",
+  "star": "190k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑫ 数据获取与文档解析"
+  ],
+  "loc": 461653,
+  "file_count": 2031,
+  "language": "TypeScript",
+  "license": "AGPL-3.0",
+  "arch_score": 55.9,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 14.1,
+   "代码可读性": 10.8,
+   "资料完整度": 10,
+   "架构清晰度": 15
+  },
+  "tool_score": 23.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 3.5,
+   "活跃度": 5,
+   "无CLI降权": -28.3
+  },
+  "signals": {
+   "has_examples": true,
+   "has_docker": true,
+   "license_ok": 0.35
+  }
+ },
+ "FlowiseAI/Flowise": {
+  "repo": "FlowiseAI/Flowise",
+  "name": "Flowise",
+  "star": "55k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑪ 平台与工作流"
+  ],
+  "loc": 441243,
+  "file_count": 2435,
+  "language": "TypeScript",
+  "license": "NOASSERTION",
+  "arch_score": 44.4,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.6,
+   "代码可读性": 10.8,
+   "资料完整度": 6,
+   "架构清晰度": 15
+  },
+  "tool_score": 21.8,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -26.7
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "dep_count": 23,
+   "dep_keys": [
+    "@babel/preset-env",
+    "@babel/preset-typescript",
+    "@changesets/cli",
+    "@types/express",
+    "@typescript-eslint/typescript-estree",
+    "eslint",
+    "eslint-config-prettier",
+    "eslint-config-react-app",
+    "eslint-plugin-jsx-a11y",
+    "eslint-plugin-markdown",
+    "eslint-plugin-prettier",
+    "eslint-plugin-react"
+   ],
+   "has_docker": true,
+   "license_ok": 0.15
+  }
+ },
+ "GT-RIPL/Awesome-LLM-Robotics": {
+  "repo": "GT-RIPL/Awesome-LLM-Robotics",
+  "name": "Awesome-LLM-Robotics",
+  "star": "4.5k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑨ 入门清单与资源聚合"
+  ],
+  "loc": 255,
+  "file_count": 3,
+  "language": null,
+  "license": "BSD-3-Clause",
+  "arch_score": 10.9,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 9.7,
+   "代码可读性": 3.5,
+   "资料完整度": 6,
+   "架构清晰度": 9,
+   "合集型降权": -20.3
+  },
+  "tool_score": 7.8,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.9,
+   "非工具型降权": -18.3
+  },
+  "signals": {
+   "license_ok": 1.0
+  }
+ },
+ "Genesis-Embodied-AI/Genesis": {
+  "repo": "Genesis-Embodied-AI/Genesis",
+  "name": "Genesis",
+  "star": "30k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "② 仿真引擎与平台"
+  ],
+  "loc": 254483,
+  "file_count": 1036,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 67.9,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 11.9,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 79.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 7,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "gs"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 8,
+   "dep_keys": [
+    "build-backend",
+    "description",
+    "gs",
+    "log_cli_level",
+    "name",
+    "readme",
+    "requires-python",
+    "version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "NVIDIA/Isaac-GR00T": {
+  "repo": "NVIDIA/Isaac-GR00T",
+  "name": "GR00T N1",
+  "star": "8.2k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑤ VLA 视觉-语言-动作主线"
+  ],
+  "loc": 18739,
+  "file_count": 14,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 47.1,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 10.4,
+   "代码可读性": 18.7,
+   "资料完整度": 6,
+   "架构清晰度": 9
+  },
+  "tool_score": 31.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -38.0
+  },
+  "signals": {
+   "license_ok": 1.0
+  }
+ },
+ "OpenBMB/AgentVerse": {
+  "repo": "OpenBMB/AgentVerse",
+  "name": "AgentVerse",
+  "star": "5.2k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "④ 多智能体协作"
+  ],
+  "loc": 212404,
+  "file_count": 4472,
+  "language": "JavaScript",
+  "license": "Apache-2.0",
+  "arch_score": 41.9,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 9.9,
+   "代码可读性": 14.0,
+   "资料完整度": 6,
+   "架构清晰度": 12
+  },
+  "tool_score": 72.0,
+  "tool_detail": {
+   "CLI 可包装": 13,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 1
+  },
+  "signals": {
+   "cli_entry": true,
+   "web_framework": [
+    "fastapi",
+    "gradio",
+    "uvicorn"
+   ],
+   "web_dirs": [
+    "ui"
+   ],
+   "dep_count": 20,
+   "dep_keys": [
+    "astunparse",
+    "colorama",
+    "colorlog",
+    "fastapi",
+    "gradio",
+    "httpx",
+    "langchain",
+    "openai",
+    "opencv-python",
+    "py3langid",
+    "pydantic",
+    "pyyaml"
+   ],
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "OpenBMB/ChatDev": {
+  "repo": "OpenBMB/ChatDev",
+  "name": "ChatDev",
+  "star": "34k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "④ 多智能体协作"
+  ],
+  "loc": 72048,
+  "file_count": 603,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 52.1,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.1,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 9
+  },
+  "tool_score": 82.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "click"
+   ],
+   "web_framework": [
+    "fastapi",
+    "uvicorn"
+   ],
+   "web_dirs": [
+    "assets",
+    "frontend"
+   ],
+   "dep_count": 38,
+   "dep_keys": [
+    "addopts",
+    "beautifulsoup4",
+    "build-backend",
+    "cartopy",
+    "chardet",
+    "click",
+    "ddgs",
+    "description",
+    "faiss-cpu",
+    "fastapi",
+    "fastmcp",
+    "filelock"
+   ],
+   "has_docs": true,
+   "has_docker": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "OpenBMB/MiniCPM-V": {
+  "repo": "OpenBMB/MiniCPM-V",
+  "name": "MiniCPM-V",
+  "star": "27k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑥ 多模态底座 VLM"
+  ],
+  "loc": 57740,
+  "file_count": 379,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 60.8,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 11.8,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 19.4,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -23.6
+  },
+  "signals": {
+   "web_framework": [
+    "gradio",
+    "uvicorn"
+   ],
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_deps": [
+    "accelerate",
+    "torch",
+    "torchvision",
+    "transformers"
+   ],
+   "heavy_imports": [
+    "deepspeed",
+    "torch"
+   ],
+   "dep_count": 32,
+   "dep_keys": [
+    "accelerate",
+    "addict",
+    "decord",
+    "editdistance",
+    "einops",
+    "fairscale",
+    "gradio",
+    "gradio_client",
+    "http://thunlp.oss-cn-qingdao.aliyuncs.com/multi_modal/never_delete/modelscope_studio-0.4.0.9-py3-none-any.whl",
+    "jsonlines",
+    "markdown2",
+    "matplotlib"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "OpenBMB/OmniLMM": {
+  "repo": "OpenBMB/OmniLMM",
+  "name": "OmniLMM",
+  "star": "27k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑥ 多模态底座 VLM"
+  ],
+  "loc": 57740,
+  "file_count": 379,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 57.8,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.8,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 19.4,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -23.6
+  },
+  "signals": {
+   "web_framework": [
+    "gradio",
+    "uvicorn"
+   ],
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_deps": [
+    "accelerate",
+    "torch",
+    "torchvision",
+    "transformers"
+   ],
+   "heavy_imports": [
+    "deepspeed",
+    "torch"
+   ],
+   "dep_count": 32,
+   "dep_keys": [
+    "accelerate",
+    "addict",
+    "decord",
+    "editdistance",
+    "einops",
+    "fairscale",
+    "gradio",
+    "gradio_client",
+    "http://thunlp.oss-cn-qingdao.aliyuncs.com/multi_modal/never_delete/modelscope_studio-0.4.0.9-py3-none-any.whl",
+    "jsonlines",
+    "markdown2",
+    "matplotlib"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "OpenBMB/XAgent": {
+  "repo": "OpenBMB/XAgent",
+  "name": "XAgent",
+  "star": "8.6k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑤ 自主探索型 Agent"
+  ],
+  "loc": 184825,
+  "file_count": 482,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 51.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 10.5,
+   "代码可读性": 20.0,
+   "资料完整度": 6,
+   "架构清晰度": 15
+  },
+  "tool_score": 17.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 0,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -20.9
+  },
+  "signals": {
+   "web_framework": [
+    "fastapi",
+    "uvicorn"
+   ],
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_imports": [
+    "torch",
+    "vllm"
+   ],
+   "dep_count": 31,
+   "dep_keys": [
+    "apscheduler",
+    "charset_normalizer",
+    "colorama",
+    "cryptography",
+    "fastapi",
+    "inputimeout",
+    "json5",
+    "jsonschema",
+    "markdown",
+    "openai",
+    "orjson",
+    "pillow"
+   ],
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "OpenDriveLab/Vista": {
+  "repo": "OpenDriveLab/Vista",
+  "name": "Vista（驾驶世界模型）",
+  "star": "907",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑦ 世界模型 WAM"
+  ],
+  "loc": 9862,
+  "file_count": 54,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 49.8,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 7.9,
+   "代码可读性": 9.9,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 58.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 1
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "fire"
+   ],
+   "web_framework": [
+    "streamlit"
+   ],
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_deps": [
+    "deepspeed",
+    "torch",
+    "torchaudio",
+    "torchvision",
+    "transformers",
+    "triton",
+    "xformers"
+   ],
+   "heavy_imports": [
+    "torch",
+    "xformers"
+   ],
+   "dep_count": 42,
+   "dep_keys": [
+    "black",
+    "chardet",
+    "clip @ git+https://github.com/openai/clip.git",
+    "deepspeed",
+    "einops",
+    "fairscale",
+    "fire",
+    "fsspec",
+    "imageio",
+    "imageio-ffmpeg",
+    "invisible-watermark",
+    "kornia"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "OpenGVLab/InternVL": {
+  "repo": "OpenGVLab/InternVL",
+  "name": "InternVL",
+  "star": "10k",
+  "domains": [
+   "embodied",
+   "cross"
+  ],
+  "branches": [
+   "⑥ 多模态底座 VLM",
+   "② Agent 能力 × 机器人"
+  ],
+  "loc": 259337,
+  "file_count": 896,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 54.1,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 10.7,
+   "代码可读性": 20.0,
+   "资料完整度": 2.4,
+   "架构清晰度": 15
+  },
+  "tool_score": 22.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 1,
+   "无CLI降权": -26.9
+  },
+  "signals": {
+   "heavy_imports": [
+    "deepspeed",
+    "flash_attn",
+    "tensorflow",
+    "torch"
+   ],
+   "dep_count": 4,
+   "dep_keys": [
+    "-r requirements/classification.txt",
+    "-r requirements/internvl_chat.txt",
+    "-r requirements/segmentation.txt",
+    "-r requirements/streamlit_demo.txt"
+   ],
+   "license_ok": 1.0
+  }
+ },
+ "Physical-Intelligence/openpi": {
+  "repo": "Physical-Intelligence/openpi",
+  "name": "openpi (π0)",
+  "star": "14k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑤ VLA 视觉-语言-动作主线"
+  ],
+  "loc": 19950,
+  "file_count": 136,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 87.1,
+  "arch_detail": {
+   "主线核心度": 26,
+   "社区热度": 11.1,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 26.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.9
+  },
+  "signals": {
+   "heavy_imports": [
+    "jax",
+    "tensorflow",
+    "torch"
+   ],
+   "dep_count": 8,
+   "dep_keys": [
+    "build-backend",
+    "description",
+    "name",
+    "readme",
+    "repository",
+    "requires-python",
+    "target-version",
+    "version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "QwenLM/Qwen-Agent": {
+  "repo": "QwenLM/Qwen-Agent",
+  "name": "Qwen-Agent",
+  "star": "17k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "③ 官方与轻量 SDK"
+  ],
+  "loc": 66040,
+  "file_count": 343,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 56.3,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.3,
+   "代码可读性": 20.0,
+   "资料完整度": 10,
+   "架构清晰度": 15
+  },
+  "tool_score": 19.8,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 9,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 3,
+   "无CLI降权": -24.2
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "QwenLM/Qwen2.5-VL": {
+  "repo": "QwenLM/Qwen2.5-VL",
+  "name": "Qwen2.5-VL",
+  "star": "20k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑥ 多模态底座 VLM"
+  ],
+  "loc": 21812,
+  "file_count": 148,
+  "language": "Jupyter Notebook",
+  "license": "Apache-2.0",
+  "arch_score": 41.3,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.5,
+   "代码可读性": 10.0,
+   "资料完整度": 4.8,
+   "架构清晰度": 15
+  },
+  "tool_score": 21.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 3,
+   "无CLI降权": -25.8
+  },
+  "signals": {
+   "heavy_imports": [
+    "flash_attn",
+    "torch",
+    "vllm"
+   ],
+   "license_ok": 1.0
+  }
+ },
+ "RoboTwin-Platform/RoboTwin": {
+  "repo": "RoboTwin-Platform/RoboTwin",
+  "name": "RoboTwin",
+  "star": "3k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "③ 操作 / 导航基准环境"
+  ],
+  "loc": 40233,
+  "file_count": 752,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 50.3,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 9.3,
+   "代码可读性": 20.0,
+   "资料完整度": 6,
+   "架构清晰度": 15
+  },
+  "tool_score": 20.7,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 9,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -25.3
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "license_ok": 1.0
+  }
+ },
+ "RoboVerseOrg/RoboVerse": {
+  "repo": "RoboVerseOrg/RoboVerse",
+  "name": "RoboVerse",
+  "star": "1.9k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "③ 操作 / 导航基准环境"
+  ],
+  "loc": 382143,
+  "file_count": 2645,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 58.7,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 8.7,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 23.9,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -29.1
+  },
+  "signals": {
+   "heavy_imports": [
+    "jax",
+    "torch"
+   ],
+   "dep_count": 11,
+   "dep_keys": [
+    "build-backend",
+    "convention",
+    "description",
+    "index-strategy",
+    "index-url",
+    "name",
+    "readme",
+    "requires-python",
+    "roboverse_pack",
+    "target-version",
+    "version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "SWE-agent/SWE-agent": {
+  "repo": "SWE-agent/SWE-agent",
+  "name": "SWE-agent",
+  "star": "21k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑩ 编码智能体"
+  ],
+  "loc": 26191,
+  "file_count": 389,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 57.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.5,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 87.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "sweagent"
+   ],
+   "web_dirs": [
+    "assets"
+   ],
+   "dep_count": 14,
+   "dep_keys": [
+    "aci",
+    "asyncio_default_fixture_loop_scope",
+    "ba",
+    "build-backend",
+    "description",
+    "dummy-variable-rgx",
+    "indent-style",
+    "line-ending",
+    "name",
+    "quote-style",
+    "readme",
+    "requires-python"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "Significant-Gravitas/AutoGPT": {
+  "repo": "Significant-Gravitas/AutoGPT",
+  "name": "AutoGPT",
+  "star": "188k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑤ 自主探索型 Agent"
+  ],
+  "loc": 1463114,
+  "file_count": 7882,
+  "language": "Python",
+  "license": "NOASSERTION",
+  "arch_score": 18.2,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 14.1,
+   "代码可读性": 9.0,
+   "资料完整度": 11,
+   "架构清晰度": 12,
+   "合集型降权": -33.9
+  },
+  "tool_score": 5.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -21.7,
+   "非工具型降权": -12.5
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "has_docs": true,
+   "license_ok": 0.15
+  }
+ },
+ "StanfordVL/BEHAVIOR-1K": {
+  "repo": "StanfordVL/BEHAVIOR-1K",
+  "name": "BEHAVIOR-1K",
+  "star": "1.7k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "③ 操作 / 导航基准环境"
+  ],
+  "loc": 1319621,
+  "file_count": 4047,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 34.6,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 8.6,
+   "代码可读性": 9.0,
+   "资料完整度": 5.0,
+   "架构清晰度": 12
+  },
+  "tool_score": 20.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 7,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -24.8
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "TianxingChen/Embodied-AI-Guide": {
+  "repo": "TianxingChen/Embodied-AI-Guide",
+  "name": "Embodied-AI-Guide（中文）",
+  "star": "16k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑨ 入门清单与资源聚合"
+  ],
+  "loc": 1906,
+  "file_count": 13,
+  "language": null,
+  "license": "NOASSERTION",
+  "arch_score": 13.5,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 11.2,
+   "代码可读性": 3.5,
+   "资料完整度": 6,
+   "架构清晰度": 12,
+   "合集型降权": -25.2
+  },
+  "tool_score": 6.9,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 5.7,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -28.2,
+   "非工具型降权": -16.1
+  },
+  "signals": {
+   "license_ok": 0.15
+  }
+ },
+ "a2aproject/A2A": {
+  "repo": "a2aproject/A2A",
+  "name": "A2A 协议",
+  "star": "26k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑥ 工具 · 协议 · 沙箱"
+  ],
+  "loc": 12108,
+  "file_count": 102,
+  "language": "Shell",
+  "license": "Apache-2.0",
+  "arch_score": 46.9,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 11.8,
+   "代码可读性": 6.1,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 9.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -38.0,
+   "非工具型降权": -21.7
+  },
+  "signals": {
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "agno-agi/agno": {
+  "repo": "agno-agi/agno",
+  "name": "Agno",
+  "star": "43k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "② 通用编排框架"
+  ],
+  "loc": 1246771,
+  "file_count": 6102,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 39.4,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.4,
+   "代码可读性": 9.0,
+   "资料完整度": 6,
+   "架构清晰度": 12
+  },
+  "tool_score": 26.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.9
+  },
+  "signals": {
+   "license_ok": 1.0
+  }
+ },
+ "anthropics/claude-code": {
+  "repo": "anthropics/claude-code",
+  "name": "Claude Code",
+  "star": "150k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑩ 编码智能体"
+  ],
+  "loc": 91975,
+  "file_count": 1483,
+  "language": "TypeScript",
+  "license": "无",
+  "arch_score": 18.6,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 13.8,
+   "代码可读性": 14.4,
+   "资料完整度": 4.0,
+   "架构清晰度": 15,
+   "合集型降权": -34.6
+  },
+  "tool_score": 8.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -33.3,
+   "非工具型降权": -19.0
+  },
+  "signals": {
+   "has_examples": true,
+   "license_ok": 0.15
+  }
+ },
+ "assafelovic/gpt-researcher": {
+  "repo": "assafelovic/gpt-researcher",
+  "name": "gpt-researcher",
+  "star": "30k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑫ 数据获取与文档解析"
+  ],
+  "loc": 254044,
+  "file_count": 805,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 54.9,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.9,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 12
+  },
+  "tool_score": 26.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.9
+  },
+  "signals": {
+   "web_framework": [
+    "fastapi",
+    "uvicorn"
+   ],
+   "web_dirs": [
+    "frontend"
+   ],
+   "dep_count": 58,
+   "dep_keys": [
+    "addopts",
+    "aiofiles",
+    "arxiv",
+    "asyncio_fixture_loop_scope",
+    "asyncio_mode",
+    "beautifulsoup4",
+    "brotli",
+    "build-backend",
+    "colorama",
+    "ddgs",
+    "description",
+    "fastapi"
+   ],
+   "has_docs": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "browser-use/browser-use": {
+  "repo": "browser-use/browser-use",
+  "name": "browser-use",
+  "star": "117k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑨ 浏览器与电脑操作"
+  ],
+  "loc": 144070,
+  "file_count": 520,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 62.1,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 13.5,
+   "代码可读性": 20.0,
+   "资料完整度": 7.6,
+   "架构清晰度": 15
+  },
+  "tool_score": 82.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "browser-use",
+    "browseruse",
+    "bu",
+    "browser",
+    "browser-use-tui"
+   ],
+   "web_dirs": [
+    "static"
+   ],
+   "dep_count": 29,
+   "dep_keys": [
+    "addopts",
+    "asyncio_default_fixture_loop_scope",
+    "asyncio_default_test_loop_scope",
+    "asyncio_mode",
+    "browser",
+    "browser-use",
+    "browser-use-tui",
+    "browseruse",
+    "bu",
+    "build-backend",
+    "description",
+    "documentation"
+   ],
+   "has_examples": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "browserbase/stagehand": {
+  "repo": "browserbase/stagehand",
+  "name": "Stagehand",
+  "star": "26k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑨ 浏览器与电脑操作"
+  ],
+  "loc": 315907,
+  "file_count": 1777,
+  "language": "TypeScript",
+  "license": "MIT",
+  "arch_score": 41.2,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.8,
+   "代码可读性": 14.4,
+   "资料完整度": 0.0,
+   "架构清晰度": 15
+  },
+  "tool_score": 30.6,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -37.4
+  },
+  "signals": {
+   "dep_count": 27,
+   "dep_keys": [
+    "@ast-grep/lang-go",
+    "@ast-grep/lang-python",
+    "@ast-grep/napi",
+    "@changesets/apply-release-plan",
+    "@changesets/assemble-release-plan",
+    "@changesets/changelog-github",
+    "@changesets/cli",
+    "@changesets/config",
+    "@changesets/parse",
+    "@changesets/read",
+    "@manypkg/get-packages",
+    "@opentelemetry/api"
+   ],
+   "license_ok": 1.0
+  }
+ },
+ "bulletphysics/bullet3": {
+  "repo": "bulletphysics/bullet3",
+  "name": "Bullet3",
+  "star": "15k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "② 仿真引擎与平台"
+  ],
+  "loc": 2041158,
+  "file_count": 7582,
+  "language": "C++",
+  "license": "NOASSERTION",
+  "arch_score": 35.2,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.1,
+   "代码可读性": 3.1,
+   "资料完整度": 9.0,
+   "架构清晰度": 12
+  },
+  "tool_score": 7.9,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -32.2,
+   "非工具型降权": -18.4
+  },
+  "signals": {
+   "dep_count": 2,
+   "dep_keys": [
+    "build-backend",
+    "numpy"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 0.15
+  }
+ },
+ "bytedance/UI-TARS": {
+  "repo": "bytedance/UI-TARS",
+  "name": "UI-TARS",
+  "star": "12k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑨ 浏览器与电脑操作"
+  ],
+  "loc": 2005,
+  "file_count": 26,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 38.9,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 10.9,
+   "代码可读性": 7.0,
+   "资料完整度": 6,
+   "架构清晰度": 15
+  },
+  "tool_score": 26.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 6.0,
+   "许可证": 10.0,
+   "活跃度": 3,
+   "无CLI降权": -31.9
+  },
+  "signals": {
+   "license_ok": 1.0
+  }
+ },
+ "camel-ai/camel": {
+  "repo": "camel-ai/camel",
+  "name": "CAMEL",
+  "star": "18k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "④ 多智能体协作"
+  ],
+  "loc": 400323,
+  "file_count": 2204,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 56.3,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.3,
+   "代码可读性": 15.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 24.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 7,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -29.7
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 13,
+   "dep_keys": [
+    "build-backend",
+    "convention",
+    "description",
+    "documentation",
+    "homepage",
+    "license",
+    "name",
+    "quote-style",
+    "readme",
+    "repository",
+    "requires-python",
+    "target-version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "chroma-core/chroma": {
+  "repo": "chroma-core/chroma",
+  "name": "Chroma",
+  "star": "29k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑧ RAG 与向量库"
+  ],
+  "loc": 554149,
+  "file_count": 2129,
+  "language": "Rust",
+  "license": "Apache-2.0",
+  "arch_score": 39.8,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.9,
+   "代码可读性": 6.3,
+   "资料完整度": 12.6,
+   "架构清晰度": 9
+  },
+  "tool_score": 71.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "chroma",
+    "rich",
+    "typer"
+   ],
+   "web_framework": [
+    "uvicorn"
+   ],
+   "dep_count": 38,
+   "dep_keys": [
+    "asyncio_mode",
+    "bcrypt",
+    "build-backend",
+    "chroma",
+    "description",
+    "graphlib_backport",
+    "grpcio",
+    "httpx",
+    "importlib-resources",
+    "jsonschema",
+    "kubernetes",
+    "local_scheme"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "crewAIInc/crewAI": {
+  "repo": "crewAIInc/crewAI",
+  "name": "CrewAI",
+  "star": "60k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "④ 多智能体协作"
+  ],
+  "loc": 908561,
+  "file_count": 34946,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 48.7,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.7,
+   "代码可读性": 15.0,
+   "资料完整度": 11,
+   "架构清晰度": 10
+  },
+  "tool_score": 30.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -36.8
+  },
+  "signals": {
+   "dep_count": 22,
+   "dep_keys": [
+    "addopts",
+    "asyncio_default_fixture_loop_scope",
+    "asyncio_mode",
+    "ban-relative-imports",
+    "bump_pattern",
+    "convention",
+    "description",
+    "exclude",
+    "exclude-newer",
+    "info",
+    "name",
+    "python_classes"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "docling-project/docling": {
+  "repo": "docling-project/docling",
+  "name": "Docling",
+  "star": "69k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑫ 数据获取与文档解析"
+  ],
+  "loc": 829097,
+  "file_count": 1760,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 53.9,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.9,
+   "代码可读性": 15.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 73.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 7,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "docling",
+    "docling-tools"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 22,
+   "dep_keys": [
+    "all",
+    "branch",
+    "build-backend",
+    "changelog",
+    "default-groups",
+    "description",
+    "docling",
+    "docling-tools",
+    "homepage",
+    "issues",
+    "license",
+    "name"
+   ],
+   "has_docs": true,
+   "has_docker": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "droid-dataset/droid": {
+  "repo": "droid-dataset/droid",
+  "name": "DROID",
+  "star": "448",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "④ 示教 · 模仿学习 · 数据"
+  ],
+  "loc": 14008,
+  "file_count": 221,
+  "language": "Jupyter Notebook",
+  "license": "无",
+  "arch_score": 34.1,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 7.1,
+   "代码可读性": 7.0,
+   "资料完整度": 5.0,
+   "架构清晰度": 15
+  },
+  "tool_score": 6.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 1.5,
+   "活跃度": 1,
+   "无CLI降权": -25.0,
+   "非工具型降权": -14.4
+  },
+  "signals": {
+   "heavy_imports": [
+    "tensorflow",
+    "torch"
+   ],
+   "dep_count": 12,
+   "dep_keys": [
+    "build-backend",
+    "description",
+    "documentation",
+    "homepage",
+    "name",
+    "profile",
+    "py_version",
+    "readme",
+    "repository",
+    "requires-python",
+    "target-version",
+    "version"
+   ],
+   "has_docs": true,
+   "has_makefile": true,
+   "license_ok": 0.15
+  }
+ },
+ "dzhng/deep-research": {
+  "repo": "dzhng/deep-research",
+  "name": "deep-research",
+  "star": "20k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑫ 数据获取与文档解析"
+  ],
+  "loc": 3846,
+  "file_count": 21,
+  "language": "TypeScript",
+  "license": "MIT",
+  "arch_score": 31.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.5,
+   "代码可读性": 5.0,
+   "资料完整度": 6,
+   "架构清晰度": 9
+  },
+  "tool_score": 28.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 11.5,
+   "许可证": 10.0,
+   "活跃度": 3,
+   "无CLI降权": -34.4
+  },
+  "signals": {
+   "web_framework": [
+    "express"
+   ],
+   "dep_count": 20,
+   "dep_keys": [
+    "@ai-sdk/fireworks",
+    "@ai-sdk/openai",
+    "@ianvs/prettier-plugin-sort-imports",
+    "@mendable/firecrawl-js",
+    "@types/cors",
+    "@types/express",
+    "@types/lodash-es",
+    "@types/node",
+    "@types/uuid",
+    "ai",
+    "cors",
+    "express"
+   ],
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "e2b-dev/E2B": {
+  "repo": "e2b-dev/E2B",
+  "name": "E2B（安全沙箱）",
+  "star": "14k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑥ 工具 · 协议 · 沙箱"
+  ],
+  "loc": 169167,
+  "file_count": 1136,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 48.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.1,
+   "代码可读性": 20.0,
+   "资料完整度": 2.4,
+   "架构清晰度": 15
+  },
+  "tool_score": 28.4,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -34.6
+  },
+  "signals": {
+   "web_dirs": [
+    "templates"
+   ],
+   "dep_count": 10,
+   "dep_keys": [
+    "@changesets/cli",
+    "@changesets/read",
+    "@cloudflare/vitest-pool-workers",
+    "@types/node",
+    "dotenv",
+    "oxlint",
+    "prettier",
+    "tsdown",
+    "typescript",
+    "vitest"
+   ],
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "eosphoros-ai/DB-GPT": {
+  "repo": "eosphoros-ai/DB-GPT",
+  "name": "DB-GPT",
+  "star": "20k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑪ 平台与工作流"
+  ],
+  "loc": 642108,
+  "file_count": 4710,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 47.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.5,
+   "代码可读性": 15.0,
+   "资料完整度": 15,
+   "架构清晰度": 6
+  },
+  "tool_score": 25.7,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.3
+  },
+  "signals": {
+   "web_dirs": [
+    "assets",
+    "web"
+   ],
+   "dep_count": 11,
+   "dep_keys": [
+    "description",
+    "indent-style",
+    "line-ending",
+    "name",
+    "publish-url",
+    "quote-style",
+    "readme",
+    "requires-python",
+    "target-version",
+    "url",
+    "version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_docker": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "facebookresearch/faiss": {
+  "repo": "facebookresearch/faiss",
+  "name": "FAISS",
+  "star": "41k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑧ RAG 与向量库"
+  ],
+  "loc": 265221,
+  "file_count": 1111,
+  "language": "C++",
+  "license": "MIT",
+  "arch_score": 41.3,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.3,
+   "代码可读性": 7.0,
+   "资料完整度": 10,
+   "架构清晰度": 12
+  },
+  "tool_score": 24.8,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 13,
+   "算力门槛": 7,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -30.2
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 47,
+   "dep_keys": [
+    "before-all",
+    "blas_root",
+    "build",
+    "build-backend",
+    "build_shared_libs",
+    "build_testing",
+    "cmake.build-type",
+    "cmake.define.cmake_c_flags",
+    "cmake.define.cmake_cxx_flags",
+    "cmake.define.cmake_module_linker_flags",
+    "cmake.define.cmake_shared_linker_flags",
+    "cmake.define.faiss_opt_level"
+   ],
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "facebookresearch/habitat-lab": {
+  "repo": "facebookresearch/habitat-lab",
+  "name": "Habitat-Lab",
+  "star": "3.2k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "③ 操作 / 导航基准环境"
+  ],
+  "loc": 109696,
+  "file_count": 709,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 62.3,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 9.3,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 24.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 3,
+   "无CLI降权": -29.7
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "geekan/MetaGPT": {
+  "repo": "geekan/MetaGPT",
+  "name": "MetaGPT",
+  "star": "71k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "④ 多智能体协作"
+  ],
+  "loc": 106834,
+  "file_count": 1238,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 68.9,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 12.9,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 62.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 8,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 3
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "fire",
+    "rich",
+    "typer"
+   ],
+   "web_framework": [
+    "aiohttp"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 71,
+   "dep_keys": [
+    "aiofiles",
+    "aiohttp",
+    "anthropic",
+    "anytree",
+    "beautifulsoup4",
+    "boto3~",
+    "channels",
+    "curl-cffi~",
+    "dashscope~",
+    "faiss_cpu",
+    "fire",
+    "fsspec"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "getzep/graphiti": {
+  "repo": "getzep/graphiti",
+  "name": "Graphiti（Zep）",
+  "star": "32k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑦ 记忆层"
+  ],
+  "loc": 91917,
+  "file_count": 369,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 60.0,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 12.0,
+   "代码可读性": 20.0,
+   "资料完整度": 10,
+   "架构清晰度": 15
+  },
+  "tool_score": 35.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -42.9
+  },
+  "signals": {
+   "dep_count": 13,
+   "dep_keys": [
+    "build-backend",
+    "description",
+    "homepage",
+    "indent-style",
+    "license",
+    "name",
+    "pythonversion",
+    "quote-style",
+    "readme",
+    "repository",
+    "requires-python",
+    "typecheckingmode"
+   ],
+   "has_examples": true,
+   "has_docker": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "google-deepmind/mujoco": {
+  "repo": "google-deepmind/mujoco",
+  "name": "MuJoCo",
+  "star": "16k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "② 仿真引擎与平台"
+  ],
+  "loc": 615651,
+  "file_count": 2232,
+  "language": "C++",
+  "license": "Apache-2.0",
+  "arch_score": 56.4,
+  "arch_detail": {
+   "主线核心度": 20,
+   "社区热度": 11.2,
+   "代码可读性": 5.2,
+   "资料完整度": 11,
+   "架构清晰度": 9
+  },
+  "tool_score": 5.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 0,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -20.9,
+   "非工具型降权": -12.0
+  },
+  "signals": {
+   "heavy_imports": [
+    "jax"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "google-deepmind/open_x_embodiment": {
+  "repo": "google-deepmind/open_x_embodiment",
+  "name": "Open X-Embodiment",
+  "star": "2.1k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "④ 示教 · 模仿学习 · 数据"
+  ],
+  "loc": 6722,
+  "file_count": 11,
+  "language": "Jupyter Notebook",
+  "license": "Apache-2.0",
+  "arch_score": 27.4,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 8.9,
+   "代码可读性": 3.5,
+   "资料完整度": 0.0,
+   "架构清晰度": 15
+  },
+  "tool_score": 6.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 1,
+   "无CLI降权": -24.8,
+   "非工具型降权": -14.1
+  },
+  "signals": {
+   "heavy_imports": [
+    "jax",
+    "tensorflow"
+   ],
+   "license_ok": 1.0
+  }
+ },
+ "google-gemini/gemini-cli": {
+  "repo": "google-gemini/gemini-cli",
+  "name": "Gemini CLI",
+  "star": "107k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑩ 编码智能体"
+  ],
+  "loc": 780653,
+  "file_count": 2875,
+  "language": "TypeScript",
+  "license": "Apache-2.0",
+  "arch_score": 53.2,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 13.4,
+   "代码可读性": 10.8,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 74.0,
+  "tool_detail": {
+   "CLI 可包装": 22,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "gemini"
+   ],
+   "has_bin": true,
+   "web_framework": [
+    "express"
+   ],
+   "dep_count": 58,
+   "dep_keys": [
+    "@agentclientprotocol/sdk",
+    "@modelcontextprotocol/sdk",
+    "@octokit/rest",
+    "@types/express",
+    "@types/marked",
+    "@types/mime-types",
+    "@types/minimatch",
+    "@types/mock-fs",
+    "@types/prompts",
+    "@types/proper-lockfile",
+    "@types/react",
+    "@types/react-dom"
+   ],
+   "has_docs": true,
+   "has_docker": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "google/adk-python": {
+  "repo": "google/adk-python",
+  "name": "Google ADK",
+  "star": "22k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "③ 官方与轻量 SDK"
+  ],
+  "loc": 821605,
+  "file_count": 2835,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 52.6,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.6,
+   "代码可读性": 15.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 25.7,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.3
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "dep_count": 18,
+   "dep_keys": [
+    "build-backend",
+    "description",
+    "follow_imports",
+    "ignore-words-list",
+    "ini_options.asyncio_default_fixture_loop_scope",
+    "ini_options.asyncio_mode",
+    "module.name",
+    "name",
+    "profile",
+    "python_version",
+    "readme",
+    "requires-python"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "gpt-engineer-org/gpt-engineer": {
+  "repo": "gpt-engineer-org/gpt-engineer",
+  "name": "gpt-engineer",
+  "star": "55k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑩ 编码智能体"
+  ],
+  "loc": 13015,
+  "file_count": 169,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 51.6,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.6,
+   "代码可读性": 13.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 88.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 1
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "gpt-engineer",
+    "ge",
+    "gpte",
+    "bench",
+    "gpte_test_application",
+    "typer"
+   ],
+   "dep_count": 49,
+   "dep_keys": [
+    "autodoc_pydantic",
+    "black",
+    "build-backend",
+    "dataclasses-json",
+    "datasets",
+    "description",
+    "documentation",
+    "homepage",
+    "langchain",
+    "langchain-anthropic",
+    "langchain-community",
+    "langchain_openai"
+   ],
+   "has_docs": true,
+   "has_docker": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "haosulab/ManiSkill": {
+  "repo": "haosulab/ManiSkill",
+  "name": "ManiSkill",
+  "star": "3.4k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "③ 操作 / 导航基准环境"
+  ],
+  "loc": 126649,
+  "file_count": 1482,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 63.0,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 9.4,
+   "代码可读性": 20.0,
+   "资料完整度": 12.6,
+   "架构清晰度": 15
+  },
+  "tool_score": 29.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -35.8
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 1,
+   "dep_keys": [
+    "build-backend"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "haotian-liu/LLaVA": {
+  "repo": "haotian-liu/LLaVA",
+  "name": "LLaVA",
+  "star": "25k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑥ 多模态底座 VLM"
+  ],
+  "loc": 28145,
+  "file_count": 166,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 57.7,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.7,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 24.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 1,
+   "无CLI降权": -29.7
+  },
+  "signals": {
+   "heavy_imports": [
+    "flash_attn",
+    "sglang",
+    "torch",
+    "xformers"
+   ],
+   "dep_count": 6,
+   "dep_keys": [
+    "build-backend",
+    "description",
+    "name",
+    "readme",
+    "requires-python",
+    "version"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "hiyouga/LLaMA-Factory": {
+  "repo": "hiyouga/LLaMA-Factory",
+  "name": "LLaMA-Factory",
+  "star": "75k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑬ 模型服务与微调"
+  ],
+  "loc": 120539,
+  "file_count": 584,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 63.0,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 13.0,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 67.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "llamafactory-cli",
+    "lmf"
+   ],
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_imports": [
+    "deepspeed",
+    "sglang",
+    "torch",
+    "vllm"
+   ],
+   "dep_count": 17,
+   "dep_keys": [
+    "build-backend",
+    "convention",
+    "description",
+    "homepage",
+    "indent-style",
+    "license",
+    "line-ending",
+    "llamafactory-cli",
+    "lmf",
+    "name",
+    "path",
+    "pattern"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "huggingface/lerobot": {
+  "repo": "huggingface/lerobot",
+  "name": "LeRobot",
+  "star": "28k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "④ 示教 · 模仿学习 · 数据"
+  ],
+  "loc": 195543,
+  "file_count": 857,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 87.9,
+  "arch_detail": {
+   "主线核心度": 26,
+   "社区热度": 11.9,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 74.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 13,
+   "算力门槛": 7,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "lerobot-build-mp4-sidecar",
+    "lerobot-calibrate",
+    "lerobot-find-cameras",
+    "lerobot-find-port",
+    "lerobot-record"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 39,
+   "dep_keys": [
+    "build-backend",
+    "convention",
+    "description",
+    "discord",
+    "documentation",
+    "follow_imports",
+    "homepage",
+    "indent-style",
+    "issues",
+    "lerobot-annotate",
+    "lerobot-build-mp4-sidecar",
+    "lerobot-calibrate"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "huggingface/smolagents": {
+  "repo": "huggingface/smolagents",
+  "name": "smolagents",
+  "star": "30k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "③ 官方与轻量 SDK"
+  ],
+  "loc": 47410,
+  "file_count": 175,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 64.9,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 11.9,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 77.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "smolagent",
+    "webagent"
+   ],
+   "heavy_imports": [
+    "torch",
+    "vllm"
+   ],
+   "dep_count": 9,
+   "dep_keys": [
+    "addopts",
+    "build-backend",
+    "description",
+    "name",
+    "readme",
+    "requires-python",
+    "smolagent",
+    "version",
+    "webagent"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "infiniflow/ragflow": {
+  "repo": "infiniflow/ragflow",
+  "name": "RAGFlow",
+  "star": "92k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑧ RAG 与向量库"
+  ],
+  "loc": 1432063,
+  "file_count": 5187,
+  "language": "Go",
+  "license": "Apache-2.0",
+  "arch_score": 45.6,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 13.2,
+   "代码可读性": 5.4,
+   "资料完整度": 15,
+   "架构清晰度": 6
+  },
+  "tool_score": 25.7,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.3
+  },
+  "signals": {
+   "web_dirs": [
+    "web"
+   ],
+   "dep_count": 10,
+   "dep_keys": [
+    "asyncio_default_fixture_loop_scope",
+    "asyncio_mode",
+    "description",
+    "directory",
+    "name",
+    "readme",
+    "requires-python",
+    "title",
+    "url",
+    "version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "isaac-sim/IsaacLab": {
+  "repo": "isaac-sim/IsaacLab",
+  "name": "Isaac Lab",
+  "star": "8.3k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "② 仿真引擎与平台"
+  ],
+  "loc": 31097,
+  "file_count": 346,
+  "language": "Python",
+  "license": "BSD-3-Clause",
+  "arch_score": 76.5,
+  "arch_detail": {
+   "主线核心度": 20,
+   "社区热度": 10.5,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 31.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -38.0
+  },
+  "signals": {
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "isaac-sim/IsaacSim": {
+  "repo": "isaac-sim/IsaacSim",
+  "name": "Isaac Sim",
+  "star": "4.2k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "② 仿真引擎与平台"
+  ],
+  "loc": 0,
+  "file_count": 1,
+  "language": "Python",
+  "license": "NOASSERTION",
+  "arch_score": 25.7,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 9.7,
+   "代码可读性": 7.0,
+   "资料完整度": 0.0,
+   "架构清晰度": 9
+  },
+  "tool_score": 22.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -27.2
+  },
+  "signals": {
+   "license_ok": 0.15
+  }
+ },
+ "kortix-ai/suna": {
+  "repo": "kortix-ai/suna",
+  "name": "suna",
+  "star": "20k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑨ 浏览器与电脑操作"
+  ],
+  "loc": 5413957,
+  "file_count": 11461,
+  "language": "TypeScript",
+  "license": "NOASSERTION",
+  "arch_score": 34.0,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.5,
+   "代码可读性": 6.5,
+   "资料完整度": 6,
+   "架构清晰度": 10
+  },
+  "tool_score": 24.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -29.4
+  },
+  "signals": {
+   "dep_count": 32,
+   "dep_keys": [
+    "@ai-sdk/openai",
+    "@biomejs/biome",
+    "@clack/prompts",
+    "@dotenvx/dotenvx",
+    "@e2e-dev/web",
+    "@types/bun",
+    "@types/pg",
+    "agent-tunnel",
+    "ai",
+    "dotenv",
+    "dotenv-expand",
+    "e2e"
+   ],
+   "license_ok": 0.15
+  }
+ },
+ "langchain-ai/langchain": {
+  "repo": "langchain-ai/langchain",
+  "name": "LangChain",
+  "star": "148k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "② 通用编排框架"
+  ],
+  "loc": 450461,
+  "file_count": 3115,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 47.4,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 13.8,
+   "代码可读性": 15.0,
+   "资料完整度": 3.6,
+   "架构清晰度": 9
+  },
+  "tool_score": 26.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.9
+  },
+  "signals": {
+   "license_ok": 1.0
+  }
+ },
+ "langchain-ai/langgraph": {
+  "repo": "langchain-ai/langgraph",
+  "name": "LangGraph",
+  "star": "43k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "② 通用编排框架"
+  ],
+  "loc": 214172,
+  "file_count": 658,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 78.8,
+  "arch_detail": {
+   "主线核心度": 20,
+   "社区热度": 12.4,
+   "代码可读性": 20.0,
+   "资料完整度": 11.4,
+   "架构清晰度": 15
+  },
+  "tool_score": 28.8,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -35.2
+  },
+  "signals": {
+   "has_docs": true,
+   "has_examples": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "langgenius/dify": {
+  "repo": "langgenius/dify",
+  "name": "Dify",
+  "star": "158k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑪ 平台与工作流"
+  ],
+  "loc": 2665066,
+  "file_count": 14080,
+  "language": "TypeScript",
+  "license": "NOASSERTION",
+  "arch_score": 38.4,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 13.9,
+   "代码可读性": 6.5,
+   "资料完整度": 11,
+   "架构清晰度": 4
+  },
+  "tool_score": 19.6,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -23.9
+  },
+  "signals": {
+   "web_dirs": [
+    "web"
+   ],
+   "dep_count": 29,
+   "dep_keys": [
+    "@eslint-react/eslint-plugin",
+    "@eslint/markdown",
+    "@iconify-json/heroicons",
+    "@iconify-json/ri",
+    "@shadcn/lint",
+    "@tanstack/eslint-plugin-query",
+    "@types/node",
+    "@typescript-eslint/parser",
+    "@typescript/native",
+    "concurrently",
+    "eslint",
+    "eslint-config-flat-gitignore"
+   ],
+   "has_docs": true,
+   "has_makefile": true,
+   "license_ok": 0.15
+  }
+ },
+ "leggedrobotics/legged_gym": {
+  "repo": "leggedrobotics/legged_gym",
+  "name": "legged_gym",
+  "star": "3.1k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑧ 运控 · 真机 · 部署"
+  ],
+  "loc": 7012,
+  "file_count": 113,
+  "language": "Python",
+  "license": "NOASSERTION",
+  "arch_score": 37.3,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 9.3,
+   "代码可读性": 7.0,
+   "资料完整度": 6,
+   "架构清晰度": 15
+  },
+  "tool_score": 19.6,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 1.5,
+   "活跃度": 1,
+   "无CLI降权": -23.9
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "license_ok": 0.15
+  }
+ },
+ "letta-ai/letta": {
+  "repo": "letta-ai/letta",
+  "name": "Letta（原 MemGPT）",
+  "star": "25k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑦ 记忆层"
+  ],
+  "loc": 438,
+  "file_count": 9,
+  "language": null,
+  "license": "Apache-2.0",
+  "arch_score": 29.0,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.7,
+   "代码可读性": 3.5,
+   "资料完整度": 4.8,
+   "架构清晰度": 9
+  },
+  "tool_score": 26.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.9
+  },
+  "signals": {
+   "license_ok": 1.0
+  }
+ },
+ "mem0ai/mem0": {
+  "repo": "mem0ai/mem0",
+  "name": "mem0",
+  "star": "67k",
+  "domains": [
+   "agent",
+   "cross"
+  ],
+  "branches": [
+   "⑦ 记忆层",
+   "② Agent 能力 × 机器人"
+  ],
+  "loc": 319604,
+  "file_count": 1774,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 74.9,
+  "arch_detail": {
+   "主线核心度": 12,
+   "社区热度": 12.9,
+   "代码可读性": 20.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 32.9,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -40.1
+  },
+  "signals": {
+   "dep_count": 9,
+   "dep_keys": [
+    "build-backend",
+    "description",
+    "license",
+    "name",
+    "profile",
+    "python",
+    "readme",
+    "requires-python",
+    "version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "microsoft/AirSim": {
+  "repo": "microsoft/AirSim",
+  "name": "AirSim",
+  "star": "19k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "② 仿真引擎与平台"
+  ],
+  "loc": 257259,
+  "file_count": 1409,
+  "language": "C++",
+  "license": "NOASSERTION",
+  "arch_score": 41.4,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 11.4,
+   "代码可读性": 7.0,
+   "资料完整度": 11,
+   "架构清晰度": 9
+  },
+  "tool_score": 16.0,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 0,
+   "功能单一": 10,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -19.5
+  },
+  "signals": {
+   "heavy_imports": [
+    "tensorflow"
+   ],
+   "has_docs": true,
+   "license_ok": 0.15
+  }
+ },
+ "microsoft/OmniParser": {
+  "repo": "microsoft/OmniParser",
+  "name": "OmniParser",
+  "star": "26k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑨ 浏览器与电脑操作"
+  ],
+  "loc": 11492,
+  "file_count": 78,
+  "language": "Jupyter Notebook",
+  "license": "CC-BY-4.0",
+  "arch_score": 38.7,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.8,
+   "代码可读性": 5.7,
+   "资料完整度": 6.2,
+   "架构清晰度": 15
+  },
+  "tool_score": 18.0,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 7.0,
+   "活跃度": 5,
+   "无CLI降权": -22.0
+  },
+  "signals": {
+   "web_framework": [
+    "gradio",
+    "streamlit"
+   ],
+   "heavy_deps": [
+    "accelerate",
+    "paddlepaddle",
+    "torch",
+    "torchvision",
+    "transformers"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 33,
+   "dep_keys": [
+    "accelerate",
+    "anthropic",
+    "azure-identity",
+    "boto3",
+    "dashscope",
+    "dill",
+    "easyocr",
+    "einops",
+    "google-auth",
+    "gradio",
+    "groq",
+    "huggingface_hub"
+   ],
+   "has_docs": true,
+   "license_ok": 0.7
+  }
+ },
+ "microsoft/TaskWeaver": {
+  "repo": "microsoft/TaskWeaver",
+  "name": "TaskWeaver",
+  "star": "6.2k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "③ 官方与轻量 SDK"
+  ],
+  "loc": 52412,
+  "file_count": 405,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 51.1,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 10.1,
+   "代码可读性": 20.0,
+   "资料完整度": 6,
+   "架构清晰度": 15
+  },
+  "tool_score": 82.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 3
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "click"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 23,
+   "dep_keys": [
+    "click",
+    "colorama",
+    "docker",
+    "ijson",
+    "injector",
+    "ipykernel",
+    "jsonschema",
+    "matplotlib",
+    "numpy",
+    "openai",
+    "pandas",
+    "plotly"
+   ],
+   "license_ok": 1.0
+  }
+ },
+ "microsoft/agent-lightning": {
+  "repo": "microsoft/agent-lightning",
+  "name": "agent-lightning",
+  "star": "19k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑪ 平台与工作流"
+  ],
+  "loc": 17107,
+  "file_count": 157,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 58.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.4,
+   "代码可读性": 17.1,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 77.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "agl-server",
+    "agl-controller"
+   ],
+   "heavy_imports": [
+    "torch",
+    "vllm"
+   ],
+   "dep_count": 20,
+   "dep_keys": [
+    "agl-controller",
+    "agl-server",
+    "build-backend",
+    "description",
+    "documentation",
+    "homepage",
+    "issues",
+    "license",
+    "name",
+    "pythonversion",
+    "quote-style",
+    "readme"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "microsoft/autogen": {
+  "repo": "microsoft/autogen",
+  "name": "AutoGen",
+  "star": "61k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "④ 多智能体协作"
+  ],
+  "loc": 601,
+  "file_count": 11,
+  "language": "Python",
+  "license": "CC-BY-4.0",
+  "arch_score": 34.2,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 12.8,
+   "代码可读性": 7.0,
+   "资料完整度": 2.4,
+   "架构清晰度": 9
+  },
+  "tool_score": 23.9,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 7.0,
+   "活跃度": 3,
+   "无CLI降权": -29.1
+  },
+  "signals": {
+   "license_ok": 0.7
+  }
+ },
+ "microsoft/markitdown": {
+  "repo": "microsoft/markitdown",
+  "name": "markitdown",
+  "star": "189k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑫ 数据获取与文档解析"
+  ],
+  "loc": 26523,
+  "file_count": 190,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 52.1,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 14.1,
+   "代码可读性": 20.0,
+   "资料完整度": 6,
+   "架构清晰度": 9
+  },
+  "tool_score": 31.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -38.0
+  },
+  "signals": {
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "microsoft/playwright": {
+  "repo": "microsoft/playwright",
+  "name": "Playwright",
+  "star": "97k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑨ 浏览器与电脑操作"
+  ],
+  "loc": 793504,
+  "file_count": 3013,
+  "language": "TypeScript",
+  "license": "Apache-2.0",
+  "arch_score": 54.1,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 13.3,
+   "代码可读性": 10.8,
+   "资料完整度": 15,
+   "架构清晰度": 12
+  },
+  "tool_score": 21.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 8,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -25.8
+  },
+  "signals": {
+   "web_framework": [
+    "react"
+   ],
+   "dep_count": 111,
+   "dep_keys": [
+    "@actions/core",
+    "@actions/github",
+    "@babel/code-frame",
+    "@babel/core",
+    "@babel/helper-plugin-utils",
+    "@babel/parser",
+    "@babel/plugin-proposal-decorators",
+    "@babel/plugin-syntax-async-generators",
+    "@babel/plugin-syntax-import-attributes",
+    "@babel/plugin-syntax-json-strings",
+    "@babel/plugin-syntax-object-rest-spread",
+    "@babel/plugin-syntax-optional-catch-binding"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "microsoft/semantic-kernel": {
+  "repo": "microsoft/semantic-kernel",
+  "name": "Semantic Kernel",
+  "star": "29k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "③ 官方与轻量 SDK"
+  ],
+  "loc": 724090,
+  "file_count": 4800,
+  "language": "C#",
+  "license": "MIT",
+  "arch_score": 43.1,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.9,
+   "代码可读性": 8.2,
+   "资料完整度": 11,
+   "架构清晰度": 12
+  },
+  "tool_score": 26.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.9
+  },
+  "signals": {
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "milvus-io/milvus": {
+  "repo": "milvus-io/milvus",
+  "name": "Milvus",
+  "star": "46k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑧ RAG 与向量库"
+  ],
+  "loc": 2700567,
+  "file_count": 6337,
+  "language": "Go",
+  "license": "Apache-2.0",
+  "arch_score": 40.8,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 12.4,
+   "代码可读性": 5.4,
+   "资料完整度": 11,
+   "架构清晰度": 9
+  },
+  "tool_score": 26.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.9
+  },
+  "signals": {
+   "has_docs": true,
+   "has_docker": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "modelcontextprotocol/inspector": {
+  "repo": "modelcontextprotocol/inspector",
+  "name": "MCP Inspector",
+  "star": "11k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑥ 工具 · 协议 · 沙箱"
+  ],
+  "loc": 406580,
+  "file_count": 1618,
+  "language": "TypeScript",
+  "license": "NOASSERTION",
+  "arch_score": 45.2,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 10.8,
+   "代码可读性": 10.8,
+   "资料完整度": 8.6,
+   "架构清晰度": 15
+  },
+  "tool_score": 19.6,
+  "tool_detail": {
+   "CLI 可包装": 22,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "非工具型降权": -45.9
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "inspector",
+    "mcp-inspector",
+    "mcpdo"
+   ],
+   "has_bin": true,
+   "web_framework": [
+    "express",
+    "react"
+   ],
+   "dep_count": 36,
+   "dep_keys": [
+    "@eslint/js",
+    "@hono/node-server",
+    "@modelcontextprotocol/client",
+    "@modelcontextprotocol/core",
+    "@modelcontextprotocol/ext-apps",
+    "@modelcontextprotocol/ext-tasks",
+    "@modelcontextprotocol/server",
+    "@modelcontextprotocol/server-legacy",
+    "@napi-rs/keyring",
+    "@types/node",
+    "@types/proper-lockfile",
+    "@vitejs/plugin-react"
+   ],
+   "has_docs": true,
+   "has_docker": true,
+   "license_ok": 0.15
+  }
+ },
+ "modelcontextprotocol/python-sdk": {
+  "repo": "modelcontextprotocol/python-sdk",
+  "name": "MCP python-sdk",
+  "star": "25k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑥ 工具 · 协议 · 沙箱"
+  ],
+  "loc": 267351,
+  "file_count": 1687,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 59.3,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.7,
+   "代码可读性": 20.0,
+   "资料完整度": 12.6,
+   "架构清晰度": 15
+  },
+  "tool_score": 92.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "mcp"
+   ],
+   "dep_count": 20,
+   "dep_keys": [
+    "addopts",
+    "build-backend",
+    "description",
+    "documentation",
+    "format-command",
+    "homepage",
+    "issues",
+    "mcp",
+    "name",
+    "readme",
+    "repository",
+    "required-version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "modelcontextprotocol/servers": {
+  "repo": "modelcontextprotocol/servers",
+  "name": "MCP servers",
+  "star": "91k",
+  "domains": [
+   "agent",
+   "cross"
+  ],
+  "branches": [
+   "⑥ 工具 · 协议 · 沙箱",
+   "② Agent 能力 × 机器人"
+  ],
+  "loc": 24335,
+  "file_count": 149,
+  "language": "TypeScript",
+  "license": "NOASSERTION",
+  "arch_score": 26.5,
+  "arch_detail": {
+   "主线核心度": 30,
+   "社区热度": 13.2,
+   "代码可读性": 14.4,
+   "资料完整度": 6,
+   "架构清晰度": 12,
+   "合集型降权": -49.1
+  },
+  "tool_score": 9.4,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -38.2,
+   "非工具型降权": -21.9
+  },
+  "signals": {
+   "dep_count": 4,
+   "dep_keys": [
+    "@modelcontextprotocol/server-everything",
+    "@modelcontextprotocol/server-filesystem",
+    "@modelcontextprotocol/server-memory",
+    "@modelcontextprotocol/server-sequential-thinking"
+   ],
+   "license_ok": 0.15
+  }
+ },
+ "modelscope/agentscope": {
+  "repo": "modelscope/agentscope",
+  "name": "AgentScope",
+  "star": "33k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "② 通用编排框架"
+  ],
+  "loc": 301958,
+  "file_count": 1156,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 58.4,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.0,
+   "代码可读性": 20.0,
+   "资料完整度": 11.4,
+   "架构清晰度": 15
+  },
+  "tool_score": 28.4,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -34.6
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "dep_count": 9,
+   "dep_keys": [
+    "build-backend",
+    "description",
+    "documentation",
+    "homepage",
+    "license",
+    "name",
+    "readme",
+    "repository",
+    "requires-python"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "n8n-io/n8n": {
+  "repo": "n8n-io/n8n",
+  "name": "n8n",
+  "star": "207k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑪ 平台与工作流"
+  ],
+  "loc": 5562905,
+  "file_count": 30291,
+  "language": "TypeScript",
+  "license": "NOASSERTION",
+  "arch_score": 47.7,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 14.2,
+   "代码可读性": 6.5,
+   "资料完整度": 11,
+   "架构清晰度": 10
+  },
+  "tool_score": 21.8,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -26.7
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "dep_count": 24,
+   "dep_keys": [
+    "@biomejs/biome",
+    "@dotenvx/dotenvx",
+    "@n8n/eslint-config",
+    "@n8n/module-cli",
+    "@stryker-mutator/core",
+    "@stryker-mutator/vitest-runner",
+    "@types/node",
+    "@types/supertest",
+    "cross-env",
+    "eslint",
+    "jscpd",
+    "knip"
+   ],
+   "has_docs": true,
+   "license_ok": 0.15
+  }
+ },
+ "octo-models/octo": {
+  "repo": "octo-models/octo",
+  "name": "Octo",
+  "star": "1.8k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑤ VLA 视觉-语言-动作主线"
+  ],
+  "loc": 12762,
+  "file_count": 64,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 51.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 8.7,
+   "代码可读性": 12.8,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 22.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 13,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 1,
+   "无CLI降权": -26.9
+  },
+  "signals": {
+   "heavy_deps": [
+    "jax",
+    "tensorflow",
+    "transformers"
+   ],
+   "heavy_imports": [
+    "jax",
+    "tensorflow"
+   ],
+   "dep_count": 31,
+   "dep_keys": [
+    "absl-py",
+    "chex",
+    "distrax",
+    "dlimp @ git+https://github.com/kvablack/dlimp@5edaa4691567873d495633f2708982b42edf1972",
+    "einops",
+    "exclude",
+    "flax",
+    "force_sort_within_sections",
+    "gym",
+    "imageio",
+    "jax",
+    "matplotlib"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "openai/CLIP": {
+  "repo": "openai/CLIP",
+  "name": "CLIP",
+  "star": "34k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑥ 多模态底座 VLM"
+  ],
+  "loc": 6709,
+  "file_count": 21,
+  "language": "Jupyter Notebook",
+  "license": "MIT",
+  "arch_score": 40.6,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 12.1,
+   "代码可读性": 3.5,
+   "资料完整度": 4.0,
+   "架构清晰度": 15
+  },
+  "tool_score": 25.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 3,
+   "无CLI降权": -30.8
+  },
+  "signals": {
+   "heavy_deps": [
+    "torch",
+    "torchvision"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 6,
+   "dep_keys": [
+    "ftfy",
+    "packaging",
+    "regex",
+    "torch",
+    "torchvision",
+    "tqdm"
+   ],
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "openai/openai-agents-python": {
+  "repo": "openai/openai-agents-python",
+  "name": "OpenAI Agents SDK",
+  "star": "30k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "③ 官方与轻量 SDK"
+  ],
+  "loc": 582268,
+  "file_count": 1582,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 62.9,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 11.9,
+   "代码可读性": 15.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 30.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -36.8
+  },
+  "signals": {
+   "dep_count": 18,
+   "dep_keys": [
+    "asyncio_default_fixture_loop_scope",
+    "asyncio_mode",
+    "build-backend",
+    "convention",
+    "description",
+    "exclude-newer",
+    "format-command",
+    "homepage",
+    "index-strategy",
+    "license",
+    "module",
+    "name"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "openvla/openvla": {
+  "repo": "openvla/openvla",
+  "name": "OpenVLA",
+  "star": "7.1k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑤ VLA 视觉-语言-动作主线"
+  ],
+  "loc": 15753,
+  "file_count": 106,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 67.1,
+  "arch_detail": {
+   "主线核心度": 20,
+   "社区热度": 10.3,
+   "代码可读性": 15.8,
+   "资料完整度": 6,
+   "架构清晰度": 15
+  },
+  "tool_score": 24.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 1,
+   "无CLI降权": -29.7
+  },
+  "signals": {
+   "heavy_imports": [
+    "tensorflow",
+    "torch"
+   ],
+   "dep_count": 10,
+   "dep_keys": [
+    "build-backend",
+    "description",
+    "documentation",
+    "homepage",
+    "name",
+    "readme",
+    "repository",
+    "requires-python",
+    "target-version",
+    "version"
+   ],
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "princeton-nlp/SWE-bench": {
+  "repo": "princeton-nlp/SWE-bench",
+  "name": "SWE-bench（评测基准）",
+  "star": "6k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑩ 编码智能体"
+  ],
+  "loc": 67244,
+  "file_count": 672,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 51.3,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 10.1,
+   "代码可读性": 20.0,
+   "资料完整度": 6.2,
+   "架构清晰度": 15
+  },
+  "tool_score": 23.1,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "非工具型降权": -53.9
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "swebench"
+   ],
+   "heavy_imports": [
+    "flash_attn",
+    "torch"
+   ],
+   "dep_count": 5,
+   "dep_keys": [
+    "description",
+    "name",
+    "readme",
+    "requires-python",
+    "swebench"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "pydantic/pydantic-ai": {
+  "repo": "pydantic/pydantic-ai",
+  "name": "Pydantic-AI",
+  "star": "21k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "③ 官方与轻量 SDK"
+  ],
+  "loc": 2090039,
+  "file_count": 3986,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 41.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 11.5,
+   "代码可读性": 9.0,
+   "资料完整度": 9.0,
+   "架构清晰度": 12
+  },
+  "tool_score": 71.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "pai"
+   ],
+   "web_framework": [
+    "aiohttp"
+   ],
+   "dep_count": 33,
+   "dep_keys": [
+    "aiohttp",
+    "anthropic",
+    "anyio_mode",
+    "asyncpg",
+    "build-backend",
+    "changelog",
+    "convention",
+    "data_file",
+    "description",
+    "documentation",
+    "exclude-newer",
+    "fastavro"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "qdrant/qdrant": {
+  "repo": "qdrant/qdrant",
+  "name": "Qdrant",
+  "star": "35k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑧ RAG 与向量库"
+  ],
+  "loc": 999571,
+  "file_count": 2257,
+  "language": "Rust",
+  "license": "Apache-2.0",
+  "arch_score": 44.4,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.1,
+   "代码可读性": 6.3,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 26.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -31.9
+  },
+  "signals": {
+   "has_docs": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "ray-project/ray": {
+  "repo": "ray-project/ray",
+  "name": "Ray RLlib",
+  "star": "44k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "① 深度学习与强化学习地基"
+  ],
+  "loc": 1983140,
+  "file_count": 10223,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 48.4,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 12.4,
+   "代码可读性": 9.0,
+   "资料完整度": 11,
+   "架构清晰度": 10
+  },
+  "tool_score": 30.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -36.8
+  },
+  "signals": {
+   "dep_count": 2,
+   "dep_keys": [
+    "follow_imports",
+    "requires-python"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "real-stanford/diffusion_policy": {
+  "repo": "real-stanford/diffusion_policy",
+  "name": "Diffusion Policy",
+  "star": "4.6k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "④ 示教 · 模仿学习 · 数据"
+  ],
+  "loc": 30115,
+  "file_count": 200,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 73.8,
+  "arch_detail": {
+   "主线核心度": 23,
+   "社区热度": 9.8,
+   "代码可读性": 20.0,
+   "资料完整度": 6,
+   "架构清晰度": 15
+  },
+  "tool_score": 23.4,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 1,
+   "无CLI降权": -28.6
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "license_ok": 1.0
+  }
+ },
+ "reworkd/AgentGPT": {
+  "repo": "reworkd/AgentGPT",
+  "name": "AgentGPT",
+  "star": "36k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑤ 自主探索型 Agent"
+  ],
+  "loc": 47407,
+  "file_count": 549,
+  "language": "TypeScript",
+  "license": "GPL-3.0",
+  "arch_score": 55.6,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 12.2,
+   "代码可读性": 14.4,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 27.0,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 5.0,
+   "活跃度": 1,
+   "无CLI降权": -33.0
+  },
+  "signals": {
+   "has_docs": true,
+   "has_docker": true,
+   "license_ok": 0.5
+  }
+ },
+ "robotics-survey/Awesome-Robotics-Foundation-Models": {
+  "repo": "robotics-survey/Awesome-Robotics-Foundation-Models",
+  "name": "Awesome-Robotics-Foundation-Models",
+  "star": "1.4k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑨ 入门清单与资源聚合"
+  ],
+  "loc": 252,
+  "file_count": 4,
+  "language": null,
+  "license": "MIT",
+  "arch_score": 9.4,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 8.4,
+   "代码可读性": 3.5,
+   "资料完整度": 6,
+   "架构清晰度": 9,
+   "合集型降权": -17.5
+  },
+  "tool_score": 7.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 1,
+   "无CLI降权": -29.7,
+   "非工具型降权": -17.0
+  },
+  "signals": {
+   "license_ok": 1.0
+  }
+ },
+ "ros2/ros2": {
+  "repo": "ros2/ros2",
+  "name": "ROS 2",
+  "star": "6.1k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑧ 运控 · 真机 · 部署"
+  ],
+  "loc": 225,
+  "file_count": 7,
+  "language": null,
+  "license": "无",
+  "arch_score": 34.6,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 10.1,
+   "代码可读性": 3.5,
+   "资料完整度": 6,
+   "架构清晰度": 9
+  },
+  "tool_score": 22.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -27.2
+  },
+  "signals": {
+   "license_ok": 0.15
+  }
+ },
+ "run-llama/llama_index": {
+  "repo": "run-llama/llama_index",
+  "name": "LlamaIndex",
+  "star": "52k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "② 通用编排框架"
+  ],
+  "loc": 1599060,
+  "file_count": 9773,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 43.2,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 12.6,
+   "代码可读性": 9.0,
+   "资料完整度": 8.6,
+   "架构清晰度": 10
+  },
+  "tool_score": 24.3,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 7,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -29.7
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 18,
+   "dep_keys": [
+    "build-backend",
+    "convention",
+    "description",
+    "documentation",
+    "homepage",
+    "ignore-words-list",
+    "license",
+    "mypy_path",
+    "name",
+    "plugins",
+    "python_version",
+    "readme"
+   ],
+   "has_docs": true,
+   "has_makefile": true,
+   "license_ok": 1.0
+  }
+ },
+ "sgl-project/sglang": {
+  "repo": "sgl-project/sglang",
+  "name": "SGLang",
+  "star": "37k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑬ 模型服务与微调"
+  ],
+  "loc": 3007249,
+  "file_count": 10206,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 39.0,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.2,
+   "代码可读性": 9.0,
+   "资料完整度": 13.8,
+   "架构清晰度": 4
+  },
+  "tool_score": 12.6,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 9,
+   "算力门槛": 0,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -15.4
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_imports": [
+    "sglang",
+    "torch",
+    "triton",
+    "vllm"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "stack-of-tasks/pinocchio": {
+  "repo": "stack-of-tasks/pinocchio",
+  "name": "Pinocchio",
+  "star": "3.8k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑧ 运控 · 真机 · 部署"
+  ],
+  "loc": 155053,
+  "file_count": 1396,
+  "language": "C++",
+  "license": "BSD-2-Clause",
+  "arch_score": 49.5,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 9.5,
+   "代码可读性": 7.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 19.8,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 0,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -24.2
+  },
+  "signals": {
+   "heavy_imports": [
+    "tensorflow"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "stanfordnlp/dspy": {
+  "repo": "stanfordnlp/dspy",
+  "name": "DSPy（Prompt 可编程优化）",
+  "star": "39k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "① 核心范式与原理"
+  ],
+  "loc": 173441,
+  "file_count": 717,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 59.4,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 12.2,
+   "代码可读性": 20.0,
+   "资料完整度": 6.2,
+   "架构清晰度": 15
+  },
+  "tool_score": 23.9,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -29.1
+  },
+  "signals": {
+   "heavy_imports": [
+    "sglang",
+    "torch"
+   ],
+   "dep_count": 12,
+   "dep_keys": [
+    "ban-relative-imports",
+    "build-backend",
+    "description",
+    "homepage",
+    "indent-style",
+    "line-ending",
+    "name",
+    "quote-style",
+    "readme",
+    "requires-python",
+    "target-version",
+    "version"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "stepjam/RLBench": {
+  "repo": "stepjam/RLBench",
+  "name": "RLBench",
+  "star": "1.8k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "③ 操作 / 导航基准环境"
+  ],
+  "loc": 46137,
+  "file_count": 10153,
+  "language": "Python",
+  "license": "NOASSERTION",
+  "arch_score": 48.7,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 8.7,
+   "代码可读性": 20.0,
+   "资料完整度": 10,
+   "架构清晰度": 10
+  },
+  "tool_score": 69.5,
+  "tool_detail": {
+   "CLI 可包装": 13,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 1.5,
+   "活跃度": 1
+  },
+  "signals": {
+   "cli_entry": true,
+   "has_examples": true,
+   "license_ok": 0.15
+  }
+ },
+ "thu-ml/RoboticsDiffusionTransformer": {
+  "repo": "thu-ml/RoboticsDiffusionTransformer",
+  "name": "RDT-1B",
+  "star": "1.8k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "④ 示教 · 模仿学习 · 数据"
+  ],
+  "loc": 45077,
+  "file_count": 146,
+  "language": "Python",
+  "license": "MIT",
+  "arch_score": 54.7,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 8.7,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 20.7,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 3,
+   "无CLI降权": -25.3
+  },
+  "signals": {
+   "web_dirs": [
+    "assets"
+   ],
+   "heavy_deps": [
+    "accelerate",
+    "deepspeed",
+    "transformers"
+   ],
+   "heavy_imports": [
+    "bitsandbytes",
+    "jax",
+    "tensorflow",
+    "torch"
+   ],
+   "dep_count": 11,
+   "dep_keys": [
+    "accelerate",
+    "deepspeed",
+    "diffusers",
+    "h5py",
+    "imgaug",
+    "opencv-python",
+    "packaging",
+    "sentencepiece",
+    "timm",
+    "transformers",
+    "wandb"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "topoteretes/cognee": {
+  "repo": "topoteretes/cognee",
+  "name": "cognee",
+  "star": "32k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑦ 记忆层"
+  ],
+  "loc": 622733,
+  "file_count": 4009,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 46.8,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 12.0,
+   "代码可读性": 15.0,
+   "资料完整度": 13.8,
+   "架构清晰度": 6
+  },
+  "tool_score": 76.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 18,
+   "算力门槛": 20,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "cognee-cli"
+   ],
+   "web_dirs": [
+    "assets"
+   ],
+   "dep_count": 11,
+   "dep_keys": [
+    "build-backend",
+    "cognee-cli",
+    "description",
+    "exclude-newer",
+    "homepage",
+    "license",
+    "name",
+    "readme",
+    "repository",
+    "requires-python",
+    "version"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "unclecode/crawl4ai": {
+  "repo": "unclecode/crawl4ai",
+  "name": "crawl4ai",
+  "star": "85k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑫ 数据获取与文档解析"
+  ],
+  "loc": 326447,
+  "file_count": 931,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 59.1,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 13.1,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 64.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 0,
+   "依赖轻量": 13,
+   "算力门槛": 7,
+   "功能单一": 10,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "crawl4ai-download-models",
+    "crawl4ai-migrate",
+    "crawl4ai-setup",
+    "crawl4ai-doctor",
+    "crwl",
+    "rich"
+   ],
+   "web_framework": [
+    "aiohttp"
+   ],
+   "heavy_imports": [
+    "torch"
+   ],
+   "dep_count": 44,
+   "dep_keys": [
+    "aiofiles",
+    "aiohttp",
+    "aiosqlite~",
+    "alphashape",
+    "anyio",
+    "beautifulsoup4~",
+    "brotli",
+    "build-backend",
+    "chardet",
+    "colorama~",
+    "crawl4ai-doctor",
+    "crawl4ai-download-models"
+   ],
+   "has_docs": true,
+   "has_docker": true,
+   "license_ok": 1.0
+  }
+ },
+ "unitreerobotics/unitree_rl_gym": {
+  "repo": "unitreerobotics/unitree_rl_gym",
+  "name": "unitree_rl_gym",
+  "star": "3.6k",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑧ 运控 · 真机 · 部署"
+  ],
+  "loc": 26013,
+  "file_count": 276,
+  "language": "Python",
+  "license": "BSD-3-Clause",
+  "arch_score": 55.5,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 9.5,
+   "代码可读性": 20.0,
+   "资料完整度": 11,
+   "架构清晰度": 15
+  },
+  "tool_score": 23.4,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 7,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 1,
+   "无CLI降权": -28.6
+  },
+  "signals": {
+   "heavy_imports": [
+    "torch"
+   ],
+   "has_docs": true,
+   "license_ok": 1.0
+  }
+ },
+ "unitreerobotics/unitree_ros2": {
+  "repo": "unitreerobotics/unitree_ros2",
+  "name": "unitree_ros2",
+  "star": "858",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑧ 运控 · 真机 · 部署"
+  ],
+  "loc": 34141,
+  "file_count": 162,
+  "language": "C++",
+  "license": "BSD-3-Clause",
+  "arch_score": 44.8,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 7.8,
+   "代码可读性": 7.0,
+   "资料完整度": 15,
+   "架构清晰度": 15
+  },
+  "tool_score": 31.1,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 10.0,
+   "活跃度": 5,
+   "无CLI降权": -38.0
+  },
+  "signals": {
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "unslothai/unsloth": {
+  "repo": "unslothai/unsloth",
+  "name": "Unsloth",
+  "star": "78k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑬ 模型服务与微调"
+  ],
+  "loc": 3254840,
+  "file_count": 7517,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 41.8,
+  "arch_detail": {
+   "主线核心度": 3,
+   "社区热度": 13.0,
+   "代码可读性": 9.0,
+   "资料完整度": 4.8,
+   "架构清晰度": 12
+  },
+  "tool_score": 66.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 18,
+   "算力门槛": 0,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "unsloth"
+   ],
+   "heavy_imports": [
+    "bitsandbytes",
+    "torch",
+    "triton",
+    "xformers"
+   ],
+   "dep_count": 12,
+   "dep_keys": [
+    "addopts",
+    "build-backend",
+    "description",
+    "documentation",
+    "homepage",
+    "license",
+    "name",
+    "readme",
+    "repository",
+    "requires-python",
+    "target-version",
+    "unsloth"
+   ],
+   "license_ok": 1.0
+  }
+ },
+ "vllm-project/vllm": {
+  "repo": "vllm-project/vllm",
+  "name": "vLLM",
+  "star": "93k",
+  "domains": [
+   "agent"
+  ],
+  "branches": [
+   "⑬ 模型服务与微调"
+  ],
+  "loc": 2273626,
+  "file_count": 7368,
+  "language": "Python",
+  "license": "Apache-2.0",
+  "arch_score": 52.2,
+  "arch_detail": {
+   "主线核心度": 6,
+   "社区热度": 13.2,
+   "代码可读性": 9.0,
+   "资料完整度": 15,
+   "架构清晰度": 9
+  },
+  "tool_score": 61.0,
+  "tool_detail": {
+   "CLI 可包装": 19,
+   "改造空间": 10,
+   "依赖轻量": 13,
+   "算力门槛": 0,
+   "功能单一": 4,
+   "许可证": 10.0,
+   "活跃度": 5
+  },
+  "signals": {
+   "cli_entry": true,
+   "cli_names": [
+    "vllm"
+   ],
+   "heavy_deps": [
+    "vllm"
+   ],
+   "heavy_imports": [
+    "torch",
+    "vllm"
+   ],
+   "dep_count": 59,
+   "dep_keys": [
+    "a63ede7",
+    "aks",
+    "arange",
+    "ba",
+    "bbc5b7ede",
+    "build-backend",
+    "cann",
+    "cpy",
+    "cudadevattrmaxsharedmemoryperblockoptin",
+    "datas",
+    "depthwise_seperable_out_channel",
+    "description"
+   ],
+   "has_docs": true,
+   "has_examples": true,
+   "license_ok": 1.0
+  }
+ },
+ "zc-xzc/embodied-ai-learning-handbook": {
+  "repo": "zc-xzc/embodied-ai-learning-handbook",
+  "name": "embodied-ai-learning-handbook",
+  "star": "56",
+  "domains": [
+   "embodied"
+  ],
+  "branches": [
+   "⑨ 入门清单与资源聚合"
+  ],
+  "loc": 52647,
+  "file_count": 74,
+  "language": null,
+  "license": "NOASSERTION",
+  "arch_score": 10.4,
+  "arch_detail": {
+   "主线核心度": 0,
+   "社区热度": 4.7,
+   "代码可读性": 10.0,
+   "资料完整度": 6,
+   "架构清晰度": 9,
+   "合集型降权": -19.3
+  },
+  "tool_score": 8.2,
+  "tool_detail": {
+   "CLI 可包装": 0,
+   "改造空间": 10,
+   "依赖轻量": 9,
+   "算力门槛": 20,
+   "功能单一": 15,
+   "许可证": 1.5,
+   "活跃度": 5,
+   "无CLI降权": -33.3,
+   "非工具型降权": -19.0
+  },
+  "signals": {
+   "license_ok": 0.15
+  }
+ }
+}

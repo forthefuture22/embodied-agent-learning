@@ -1,0 +1,83 @@
+{
+  "repo": "huggingface/lerobot",
+  "name": "LeRobot",
+  "one_liner": "PyTorch 端到端机器人学习工具链，统一硬件、数据集与策略接口",
+  "problem": "机器人学习生态碎片化：各家硬件、数据格式、策略实现互不兼容。LeRobot 用统一抽象把真实机器人控制、数据集、训练与评估串成可复用流水线。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Robot", "role": "所有真实机器人的抽象基类，规定 connect / get_observation / send_action / calibrate 等硬件无关接口", "file": "src/lerobot/robots/robot.py"},
+    {"name": "PreTrainedPolicy", "role": "所有策略模型的抽象基类，继承 nn.Module，提供 select_action、predict_action_chunk、from_pretrained 等统一推理与加载接口", "file": "src/lerobot/policies/pretrained.py"},
+    {"name": "PreTrainedConfig", "role": "所有策略配置的基类，基于 draccus ChoiceRegistry 做类型注册，是策略的工厂入口", "file": "src/lerobot/configs/policies.py"},
+    {"name": "LeRobotDataset", "role": "标准化的机器人数据集格式，Parquet 存状态/动作、MP4 或图像存视觉，支持流式与 HF Hub 加载", "file": "src/lerobot/datasets/lerobot_dataset.py"},
+    {"name": "RobotConfig", "role": "机器人配置基类，同样是 draccus ChoiceRegistry，决定 --robot.type 实例化哪个机器人", "file": "src/lerobot/robots/config.py"},
+    {"name": "EnvConfig", "role": "仿真环境配置基类，通过 create_envs 生成 gymnasium 向量化环境，供评估与仿真数据采集", "file": "src/lerobot/envs/configs.py"},
+    {"name": "PolicyProcessorPipeline", "role": "可组合的处理器流水线，负责观测/动作的归一化、设备搬运、重命名等前后处理步骤", "file": "src/lerobot/processor/pipeline.py"},
+    {"name": "Teleoperator", "role": "遥操作设备抽象基类，与 Robot 对称，提供 get_action 供数据采集时人工示教", "file": "src/lerobot/teleoperators/teleoperator.py"}
+  ],
+  "layers": [
+    {"name": "配置与 CLI 层", "responsibility": "用 draccus 把命令行参数解析成强类型配置对象，是所有入口脚本的起点", "modules": ["src/lerobot/configs"], "files": ["src/lerobot/configs/train.py", "src/lerobot/configs/policies.py", "src/lerobot/configs/parser.py"]},
+    {"name": "硬件抽象层", "responsibility": "把不同机器人、遥操作器、相机、电机统一到 Robot / Teleoperator / Camera 接口下", "modules": ["src/lerobot/robots", "src/lerobot/teleoperators", "src/lerobot/cameras", "src/lerobot/motors"], "files": ["src/lerobot/robots/robot.py", "src/lerobot/teleoperators/teleoperator.py", "src/lerobot/robots/so_follower/so_follower.py"]},
+    {"name": "数据层", "responsibility": "定义并读写 LeRobotDataset 格式，含视频编码、分片、统计与流式加载", "modules": ["src/lerobot/datasets"], "files": ["src/lerobot/datasets/lerobot_dataset.py", "src/lerobot/datasets/dataset_writer.py", "src/lerobot/datasets/streaming_dataset.py"]},
+    {"name": "策略层", "responsibility": "实现各类模仿学习、强化学习、VLA、世界模型与奖励模型策略", "modules": ["src/lerobot/policies", "src/lerobot/rewards", "src/lerobot/rl"], "files": ["src/lerobot/policies/pretrained.py", "src/lerobot/policies/act/modeling_act.py", "src/lerobot/policies/diffusion/modeling_diffusion.py", "src/lerobot/policies/pi0/modeling_pi0.py"]},
+    {"name": "处理层", "responsibility": "观测/动作的归一化、重命名、相对动作、图像增强、设备搬运等可组合处理步骤", "modules": ["src/lerobot/processor"], "files": ["src/lerobot/processor/pipeline.py", "src/lerobot/processor/normalize_processor.py", "src/lerobot/processor/factory.py"]},
+    {"name": "仿真环境层", "responsibility": "封装 LIBERO、MetaWorld、RoboCasa 等基准为统一向量化环境", "modules": ["src/lerobot/envs"], "files": ["src/lerobot/envs/factory.py", "src/lerobot/envs/libero.py", "src/lerobot/envs/metaworld.py"]},
+    {"name": "训练与评估编排层", "responsibility": "入口脚本组装数据集、策略、优化器与分布式引擎，跑训练循环和 rollout 评估", "modules": ["src/lerobot/scripts"], "files": ["src/lerobot/scripts/lerobot_train.py", "src/lerobot/scripts/lerobot_eval.py", "src/lerobot/scripts/lerobot_record.py"]},
+    {"name": "分布式与加速层", "responsibility": "基于 accelerate 提供 DDP/FSDP2/混合精度/梯度累积等并行能力", "modules": ["src/lerobot/distributed", "src/lerobot/optim"], "files": ["src/lerobot/distributed/parallelism.py", "src/lerobot/optim/factory.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户运行 lerobot-train，draccus 解析 CLI 得到 TrainPipelineConfig",
+    "第2步：train() 调用 make_accelerator 建立 accelerate 引擎并解析并行拓扑",
+    "第3步：make_train_eval_datasets 从 HF Hub 或本地加载 LeRobotDataset，得到数据集元数据与统计",
+    "第4步：make_policy 依据数据集特征与策略配置实例化策略模型",
+    "第5步：make_pre_post_processors 依据策略配置构建归一化等前后处理流水线",
+    "第6步：make_optimizer_and_scheduler 构建优化器与学习率调度器，accelerator.prepare 包装模型与数据加载器",
+    "第7步：训练循环取 batch，经 rename 与 preprocessor 处理后送入 policy(batch)",
+    "第8步：policy 前向返回 loss，accelerator.backward 反向传播，optimizer.step 更新权重",
+    "第9步：按频率记录日志、跑 eval_dataloader 或仿真环境评估、保存 checkpoint",
+    "第10步：可选把训练好的策略与处理器推送到 Hugging Face Hub"
+  ],
+  "entry_points": [
+    {"path": "lerobot-train", "what": "训练策略的主入口，解析配置后执行完整训练循环"},
+    {"path": "lerobot-eval", "what": "在仿真环境或真实硬件上 rollout 策略并计算成功率等指标"},
+    {"path": "lerobot-record", "what": "通过遥操作采集真实机器人数据并写成 LeRobotDataset"},
+    {"path": "lerobot-teleoperate", "what": "不采集数据，仅做遥操作实时控制机器人"},
+    {"path": "lerobot-calibrate", "what": "标定机器人电机零位并保存标定文件"},
+    {"path": "lerobot-dataset-viz", "what": "可视化数据集中的视频与状态动作序列"},
+    {"path": "src/lerobot/scripts/lerobot_train.py:543", "what": "train() 函数，整个训练流水线的编排核心"},
+    {"path": "src/lerobot/scripts/lerobot_record.py:228", "what": "record_loop() 函数，遥操作采集数据的主循环"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：硬件、数据集、策略三大块与 CLI 用法"},
+    {"path": "src/lerobot/configs/policies.py", "why": "PreTrainedConfig 基类，理解 draccus ChoiceRegistry 如何注册与选择策略"},
+    {"path": "src/lerobot/policies/pretrained.py", "why": "PreTrainedPolicy 基类，理解策略必须实现的接口与并行声明"},
+    {"path": "src/lerobot/robots/robot.py", "why": "Robot 基类，理解硬件抽象层的契约"},
+    {"path": "src/lerobot/policies/factory.py", "why": "make_policy 工厂，理解策略如何被按名约定地实例化"},
+    {"path": "src/lerobot/scripts/lerobot_train.py", "why": "训练入口，串联数据集、策略、处理器、优化器与分布式"},
+    {"path": "src/lerobot/datasets/lerobot_dataset.py", "why": "LeRobotDataset 实现，理解统一数据格式的读写"},
+    {"path": "src/lerobot/processor/pipeline.py", "why": "处理流水线，理解观测/动作前后处理如何可组合"}
+  ],
+  "extension_points": [
+    "想加新策略：在 src/lerobot/policies/<name>/ 下写 configuration_<name>.py，用 @PreTrainedConfig.register_subclass(\"<name>\") 注册一个继承 PreTrainedConfig 的配置类；再写 modeling_<name>.py 暴露 <Name>Policy，继承 PreTrainedPolicy",
+    "想加新机器人：在 src/lerobot/robots/ 下新建目录，写继承 Robot 的类和继承 RobotConfig 的配置类并注册",
+    "想加新遥操作器或相机：分别继承 Teleoperator / Camera 并注册对应 Config",
+    "想加新仿真环境：在 src/lerobot/envs/ 下写继承 EnvConfig 的类，实现 create_envs 返回 gymnasium 向量化环境",
+    "想加新的数据前后处理步骤：在 src/lerobot/processor/ 下写 ProcessorStep 并在策略的 processor_<name>.py 里组装 make_<name>_pre_post_processors",
+    "想接入第三方硬件包：发布名为 lerobot_robot_* / lerobot_teleoperator_* / lerobot_camera_* 的包，会被自动发现"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 pyproject.toml 的 [project.scripts]，搞清有哪些 CLI 入口",
+    "第2步：读 src/lerobot/configs/policies.py 与 src/lerobot/robots/robot.py，掌握两类核心配置基类与注册机制",
+    "第3步：读 src/lerobot/policies/pretrained.py 与一个具体策略如 policies/act/modeling_act.py，理解策略契约",
+    "第4步：读 src/lerobot/policies/factory.py，理解配置到实例的按名约定工厂",
+    "第5步：读 src/lerobot/scripts/lerobot_train.py 的 train()，把整条训练流水线串起来",
+    "第6步：读 src/lerobot/scripts/lerobot_record.py 与 datasets/lerobot_dataset.py，理解数据采集与统一格式"
+  ],
+  "diagram_mermaid": "graph TD\n  CLI[CLI 命令行参数] --> CFG[TrainPipelineConfig 配置对象]\n  CFG --> DS[make_train_eval_datasets 构建数据集]\n  CFG --> POL[make_policy 构建策略]\n  CFG --> PROC[make_pre_post_processors 构建处理器]\n  DS --> DL[DataLoader 批量加载]\n  DL --> PRE[Preprocessor 归一化与设备搬运]\n  PRE --> MODEL[Policy forward 计算损失]\n  MODEL --> OPT[optimizer.step 更新权重]\n  OPT --> CKPT[保存 checkpoint]\n  CKPT --> HUB[上传 HuggingFace Hub]\n  POL --> ACT[select_action 推理动作]\n  ACT --> ENV[仿真或真实环境 rollout]",
+  "surprises": [
+    "策略类的导入完全靠命名约定：配置模块 configuration_<name>.py 会被重写成 modeling_<name>.py 再取 <Name>Policy，模块名不合规会直接报错",
+    "训练里刻意写 policy(batch) 而不是 policy.forward(batch)，因为 FSDP2 只通过 nn.Module 的 __call__ 钩子做参数 all-gather",
+    "基础安装非常轻，训练/硬件/数据集能力分别藏在 lerobot[training]、lerobot[hardware] 等 extras 后面，缺包时会给出可操作的安装提示",
+    "第三方硬件无需改本仓库，只要包名以 lerobot_robot_ 等前缀发布即可被自动发现并用 --robot.type 直接调用"
+  ],
+  "confidence": "高"
+}

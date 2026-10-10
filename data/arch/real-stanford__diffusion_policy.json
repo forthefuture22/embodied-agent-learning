@@ -1,0 +1,84 @@
+{
+  "repo": "real-stanford/diffusion_policy",
+  "name": "Diffusion Policy",
+  "one_liner": "扩散策略模仿学习，用条件去噪生成机器人动作序列",
+  "problem": "人类示教动作常是多模态、非高斯的，单峰回归策略会平均成无效动作。Diffusion Policy 把动作序列生成建模成条件扩散去噪过程，从而表达多模态动作分布。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "BaseWorkspace", "role": "顶层编排容器，持有模型、优化器、数据集、日志与 checkpoint，负责串起整个训练/评估流程", "file": "diffusion_policy/workspace/base_workspace.py"},
+    {"name": "BaseImagePolicy", "role": "图像策略抽象基类，规定 predict_action、reset、set_normalizer 接口", "file": "diffusion_policy/policy/base_image_policy.py"},
+    {"name": "BaseLowdimPolicy", "role": "低维状态策略抽象基类，与图像策略对称", "file": "diffusion_policy/policy/base_lowdim_policy.py"},
+    {"name": "DiffusionUnetHybridImagePolicy", "role": "核心扩散策略，融合图像与低维观测，实现 conditional_sample 采样与 compute_loss 训练", "file": "diffusion_policy/policy/diffusion_unet_hybrid_image_policy.py"},
+    {"name": "ConditionalUnet1D", "role": "一维条件 UNet 去噪网络，输入噪声动作序列与条件，输出预测噪声", "file": "diffusion_policy/model/diffusion/conditional_unet1d.py"},
+    {"name": "LinearNormalizer", "role": "逐键线性归一化器，把观测与动作归一化到稳定范围并支持反归一化", "file": "diffusion_policy/model/common/normalizer.py"},
+    {"name": "BaseImageDataset", "role": "图像数据集抽象基类，提供 get_normalizer、get_validation_dataset 与按 horizon 采样", "file": "diffusion_policy/dataset/base_dataset.py"},
+    {"name": "BaseImageRunner", "role": "环境评估器抽象基类，在仿真环境中 rollout 策略并返回成功率等指标", "file": "diffusion_policy/env_runner/base_image_runner.py"},
+    {"name": "ReplayBuffer", "role": "基于 zarr 的磁盘回放缓冲区，是示教数据的统一存储格式", "file": "diffusion_policy/common/replay_buffer.py"},
+    {"name": "EMAModel", "role": "指数移动平均权重管理器，维护评估用的稳定影子模型", "file": "diffusion_policy/model/diffusion/ema_model.py"}
+  ],
+  "layers": [
+    {"name": "配置层", "responsibility": "用 Hydra YAML 与 _target_ 字段声明式地装配工作区、策略、数据集与环境运行器", "modules": ["diffusion_policy/config", "diffusion_policy/config/task"], "files": ["image_pusht_diffusion_policy_cnn.yaml", "diffusion_policy/config/train_diffusion_unet_hybrid_workspace.yaml", "diffusion_policy/config/task/pusht_image.yaml"]},
+    {"name": "数据层", "responsibility": "把 zarr 回放缓冲区的示教数据包装成数据集，按 horizon 采样序列并计算归一化统计", "modules": ["diffusion_policy/dataset", "diffusion_policy/common/replay_buffer.py"], "files": ["diffusion_policy/dataset/base_dataset.py", "diffusion_policy/dataset/pusht_image_dataset.py", "diffusion_policy/dataset/robomimic_replay_image_dataset.py"]},
+    {"name": "策略层", "responsibility": "实现扩散策略、BET、IBC 等策略，负责归一化、条件编码、去噪采样与损失计算", "modules": ["diffusion_policy/policy"], "files": ["diffusion_policy/policy/diffusion_unet_hybrid_image_policy.py", "diffusion_policy/policy/diffusion_unet_lowdim_policy.py", "diffusion_policy/policy/diffusion_transformer_hybrid_image_policy.py"]},
+    {"name": "模型层", "responsibility": "提供去噪网络、视觉编码器、位置编码、EMA 与归一化等可复用组件", "modules": ["diffusion_policy/model/diffusion", "diffusion_policy/model/vision", "diffusion_policy/model/common"], "files": ["diffusion_policy/model/diffusion/conditional_unet1d.py", "diffusion_policy/model/diffusion/ema_model.py", "diffusion_policy/model/common/normalizer.py"]},
+    {"name": "环境层", "responsibility": "实现 PushT、Robomimic、Kitchen 等仿真环境与真实机器人接口", "modules": ["diffusion_policy/env", "diffusion_policy/real_world"], "files": ["diffusion_policy/env/pusht/pusht_image_env.py", "diffusion_policy/env/robomimic/robomimic_image_wrapper.py"]},
+    {"name": "环境评估层", "responsibility": "在环境中 rollout 策略、渲染视频并统计成功率，供训练中周期评估与独立 eval 使用", "modules": ["diffusion_policy/env_runner"], "files": ["diffusion_policy/env_runner/pusht_image_runner.py", "diffusion_policy/env_runner/robomimic_image_runner.py", "diffusion_policy/env_runner/base_image_runner.py"]},
+    {"name": "工作区编排层", "responsibility": "组织模型、优化器、数据集、EMA、日志与 checkpoint，执行训练循环与评估", "modules": ["diffusion_policy/workspace"], "files": ["diffusion_policy/workspace/base_workspace.py", "diffusion_policy/workspace/train_diffusion_unet_hybrid_workspace.py"]},
+    {"name": "入口脚本层", "responsibility": "提供训练、评估、示教采集、真实机器人部署与多机运行的命令行入口", "modules": ["."], "files": ["train.py", "eval.py", "demo_pusht.py", "eval_real_robot.py", "ray_train_multirun.py"]}
+  ],
+  "data_flow": [
+    "第1步：运行 train.py，Hydra 读取 YAML 配置并解析 ${eval:} 等 resolver",
+    "第2步：配置的 _target_ 指向 TrainDiffusionUnetHybridWorkspace，实例化工作区",
+    "第3步：工作区用 hydra.utils.instantiate 从 cfg.policy 构建扩散策略与 EMA 影子模型",
+    "第4步：从 cfg.task.dataset 构建数据集，读取 zarr 回放缓冲区并计算 LinearNormalizer 统计",
+    "第5步：DataLoader 按 horizon 采样出包含 obs 与 action 序列的 batch",
+    "第6步：训练循环调用 policy.compute_loss：先归一化，再对动作加噪并随机采时间步",
+    "第7步：ConditionalUnet1D 预测噪声，与真实噪声做 MSE 得到损失，反向传播更新权重",
+    "第8步：按频率用 EMAModel 更新影子权重，并用 env_runner 在仿真环境 rollout 评估成功率",
+    "第9步：定期保存含 cfg 与权重的 dill checkpoint，并用 TopKCheckpointManager 保留最佳模型",
+    "第10步：推理时 policy.predict_action 归一化观测、编码为条件，从纯噪声迭代去噪生成动作块并反归一化"
+  ],
+  "entry_points": [
+    {"path": "train.py", "what": "Hydra 训练主入口，实例化配置指定的 workspace 并调用 run"},
+    {"path": "eval.py", "what": "加载 dill checkpoint，构建 env_runner 跑评估并输出指标与视频"},
+    {"path": "demo_pusht.py", "what": "PushT 任务的人工示教采集，把轨迹写入 zarr 回放缓冲区"},
+    {"path": "eval_real_robot.py", "what": "在真实机器人上部署并评估策略"},
+    {"path": "demo_real_robot.py", "what": "在真实机器人上采集示教数据"},
+    {"path": "ray_train_multirun.py", "what": "用 Ray 做多配置多随机种子的批量训练"},
+    {"path": "diffusion_policy/workspace/train_diffusion_unet_hybrid_workspace.py:61", "what": "run() 方法，完整训练循环的实现"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：扩散策略思想、任务矩阵、安装与复现方式"},
+    {"path": "diffusion_policy/workspace/base_workspace.py", "why": "工作区基类，理解模型/优化器/数据/日志/checkpoint 如何被统一编排"},
+    {"path": "diffusion_policy/workspace/train_diffusion_unet_hybrid_workspace.py", "why": "最主流的训练工作区，看清完整训练循环"},
+    {"path": "diffusion_policy/policy/diffusion_unet_hybrid_image_policy.py", "why": "核心策略，conditional_sample 与 compute_loss 是扩散策略的精髓"},
+    {"path": "diffusion_policy/model/diffusion/conditional_unet1d.py", "why": "去噪网络实现，理解条件注入与 1D UNet 结构"},
+    {"path": "diffusion_policy/dataset/base_dataset.py", "why": "数据集抽象与采样逻辑，理解 horizon 与归一化来源"},
+    {"path": "diffusion_policy/env_runner/pusht_image_runner.py", "why": "评估闭环实现，理解策略如何被环境消费"},
+    {"path": "image_pusht_diffusion_policy_cnn.yaml", "why": "一个完整可跑配置，理解 Hydra 参数体系与各组件如何被引用"}
+  ],
+  "extension_points": [
+    "想加新任务：写一个继承 BaseImageDataset 的数据集类与继承 BaseImageRunner 的评估器，再在 config/task/ 下加一份 YAML 声明 dataset 与 env_runner",
+    "想加新策略：继承 policy/base_image_policy.py 的 BaseImagePolicy，实现 predict_action、set_normalizer，并实现 compute_loss，再写对应的训练工作区",
+    "想换去噪网络：在 diffusion_policy/model/diffusion/ 下新增网络，在策略的 __init__ 里替换 self.model",
+    "想改观测编码方式：替换策略里的 obs_encoder，或在条件注入处改 obs_as_global_cond 与 inpainting 两种分支",
+    "想接入真实机器人：参考 real_world/ 与 eval_real_robot.py 实现机器人适配层",
+    "想调整训练策略：直接改 workspace 的 run() 或复制一个新 workspace 子类"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，跑通 PushT 的 Colab 或 demo，建立任务直觉",
+    "第2步：读 image_pusht_diffusion_policy_cnn.yaml，理解 Hydra 如何用 _target_ 声明式装配全部组件",
+    "第3步：读 workspace/train_diffusion_unet_hybrid_workspace.py 的 run()，把训练循环串起来",
+    "第4步：读 policy/diffusion_unet_hybrid_image_policy.py 的 compute_loss 与 conditional_sample，理解扩散策略核心",
+    "第5步：读 model/diffusion/conditional_unet1d.py，理解去噪网络结构与条件注入",
+    "第6步：读 dataset/base_dataset.py 与 env_runner/pusht_image_runner.py，理解数据来源与评估闭环"
+  ],
+  "diagram_mermaid": "graph TD\n  ZARR[Zarr 回放缓冲区示教数据] --> DS[BaseImageDataset 数据集]\n  DS --> NORM[LinearNormalizer 计算归一化]\n  NORM --> BATCH[DataLoader 采样动作序列 batch]\n  BATCH --> CLOSS[compute_loss 归一化并加噪]\n  CLOSS --> UNET[ConditionalUnet1D 预测噪声]\n  UNET --> MSE[MSE 损失反向更新权重]\n  MSE --> EMA[EMA 更新影子权重]\n  EMA --> CKPT[保存 dill checkpoint]\n  OBS[推理观测 dict] --> PNORM[normalize 观测]\n  PNORM --> ENC[obs_encoder 提取全局条件]\n  ENC --> SAMPLE[conditional_sample 迭代去噪]\n  SAMPLE --> ACT[unnormalize 输出动作块]\n  ACT --> ROBOT[机器人或仿真环境执行]",
+  "surprises": [
+    "策略不是普通 nn.Module 直接调用，而是通过 Hydra 的 _target_ 从 YAML 声明式实例化，改结构往往先改配置",
+    "checkpoint 用 dill 序列化整个 cfg 与 workspace 状态，eval.py 直接反序列化 cfg 再重建工作区，配置文件因此也是模型的一部分",
+    "观测条件有两种模式：obs_as_global_cond 走全局特征拼接，否则走 inpainting 把观测特征写进动作序列的前若干步并加 mask，两条路径在同一策略里并存",
+    "扩散去噪用 diffusers 的 DDPMScheduler，训练时随机采时间步加噪，推理时按 num_inference_steps 迭代，同一个 conditional_sample 在训练与推理语义不同"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,82 @@
+{
+  "repo": "Physical-Intelligence/openpi",
+  "name": "openpi",
+  "one_liner": "Physical Intelligence 的 π0 系列 VLA 视觉-语言-动作基础模型开源实现",
+  "problem": "机器人操作需要把摄像头画面与自然语言指令映射成连续动作序列。openpi 提供在 10k+ 小时机器人数据上预训练的 π0 / π0-FAST / π0.5 模型，支持开箱推理与在自己的数据上微调。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "BaseModel", "role": "所有模型实现的抽象基类，规定 compute_loss 与 sample_actions 两个核心方法", "file": "src/openpi/models/model.py"},
+    {"name": "BaseModelConfig", "role": "模型配置基类，定义 action_dim / action_horizon / max_token_len，并负责 create 与 load 模型", "file": "src/openpi/models/model.py"},
+    {"name": "Observation", "role": "模型输入的结构化数据类，统一多路图像、图像掩码、机器人状态与 tokenized prompt", "file": "src/openpi/models/model.py"},
+    {"name": "Policy", "role": "推理侧封装，把输入 transforms、模型 sample_actions、输出 transforms 串成 infer 接口", "file": "src/openpi/policies/policy.py"},
+    {"name": "BasePolicy", "role": "客户端侧的极简策略协议，只要求实现 infer，是策略服务器与机器人运行时之间的契约", "file": "packages/openpi-client/src/openpi_client/base_policy.py"},
+    {"name": "DataTransformFn", "role": "数据变换协议，对无 batch 的嵌套 dict 逐样本处理，是数据格式适配的核心抽象", "file": "src/openpi/transforms.py"},
+    {"name": "TrainConfig", "role": "训练总配置，组合模型配置、数据配置、优化器、并行与 checkpoint 参数", "file": "src/openpi/training/config.py"},
+    {"name": "DataConfigFactory", "role": "数据配置工厂基类，负责把某平台数据映射成模型输入并声明 transforms", "file": "src/openpi/training/config.py"},
+    {"name": "WeightLoader", "role": "权重加载器协议，支持从预训练 checkpoint 或 PaliGemma 加载部分权重", "file": "src/openpi/training/weight_loaders.py"}
+  ],
+  "layers": [
+    {"name": "模型层", "responsibility": "实现 π0 / π0-FAST / π0.5 的 JAX 与 PyTorch 网络，含 PaliGemma 主干、SigLIP 视觉编码器与动作专家", "modules": ["src/openpi/models", "src/openpi/models_pytorch"], "files": ["src/openpi/models/model.py", "src/openpi/models/pi0.py", "src/openpi/models/pi0_config.py", "src/openpi/models_pytorch/pi0_pytorch.py"]},
+    {"name": "数据变换层", "responsibility": "定义可组合的无 batch 数据变换，负责键重排、归一化、prompt 注入与平台适配", "modules": ["src/openpi/transforms.py"], "files": ["src/openpi/transforms.py"]},
+    {"name": "策略层", "responsibility": "把 transforms 与模型组装成可推理的 Policy，并提供各平台专属的输入输出映射", "modules": ["src/openpi/policies"], "files": ["src/openpi/policies/policy.py", "src/openpi/policies/policy_config.py", "src/openpi/policies/libero_policy.py", "src/openpi/policies/droid_policy.py"]},
+    {"name": "训练层", "responsibility": "定义 TrainConfig 体系、数据加载、优化器、FSDP 分片、checkpoint 与权重加载", "modules": ["src/openpi/training"], "files": ["src/openpi/training/config.py", "src/openpi/training/data_loader.py", "src/openpi/training/optimizer.py", "src/openpi/training/weight_loaders.py", "src/openpi/training/sharding.py"]},
+    {"name": "服务层", "responsibility": "把 Policy 封装成 websocket 策略服务器，供远程机器人客户端查询动作", "modules": ["src/openpi/serving"], "files": ["src/openpi/serving/websocket_policy_server.py", "scripts/serve_policy.py"]},
+    {"name": "客户端层", "responsibility": "独立可安装的轻量客户端包，含动作块缓冲、运行时与机器人环境抽象", "modules": ["packages/openpi-client"], "files": ["packages/openpi-client/src/openpi_client/base_policy.py", "packages/openpi-client/src/openpi_client/action_chunk_broker.py", "packages/openpi-client/src/openpi_client/runtime/agent.py"]},
+    {"name": "共享工具层", "responsibility": "数组类型检查、图像工具、归一化统计、下载与 NNX 工具", "modules": ["src/openpi/shared"], "files": ["src/openpi/shared/normalize.py", "src/openpi/shared/image_tools.py", "src/openpi/shared/nnx_utils.py", "src/openpi/shared/download.py"]}
+  ],
+  "data_flow": [
+    "第1步：调用方构造观测 dict，含多路图像、机器人状态与 prompt 文本",
+    "第2步：Policy.infer 先复制输入，依次应用 repack_transforms 与 InjectDefaultPrompt",
+    "第3步：data_transforms 把平台原始键映射为模型期望的图像键与状态键",
+    "第4步：Normalize 用 norm_stats 把状态与动作归一化到稳定范围",
+    "第5步：model_transforms 把数据整理成模型输入格式",
+    "第6步：Observation.from_dict 把嵌套 dict 转成结构化 Observation，并补上图像掩码",
+    "第7步：model.sample_actions 以 flow matching 迭代去噪从噪声生成动作块",
+    "第8步：输出经 Unnormalize 与 data_transforms.outputs 还原为平台动作格式",
+    "第9步：返回含 actions 与 policy_timing 的 dict，动作块由客户端 broker 按步执行",
+    "第10步：训练时同一套 transforms 生成 batch，train_step 调 compute_loss 得到 flow matching 损失并反向更新"
+  ],
+  "entry_points": [
+    {"path": "scripts/train.py", "what": "JAX 训练主入口，按 config 名加载配置并跑训练循环"},
+    {"path": "scripts/train_pytorch.py", "what": "PyTorch 版训练入口，支持单卡与 torchrun 多卡"},
+    {"path": "scripts/serve_policy.py", "what": "加载 checkpoint 并启动 websocket 策略服务器"},
+    {"path": "scripts/compute_norm_stats.py", "what": "为某训练配置预先计算数据归一化统计"},
+    {"path": "src/openpi/policies/policy_config.py:16", "what": "create_trained_policy，推理侧组装 Policy 的标准入口"},
+    {"path": "src/openpi/training/config.py:955", "what": "get_config 与 cli，按名字取训练配置"},
+    {"path": "examples/inference.ipynb", "what": "无需机器人的最小推理示例"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：三类模型、checkpoint、微调三步流程与 JAX/PyTorch 双实现"},
+    {"path": "src/openpi/models/model.py", "why": "核心抽象所在：Observation、BaseModel、BaseModelConfig 与 restore_params"},
+    {"path": "src/openpi/policies/policy.py", "why": "推理链路的组装点，看清 transforms 与 sample_actions 的先后关系"},
+    {"path": "src/openpi/policies/policy_config.py", "why": "create_trained_policy，理解如何从 checkpoint 构造可推理策略"},
+    {"path": "src/openpi/training/config.py", "why": "TrainConfig 体系与全部内置配置，是理解参数组织与扩展入口的关键"},
+    {"path": "src/openpi/models/pi0.py", "why": "π0 模型本体，含 flow matching 与 attention mask 的实现"},
+    {"path": "scripts/train.py", "why": "训练主循环，把数据加载、模型初始化、优化器与 checkpoint 串起来"},
+    {"path": "src/openpi/transforms.py", "why": "数据变换抽象与归一化实现，理解数据格式如何适配模型"}
+  ],
+  "extension_points": [
+    "想加新机器人平台：在 src/openpi/policies/ 下参考 libero_policy.py / droid_policy.py 写输入输出 transforms 与 Policy 子类",
+    "想加新数据来源：继承 training/config.py 的 DataConfigFactory，实现 create 返回 DataConfig，并在 _CONFIGS 里注册新 TrainConfig",
+    "想加新模型结构：继承 models/model.py 的 BaseModel 与 BaseModelConfig，实现 create / compute_loss / sample_actions 与 inputs_spec",
+    "想换权重加载策略：实现 training/weight_loaders.py 的 WeightLoader 协议",
+    "想改归一化或数据预处理：在 transforms.py 里新增 DataTransformFn 并在 DataConfig 的 transforms 中组装",
+    "想部署到自定义运行时：基于 packages/openpi-client 的 BasePolicy 与 runtime 实现机器人侧循环"
+  ],
+  "learning_path": [
+    "第1步：读 README.md，跑通 examples/inference.ipynb，建立推理链路直觉",
+    "第2步：读 src/openpi/models/model.py，掌握 Observation / BaseModel / BaseModelConfig 三个核心抽象",
+    "第3步：读 src/openpi/transforms.py，理解无 batch 数据变换与归一化协议",
+    "第4步：读 src/openpi/policies/policy.py 与 policy_config.py，把推理链路的组装串起来",
+    "第5步：读 src/openpi/models/pi0.py，理解 flow matching 与多模态注意力",
+    "第6步：读 src/openpi/training/config.py 与 scripts/train.py，理解训练配置体系与训练循环"
+  ],
+  "diagram_mermaid": "graph TD\n  OBS[观测 dict 图像 状态 prompt] --> REPACK[RepackTransform 重排键]\n  REPACK --> INJ[InjectDefaultPrompt 注入语言指令]\n  INJ --> DT[data_transforms 平台适配]\n  DT --> NORM[Normalize 归一化]\n  NORM --> MT[model_transforms 整理模型输入]\n  MT --> OBSOBJ[Observation 结构化对象]\n  OBSOBJ --> MODEL[Pi0 sample_actions]\n  MODEL --> FLOW[flow matching 迭代去噪]\n  FLOW --> UNNORM[Unnormalize 反归一化]\n  UNNORM --> OUT[输出 actions 动作块]\n  OUT --> BROKER[客户端 action chunk broker 逐帧执行]",
+  "surprises": [
+    "同一仓库同时维护 JAX 与 PyTorch 两套实现，推理 API 完全一致，靠 checkpoint 里是否存在 model.safetensors 自动判定后端",
+    "数据变换刻意工作在无 batch 的 numpy 嵌套 dict 上，靠 DataLoader 的 collate 才堆成 batch，训练与推理复用同一批变换",
+    "PyTorch 路线需要手动把 transformers_replace 里的补丁覆盖进 transformers 库，用来支持 AdaRMS 与 KV cache 复用，属于较脏的依赖处理",
+    "训练前必须先用 compute_norm_stats.py 生成归一化统计，否则训练会因缺失 norm_stats 直接报错；norm stats 还会随 checkpoint 一起分发以保证推理一致"
+  ],
+  "confidence": "高"
+}

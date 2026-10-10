@@ -1,0 +1,77 @@
+{
+  "repo": "geekan/MetaGPT",
+  "name": "MetaGPT",
+  "one_liner": "把软件公司 SOP 编码成多智能体协作流程的框架",
+  "problem": "让多个 LLM 角色按标准作业流程 SOP 协作，把一句话需求自动转成用户故事、需求文档、API 设计、代码与测试，解决单 Agent 难以完成长链路复杂任务的问题。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Role", "role": "角色智能体基类：封装观察-思考-行动循环，持有动作列表与订阅规则，是协作的基本单位", "file": "metagpt/roles/role.py"},
+    {"name": "Action", "role": "可执行动作基类：封装一次 LLM 调用或工具操作，产出 ActionOutput，是 SOP 的最小步骤", "file": "metagpt/actions/action.py"},
+    {"name": "Message", "role": "角色间通信的统一消息结构，携带 cause_by 与 send_to 实现基于内容的发布订阅路由", "file": "metagpt/schema.py"},
+    {"name": "Environment", "role": "运行环境与调度器：承载所有角色，负责消息广播投递与按轮次并发驱动角色运行", "file": "metagpt/environment/base_env.py"},
+    {"name": "Team", "role": "多角色团队的装配与顶层运行循环，负责雇佣角色、投喂初始需求、按轮次推进直到全部空闲", "file": "metagpt/team.py"},
+    {"name": "ActionNode", "role": "结构化输出节点：把 prompt 模板与期望字段约束成可解析的结构化结果，支撑 SOP 中固定格式交付物", "file": "metagpt/actions/action_node.py"},
+    {"name": "Memory", "role": "角色的消息记忆：存储已观察消息并支持按角色、动作、时间检索，避免重复处理", "file": "metagpt/memory/memory.py"}
+  ],
+  "layers": [
+    {"name": "角色层", "responsibility": "定义各类角色的动作集合与订阅规则，实现观察-思考-行动循环与不同反应策略", "modules": ["metagpt/roles"], "files": ["metagpt/roles/role.py", "metagpt/roles/product_manager.py", "metagpt/roles/architect.py", "metagpt/roles/engineer.py"]},
+    {"name": "动作层", "responsibility": "实现具体 SOP 步骤：写 PRD、设计 API、写代码、写测试等，负责组装 prompt 与调用 LLM", "modules": ["metagpt/actions"], "files": ["metagpt/actions/action.py", "metagpt/actions/write_prd.py", "metagpt/actions/design_api.py", "metagpt/actions/action_node.py"]},
+    {"name": "环境调度层", "responsibility": "承载角色、广播消息、按轮次并发执行角色并判断系统是否空闲", "modules": ["metagpt/environment", "metagpt/team.py"], "files": ["metagpt/environment/base_env.py", "metagpt/team.py", "metagpt/software_company.py"]},
+    {"name": "消息与数据模型层", "responsibility": "定义 Message、Document、Task、Plan 等跨角色传递的数据结构", "modules": ["metagpt"], "files": ["metagpt/schema.py", "metagpt/const.py"]},
+    {"name": "记忆层", "responsibility": "提供短期消息记忆与长期记忆检索能力，供角色去重与增强上下文", "modules": ["metagpt/memory", "metagpt/rag"], "files": ["metagpt/memory/memory.py", "metagpt/memory/longterm_memory.py", "metagpt/memory/brain_memory.py"]},
+    {"name": "配置与模型接入层", "responsibility": "统一 LLM、embedding、搜索等 provider 的配置与实例化，支持按角色覆盖模型", "modules": ["metagpt/configs", "metagpt/provider", "config"], "files": ["metagpt/config2.py", "config/config2.example.yaml", "metagpt/provider"]}
+  ],
+  "data_flow": [
+    "第1步：用户构造 Team 并 hire 一组 Role，或直接调用 software_company.startup 走预置软件公司流程",
+    "第2步：把 idea 包装成 UserRequirement 消息投入环境 publish_message，按 cause_by 路由给订阅该动作的角色",
+    "第3步：Environment.run 每轮遍历所有非 idle 角色，用 asyncio.gather 并发调用各自 role.run",
+    "第4步：Role.run 先 _observe，从私有 msg_buffer 与 memory 取新消息，按 rc.watch 与 send_to 过滤出 rc.news",
+    "第5步：若存在新消息则进入 react，按 react_mode 选择 _react 或 _plan_and_act 策略",
+    "第6步：_react 循环 _think 选动作，BY_ORDER 模式按序轮转、REACT 模式用 LLM 动态选择",
+    "第7步：_act 执行 rc.todo.run(history)，Action 组装 prompt 并经 ActionNode.fill 调用 LLM 得到结构化 ActionOutput",
+    "第8步：结果被包装成 AIMessage 写入角色 memory，再经 publish_message 广播回环境",
+    "第9步：Environment.publish_message 依据 send_to 与 member_addrs 把消息投递到目标角色的 msg_buffer",
+    "第10步：Team.run 循环多轮直到 env.is_idle，返回 env.history 作为最终交付物"
+  ],
+  "entry_points": [
+    {"path": "metagpt/team.py:Team.run", "what": "团队顶层运行循环，投喂需求并按轮次推进直到所有角色空闲"},
+    {"path": "metagpt/software_company.py:startup", "what": "预置软件公司的启动入口，组装 PM/架构师/项目经理/工程师团队"},
+    {"path": "metagpt/roles/role.py:Role.run", "what": "单个角色的主循环入口：观察-反应-发布消息"},
+    {"path": "metagpt/environment/base_env.py:Environment.run", "what": "环境调度入口，每轮并发驱动所有非空闲角色"},
+    {"path": "examples/", "what": "各类可直接运行的示例脚本，最快的上手入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先理解核心哲学 Code = SOP(Team)，以及输入输出边界"},
+    {"path": "metagpt/schema.py", "why": "Message/Document/Task 等数据模型，理解角色间传递什么"},
+    {"path": "metagpt/roles/role.py", "why": "Role 基类与观察-思考-行动循环，是协作机制的核心"},
+    {"path": "metagpt/actions/action.py", "why": "Action 基类与 LLM 调用契约，理解一个 SOP 步骤如何执行"},
+    {"path": "metagpt/environment/base_env.py", "why": "环境如何广播消息与并发调度角色，理解系统如何跑起来"},
+    {"path": "metagpt/team.py", "why": "团队装配与顶层运行循环，把角色和环境串起来"},
+    {"path": "metagpt/actions/write_prd.py", "why": "一个典型动作的完整实现，看 prompt 与 ActionNode 如何组织"},
+    {"path": "config/config2.example.yaml", "why": "参数体系：全局与按角色的 LLM/embedding 配置"}
+  ],
+  "extension_points": [
+    "新增一个角色：继承 metagpt/roles/role.py 的 Role，在 __init__ 里 set_actions 并 _watch 关注的动作，参考 product_manager.py",
+    "新增一个动作：继承 metagpt/actions/action.py 的 Action，实现 async def run，用 ActionNode 约束结构化输出",
+    "定义结构化交付物：使用 metagpt/actions/action_node.py 的 ActionNode 与模板，自动生成可解析字段",
+    "新增运行环境：继承 metagpt/environment/base_env.py 的 Environment，重写 publish_message/run 以改变调度或路由",
+    "更换记忆后端：继承 metagpt/memory/memory.py 的 Memory 或扩展 longterm_memory.py，接入向量库",
+    "新增 LLM/embedding 供应商：在 metagpt/provider 下实现对应 provider 并在 configs 注册"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 software_company.py，明确 SOP 协作的整体目标与团队构成",
+    "第2步：读 schema.py 的 Message，理解 cause_by 与 send_to 构成的发布订阅路由",
+    "第3步：读 roles/role.py，吃透 _observe/_think/_act/react 的观察-思考-行动循环",
+    "第4步：读 actions/action.py 与一个具体动作 write_prd.py，理解动作如何调 LLM 产出交付物",
+    "第5步：读 environment/base_env.py 与 team.py，理解环境如何并发调度并判定空闲收敛",
+    "第6步：读 config2.example.yaml，了解如何按角色配置不同模型"
+  ],
+  "diagram_mermaid": "graph TD\n  U[一句话需求] --> T[Team 雇佣角色]\n  T --> E[Environment 环境]\n  E --> R[Role.run 主循环]\n  R --> O[_observe 过滤新消息]\n  O --> M[Memory 消息记忆]\n  O --> K[_think 选择动作]\n  K --> A[_act 执行动作]\n  A --> AC[Action.run 组装 prompt]\n  AC --> L[LLM 生成结构化输出]\n  L --> A\n  A --> P[publish_message 广播消息]\n  P --> RT[Environment 路由投递]\n  RT --> O\n  R --> ID{全部角色 idle}\n  ID -->|否| R\n  ID -->|是| OUT[返回 env.history 交付物]",
+  "surprises": [
+    "角色之间不直接互相调用，全部通过 Environment 的消息广播解耦；一个角色是否行动由它订阅的动作类型 cause_by 决定，而非显式编排",
+    "SOP 不是硬编码流程图，而是由每个 Role 的 actions 列表与 _watch 规则隐式涌现出来，读代码时需要把多个角色的订阅关系拼起来才能看到完整流程",
+    "Role 默认 enable_memory 会去重历史消息，角色可能因为消息已在记忆中而选择不行动，调试时容易误判为卡住",
+    "Message 同时承载自然语言 content 和结构化 instruct_content，ActionNode 负责把 LLM 输出转成可校验的字段，是保证多角色交接格式一致的关键"
+  ],
+  "confidence": "高"
+}

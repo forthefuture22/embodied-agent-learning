@@ -1,0 +1,80 @@
+{
+  "repo": "mem0ai/mem0",
+  "name": "mem0",
+  "one_liner": "为 AI Agent 提供可抽取、可检索、可更新的长期记忆层",
+  "problem": "解决 Agent 缺乏长期记忆的问题：把对话与交互自动抽取成事实并去重存储，在多用户/多智能体场景下按语义与关键词混合检索，并支持显式更新与删除。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "Memory / AsyncMemory", "role": "记忆层主入口：编排抽取-嵌入-去重-存储-实体链接-检索的完整管线，同步与异步两个实现", "file": "mem0/memory/main.py"},
+    {"name": "MemoryBase", "role": "记忆层抽象契约，定义 add/get/get_all/search/update/delete 等对外方法", "file": "mem0/memory/base.py"},
+    {"name": "VectorStoreBase", "role": "向量库统一接口：insert/search/keyword_search/update/get/list，是后端可插拔的核心", "file": "mem0/vector_stores/base.py"},
+    {"name": "MemoryConfig", "role": "记忆层总配置：聚合 vector_store/llm/embedder/reranker 与 history_db_path、custom_instructions", "file": "mem0/configs/base.py"},
+    {"name": "EmbedderFactory / LlmFactory / RerankerFactory", "role": "按 provider 名实例化各类组件的工厂，实现 24 种 LLM、15 种嵌入、30 种向量库的可插拔", "file": "mem0/utils/factory.py"},
+    {"name": "SQLiteManager", "role": "本地历史与原始消息的持久化，记录记忆的 ADD/UPDATE/DELETE 变更历史", "file": "mem0/memory/storage.py"},
+    {"name": "Entity store", "role": "惰性初始化的第二向量集合，用于抽取实体并按链接关联到记忆，替代旧版知识图谱", "file": "mem0/memory/main.py"},
+    {"name": "MemoryClient / AsyncMemoryClient", "role": "托管平台客户端，把同样的记忆操作走远程 API 而非本地组件", "file": "mem0/client/main.py"}
+  ],
+  "layers": [
+    {"name": "记忆核心层", "responsibility": "实现记忆的抽取、去重、存储、更新、删除与检索编排逻辑", "modules": ["mem0/memory"], "files": ["mem0/memory/main.py", "mem0/memory/base.py", "mem0/memory/storage.py", "mem0/memory/utils.py"]},
+    {"name": "配置层", "responsibility": "定义 MemoryConfig 与各类 provider 的配置模型及默认值", "modules": ["mem0/configs"], "files": ["mem0/configs/base.py", "mem0/configs/prompts.py", "mem0/configs/enums.py"]},
+    {"name": "向量存储层", "responsibility": "30 种向量库后端的统一抽象与实现，提供语义与关键词检索", "modules": ["mem0/vector_stores"], "files": ["mem0/vector_stores/base.py", "mem0/vector_stores/qdrant.py", "mem0/vector_stores/pgvector.py", "mem0/vector_stores/faiss.py"]},
+    {"name": "模型接入层", "responsibility": "LLM、嵌入模型、重排器的 provider 抽象与工厂化实例化", "modules": ["mem0/llms", "mem0/embeddings", "mem0/reranker"], "files": ["mem0/llms/base.py", "mem0/embeddings/base.py", "mem0/reranker/base.py"]},
+    {"name": "客户端与服务层", "responsibility": "托管平台客户端与自托管服务端，复用同一套记忆语义", "modules": ["mem0/client", "server"], "files": ["mem0/client/main.py", "server"]},
+    {"name": "工具层", "responsibility": "分词、BM25 归一化、实体抽取、评分排序等纯函数工具", "modules": ["mem0/utils"], "files": ["mem0/utils/lemmatization.py", "mem0/utils/scoring.py", "mem0/utils/entity_extraction.py"]}
+  ],
+  "data_flow": [
+    "第1步：调用 Memory.add(messages, user_id/agent_id/run_id, infer=True) 写入新记忆",
+    "第2步：构造 filters 与 metadata，校验并解析消息，必要时做视觉消息解析",
+    "第3步：Phase 0 上下文收集：从 SQLiteManager 取该会话最近 10 条消息作为上下文",
+    "第4步：Phase 1 现有记忆检索：嵌入新消息并在 vector_store 语义搜索 top 10，结果用整数 ID 映射防止 LLM 幻觉",
+    "第5步：Phase 2 LLM 抽取：单次调用把新消息抽成事实列表，支持 custom_instructions 定制",
+    "第6步：Phase 3 批量嵌入抽取出的记忆文本，失败时降级为逐条嵌入",
+    "第7步：Phase 4/5 逐条计算 MD5 hash，对已有记忆与批内重复做去重，并做 BM25 分词",
+    "第8步：Phase 6 批量写入 vector_store，并按记录写入 SQLite 历史表",
+    "第9步：Phase 7 实体抽取与链接：抽取实体写入 entity store，按精确匹配或语义相似度合并并维护 linked_memory_ids",
+    "第10步：Phase 8 保存原始消息到 SQLite，返回每条 ADD 结果"
+  ],
+  "entry_points": [
+    {"path": "mem0/memory/main.py:Memory.add", "what": "写入记忆主入口，驱动抽取到存储的完整管线"},
+    {"path": "mem0/memory/main.py:Memory.search", "what": "检索记忆主入口，做混合检索与可选重排"},
+    {"path": "mem0/memory/main.py:_add_to_vector_store", "what": "V3 分阶段批处理管线主体，是理解记忆写入的核心"},
+    {"path": "mem0/memory/main.py:_search_vector_store", "what": "混合检索实现：语义 + BM25 + 实体加权 + 融合排序"},
+    {"path": "mem0/client/main.py:MemoryClient", "what": "托管平台客户端入口，与本地 Memory 语义对齐"},
+    {"path": "mem0/__init__.py", "what": "包导出入口，暴露 Memory/AsyncMemory/MemoryClient"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立定位：新记忆算法、基准数据与整体能力边界"},
+    {"path": "mem0/AGENTS.md", "why": "一张图看懂 provider pattern 与各目录职责，含各层 provider 数量"},
+    {"path": "mem0/memory/base.py", "why": "记忆层抽象契约，理解对外能力的最小集合"},
+    {"path": "mem0/configs/base.py", "why": "MemoryConfig 参数体系，看清 vector_store/llm/embedder/reranker 如何组合"},
+    {"path": "mem0/memory/main.py", "why": "核心实现，add 与 _add_to_vector_store 是记忆写入的完整链路"},
+    {"path": "mem0/memory/main.py:search", "why": "检索链路：从查询到混合打分到结果格式化"},
+    {"path": "mem0/vector_stores/base.py", "why": "向量库统一接口，理解后端如何可插拔以及 keyword_search 的可选性"},
+    {"path": "mem0/memory/storage.py", "why": "SQLite 历史与消息持久化，理解记忆变更历史与去重上下文来源"}
+  ],
+  "extension_points": [
+    "新增向量库后端：继承 mem0/vector_stores/base.py 的 VectorStoreBase，实现 insert/search/keyword_search/update/get/list，并在 vector_stores/__init__.py 注册",
+    "新增 LLM 供应商：继承 mem0/llms/base.py 的 LLMBase 实现 generate_response，在 llms/__init__.py 注册",
+    "新增嵌入模型：继承 mem0/embeddings/base.py 的 EmbedderBase，实现 embed 与 embed_batch",
+    "新增重排器：继承 mem0/reranker/base.py，并在 MemoryConfig.reranker 配置后由 RerankerFactory 创建",
+    "自定义抽取规则：通过 MemoryConfig.custom_instructions 或 add(prompt=...) 覆盖默认抽取提示词",
+    "替换记忆核心：继承 mem0/memory/base.py 的 MemoryBase 实现自定义记忆策略",
+    "注意：本版本无 mem0/graphs 目录，若需知识图谱记忆需参考托管平台或历史版本，不能沿用旧版 GraphStore 扩展点"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 AGENTS.md，建立 provider pattern 与目录职责的整体认知",
+    "第2步：读 memory/base.py 与 configs/base.py，掌握对外契约与配置体系",
+    "第3步：读 memory/main.py 的 Memory.__init__，看清四大组件如何被工厂组装",
+    "第4步：读 _add_to_vector_store，按 Phase 0-8 逐步理解抽取-嵌入-去重-存储-实体链接",
+    "第5步：读 search 与 _search_vector_store，理解语义+BM25+实体加权的混合检索与重排",
+    "第6步：读 vector_stores/base.py 与一个具体后端，理解如何接入新的存储后端"
+  ],
+  "diagram_mermaid": "graph TD\n  U[调用 add 输入消息] --> F[构造 filters 与 metadata]\n  F --> C[Phase0 取最近历史消息]\n  C --> R[Phase1 向量库检索现有记忆]\n  R --> X[Phase2 LLM 抽取事实]\n  X --> E[Phase3 批量嵌入]\n  E --> D[Phase4-5 hash 去重]\n  D --> P[Phase6 批量写入向量库]\n  P --> H[写 SQLite 历史]\n  H --> EN[Phase7 实体抽取与链接]\n  EN --> OUT[返回 ADD 结果]\n  Q[search 查询] --> SS[语义加 BM25 混合检索]\n  SS --> SC[融合打分排序]\n  SC -->|可选 reranker 重排| RES[返回 MemoryItem]",
+  "surprises": [
+    "本仓库版本为 2.2.1，AGENTS.md 仍文档化 graphs/ 目录与 4 个图库 provider，但实际代码中并不存在 mem0/graphs，README 也已移除图记忆说明：图记忆在本版本被移除或仅存于托管平台，切勿按旧版文档寻找 GraphStore",
+    "所谓向量库与图库协同，在本版本由 entity store 承担：实体被抽取后写入第二个向量集合，用 linked_memory_ids 与记忆关联，而非构建知识图谱",
+    "写入路径不再逐条做 ADD/UPDATE/DELETE 决策循环，而是 additive extraction 加 MD5 hash 去重加实体链接；记忆更新需显式调用 update(memory_id)",
+    "检索默认是语义加 BM25 混合，但只有实现了 keyword_search 的向量库才启用 BM25，否则会静默降级为纯语义相似度，容易造成不同后端行为不一致"
+  ],
+  "confidence": "高"
+}

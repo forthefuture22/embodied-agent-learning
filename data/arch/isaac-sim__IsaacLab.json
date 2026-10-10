@@ -1,0 +1,81 @@
+{
+  "repo": "isaac-sim/IsaacLab",
+  "name": "Isaac Lab",
+  "one_liner": "基于 Omniverse 的 GPU 并行机器人学习仿真与训练框架",
+  "problem": "把机器人强化学习/模仿学习的仿真、传感器、随机化与策略训练整合成可大规模并行的统一流程，降低 sim-to-real 门槛。",
+  "difficulty": "困难",
+  "core_abstractions": [
+    {"name": "ManagerBasedEnv", "role": "manager-based 工作流的环境基类，持有场景与各类 manager，但不含 reward/termination，对 MDP 保持无关", "file": "source/isaaclab/isaaclab/envs/manager_based_env.py"},
+    {"name": "ManagerBasedRLEnv", "role": "在 ManagerBasedEnv 之上补齐 reward、termination、reset 与 Gymnasium 接口的 RL 任务环境，是绝大多数训练任务的入口类", "file": "source/isaaclab/isaaclab/envs/manager_based_rl_env.py"},
+    {"name": "DirectRLEnv / DirectMARLEnv", "role": "另一种工作流：不拆 manager，由用户在一个类里直接实现 scene 搭建、观测、奖励、终止与 reset", "file": "source/isaaclab/isaaclab/envs/direct_rl_env.py"},
+    {"name": "ManagerBase / ManagerTermBase", "role": "所有 manager 的抽象基类，负责把配置对象解析成一个个 term 并统一调度，是 MDP 分解机制的核心", "file": "source/isaaclab/isaaclab/managers/manager_base.py"},
+    {"name": "InteractiveScene", "role": "场景管理器，依据 InteractiveSceneCfg 创建机器人、刚体、传感器等实体并做 GPU 批量克隆与数据缓冲", "file": "source/isaaclab/isaaclab/scene/interactive_scene.py"},
+    {"name": "SimulationContext", "role": "物理仿真上下文单例，控制 dt、物理步进、渲染与物理后端，env 必须由它驱动", "file": "source/isaaclab/isaaclab/sim/simulation_context.py"},
+    {"name": "configclass + EnvCfg", "role": "基于 dataclass 的配置体系，用 @configclass 声明式定义场景/MDP 项，是用户定义新任务的主要接口", "file": "source/isaaclab/isaaclab/envs/manager_based_env_cfg.py"},
+    {"name": "RslRlVecEnvWrapper", "role": "把 Isaac Lab 环境适配成 RSL-RL 等库所需的向量化环境接口，是 env 与策略库之间的桥", "file": "source/isaaclab_rl/isaaclab_rl/rsl_rl/vecenv_wrapper.py"}
+  ],
+  "layers": [
+    {"name": "启动/App 层", "responsibility": "启动 Omniverse Kit 内核、解析命令行与 Kit 参数、创建仿真上下文与可视化窗口", "modules": ["source/isaaclab/isaaclab/app", "apps", "source/isaaclab/isaaclab/cli"], "files": ["source/isaaclab/isaaclab/app/app_launcher.py", "source/isaaclab/isaaclab/app/sim_launcher.py"]},
+    {"name": "仿真核心层", "responsibility": "封装物理步进、时间步/decimation、渲染与物理后端抽象", "modules": ["source/isaaclab/isaaclab/sim", "source/isaaclab_physx", "source/isaaclab_newton"], "files": ["source/isaaclab/isaaclab/sim/simulation_context.py", "source/isaaclab/isaaclab/sim/simulation_cfg.py"]},
+    {"name": "场景/资产/传感器层", "responsibility": "提供机器人、刚体、可变形体、相机/激光雷达/接触等资产的配置与运行时句柄", "modules": ["source/isaaclab/isaaclab/scene", "source/isaaclab/isaaclab/assets", "source/isaaclab/isaaclab/sensors", "source/isaaclab/isaaclab/terrains"], "files": ["source/isaaclab/isaaclab/scene/interactive_scene.py", "source/isaaclab_assets/robots/franka.py"]},
+    {"name": "环境抽象层", "responsibility": "把场景与 manager 组织成对 agent 暴露的 step/reset 接口，区分 manager-based 与 direct 两种工作流", "modules": ["source/isaaclab/isaaclab/envs"], "files": ["source/isaaclab/isaaclab/envs/manager_based_env.py", "source/isaaclab/isaaclab/envs/manager_based_rl_env.py", "source/isaaclab/isaaclab/envs/direct_rl_env.py"]},
+    {"name": "Manager/MDP 层", "responsibility": "把 MDP 拆成 action/observation/reward/termination/event/command/curriculum/recorder 等可插拔 term 并统一调度", "modules": ["source/isaaclab/isaaclab/managers", "source/isaaclab/isaaclab/envs/mdp"], "files": ["source/isaaclab/isaaclab/managers/action_manager.py", "source/isaaclab/isaaclab/managers/observation_manager.py", "source/isaaclab/isaaclab/envs/mdp/rewards.py"]},
+    {"name": "任务层", "responsibility": "提供 30+ 现成环境与机器人配置，并通过 gym.register 把任务名映射到 env cfg 与各 RL 库的 agent cfg", "modules": ["source/isaaclab_tasks", "source/isaaclab_tasks_experimental"], "files": ["source/isaaclab_tasks/isaaclab_tasks/contrib/lift/lift_env_cfg.py", "source/isaaclab_tasks/isaaclab_tasks/contrib/lift/config/franka/__init__.py"]},
+    {"name": "RL 集成层", "responsibility": "统一 train/play/export 入口，按 --rl_library 分发到 RSL-RL/SB3/SKRL/rl_games/TorchRL 等后端并做环境适配", "modules": ["source/isaaclab_rl"], "files": ["source/isaaclab_rl/isaaclab_rl/entrypoints/dispatch.py", "source/isaaclab_rl/isaaclab_rl/entrypoints/backends/train_rsl_rl.py"]}
+  ],
+  "data_flow": [
+    "第1步：运行 scripts/reinforcement_learning/train.py，它导入 isaaclab_rl.entrypoints.run_train_cli",
+    "第2步：dispatch.run_cli 解析 --rl_library 与 --task，并从 gym.spec 的 kwargs 解析出默认后端",
+    "第3步：resolve_task_config 通过任务注册取出 env_cfg_entry_point 与 agent 配置并实例化为 @configclass",
+    "第4步：launch_simulation 启动 Kit 与 SimulationContext，创建 USD stage 并配置物理/渲染",
+    "第5步：create_isaaclab_env 用 gym.make(task) 实例化 ManagerBasedRLEnv",
+    "第6步：ManagerBasedEnv.__init__ 创建 InteractiveScene 与 EventManager，调用 sim.reset() 激活物理句柄",
+    "第7步：load_managers 依次构建 recorder/action/observation manager，并把配置解析成 term",
+    "第8步：RslRlVecEnvWrapper 包装环境，构建 OnPolicyRunner 等策略 runner",
+    "第9步：runner.learn 循环中策略输出 action，调用 env.step(action)",
+    "第10步：step 内 action_manager.process_action/apply_action 驱动 decimation 次物理步进，再算 termination/reward、reset 终止环境、observation_manager.compute 生成观测并返回"
+  ],
+  "entry_points": [
+    {"path": "scripts/reinforcement_learning/train.py", "what": "统一 RL 训练入口，转调 isaaclab_rl.entrypoints.run_train_cli"},
+    {"path": "scripts/reinforcement_learning/play.py", "what": "加载 checkpoint 回放/评估策略"},
+    {"path": "scripts/environments/zero_agent.py", "what": "零动作 agent，用于快速验证环境能否跑通"},
+    {"path": "scripts/environments/random_agent.py", "what": "随机动作 agent，用于冒烟测试环境"},
+    {"path": "scripts/tutorials/03_envs", "what": "环境创建与 manager 配置的官方教学脚本"},
+    {"path": "isaaclab (console script -> isaaclab.cli:cli)", "what": "安装后的命令行工具，提供环境列表、预编译等子命令"},
+    {"path": "apps/isaaclab.python.kit", "what": "Kit experience 文件，定义启动 Isaac Sim 内核所需的扩展集"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立整体认知：GPU 并行、基于 Isaac Sim、支持 RL/IL 与多后端"},
+    {"path": "source/isaaclab/isaaclab/envs/manager_based_env.py", "why": "理解 env 如何组织场景与 manager，以及 step/reset 的主循环"},
+    {"path": "source/isaaclab/isaaclab/envs/manager_based_rl_env.py", "why": "看 RL 版如何补上 reward/termination/reset 与 Gymnasium 接口"},
+    {"path": "source/isaaclab/isaaclab/managers/manager_base.py", "why": "理解 MDP 分解机制与 term 的统一调度方式"},
+    {"path": "source/isaaclab_tasks/isaaclab_tasks/contrib/lift/lift_env_cfg.py", "why": "一个完整 manager-based 任务配置范例，把抽象落到具体 term"},
+    {"path": "source/isaaclab_tasks/isaaclab_tasks/contrib/lift/config/franka/__init__.py", "why": "看清 gym.register 如何把任务名、env 类与 cfg 入口绑定"},
+    {"path": "source/isaaclab_rl/isaaclab_rl/entrypoints/dispatch.py", "why": "理解统一入口如何按 --rl_library 分发到各 RL 后端"},
+    {"path": "source/isaaclab_rl/isaaclab_rl/entrypoints/backends/train_rsl_rl.py", "why": "完整的训练调用链：解析→启动仿真→建环境→包装→runner.learn"}
+  ],
+  "extension_points": [
+    "想加新环境：写一个继承 ManagerBasedRLEnvCfg 或 DirectRLEnvCfg 的 @configclass，在包内 __init__.py 用 gym.register(entry_point='isaaclab.envs:ManagerBasedRLEnv', kwargs={'env_cfg_entry_point': ...}) 注册",
+    "想加新机器人：在 source/isaaclab_assets/robots 下新增 ArticulationCfg，并在任务 cfg 的 scene.robot 里 replace 使用",
+    "想加新 MDP 项：在 source/isaaclab/isaaclab/envs/mdp 下写函数，再在任务 cfg 里用 RewTerm/ObsTerm/EventTerm/TerminationTermCfg 引用",
+    "想加新 manager：继承 source/isaaclab/isaaclab/managers/manager_base.py 的 ManagerBase，并实现 active_terms 等抽象方法",
+    "想换物理后端：在 source/isaaclab_physx 或 source/isaaclab_newton 实现对应 physics manager，通过 physics= 选择器切换",
+    "想接新 RL 库：在 source/isaaclab_rl/isaaclab_rl/entrypoints/backends 增加 train/play 后端模块，并在 dispatch._BACKEND_MODULES 注册"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 与 docs，理解 GPU 并行、基于 Isaac Sim、支持多 RL 后端这三点定位",
+    "第2步：跑 scripts/tutorials/03_envs 系列，先会用再懂原理",
+    "第3步：读 envs/manager_based_env.py 的 __init__/load_managers/reset/step，掌握 env 生命周期",
+    "第4步：读 envs/manager_based_rl_env.py 的 step，理解 reward/termination/reset 的插入点",
+    "第5步：读 lift_env_cfg.py，把一个真实任务的 scene/actions/observations/rewards 与 manager 对应起来",
+    "第6步：读 isaaclab_rl/entrypoints/dispatch.py 与 train_rsl_rl.py，打通从命令行到策略训练的完整链路"
+  ],
+  "diagram_mermaid": "graph TD\n  A[命令行 train.py] --> B[dispatch 统一入口]\n  B --> C[resolve_task_config 解析任务]\n  C --> D[launch_simulation 启动 Kit]\n  D --> E[gym.make 创建 ManagerBasedRLEnv]\n  E --> F[InteractiveScene 建场景]\n  E --> G[EventManager 随机化]\n  E --> H[load_managers 建管理器]\n  H --> I[ActionManager 处理动作]\n  H --> J[ObservationManager 生成观测]\n  I --> K[物理 decimation 循环步进]\n  K --> L[RewardManager 计算奖励]\n  K --> M[TerminationManager 判终止]\n  L --> N[RslRlVecEnvWrapper 包装]\n  M --> N\n  N --> O[runner.learn 训练策略]\n  O --> A",
+  "surprises": [
+    "ManagerBasedEnv 刻意不包含 reward 与 termination，只有 ManagerBasedRLEnv 才补齐 MDP 定义，基础 env 可复用于非 RL 场景",
+    "env step 与物理步长被 decimation 解耦：一次 env.step 内部会跑 decimation 次物理步进，且 3.0 允许物理后端自行处理 decimation",
+    "3.0 把物理后端拆成独立包 isaaclab_physx 与 isaaclab_newton，同一套 env/manager API 下可切换 PhysX 与 Newton",
+    "RslRlVecEnvWrapper 并不遵循标准 gym.Wrapper 接口，官方明确要求它必须是 wrapper 链的最后一个，否则会出错"
+  ],
+  "confidence": "高"
+}

@@ -1,0 +1,77 @@
+{
+  "repo": "langchain-ai/langgraph",
+  "name": "LangGraph",
+  "one_liner": "用图状态机编排有状态、可持久化 Agent 的低层运行时",
+  "problem": "解决长时运行、有状态 Agent 的编排难题：需要把多步推理组织成可持久化、可断点恢复、可人工介入的显式状态机，而不是黑盒链式调用。",
+  "difficulty": "中等",
+  "core_abstractions": [
+    {"name": "StateGraph", "role": "用户态图构建器 DSL：声明状态 schema、节点、边与条件分支，compile 后产出可执行图", "file": "libs/langgraph/langgraph/graph/state.py"},
+    {"name": "Pregel / CompiledStateGraph", "role": "真正的执行引擎：把图编译成 Pregel 实例，按 superstep 调度节点、聚合写入、驱动循环", "file": "libs/langgraph/langgraph/pregel/main.py"},
+    {"name": "BaseChannel", "role": "状态字段的存储与合并语义单元，决定多次写入如何 reduce，是状态更新的最小载体", "file": "libs/langgraph/langgraph/channels/base.py"},
+    {"name": "BaseCheckpointSaver", "role": "检查点持久化接口：按 thread_id 存取图状态快照，支撑断点恢复、时间旅行与中断", "file": "libs/checkpoint/langgraph/checkpoint/base/__init__.py"},
+    {"name": "PregelNode", "role": "编译后的节点：把用户函数封装成可从 channel 读取输入、向 channel 写入输出的执行单元", "file": "libs/langgraph/langgraph/pregel/_read.py"},
+    {"name": "Command / Send", "role": "节点动态控制流原语：Command 用于跳转与状态更新，Send 用于 fan-out 到多个并行任务", "file": "libs/langgraph/langgraph/types.py"},
+    {"name": "BaseStore", "role": "跨线程的长期记忆存储接口，与 checkpointer 的短期记忆互补", "file": "libs/checkpoint/langgraph/store/base/__init__.py"}
+  ],
+  "layers": [
+    {"name": "图构建 DSL 层", "responsibility": "面向用户声明状态 schema、节点、边、条件分支，校验图合法性", "modules": ["libs/langgraph/langgraph/graph"], "files": ["libs/langgraph/langgraph/graph/state.py", "libs/langgraph/langgraph/graph/_node.py", "libs/langgraph/langgraph/graph/message.py"]},
+    {"name": "执行引擎层", "responsibility": "把图编译为 Pregel，按 superstep 生成任务、并发执行、聚合写入、驱动循环", "modules": ["libs/langgraph/langgraph/pregel"], "files": ["libs/langgraph/langgraph/pregel/main.py", "libs/langgraph/langgraph/pregel/_algo.py", "libs/langgraph/langgraph/pregel/_loop.py", "libs/langgraph/langgraph/pregel/_read.py"]},
+    {"name": "状态通道层", "responsibility": "定义每个状态字段的读写与 reduce 语义，是节点间传递数据的媒介", "modules": ["libs/langgraph/langgraph/channels"], "files": ["libs/langgraph/langgraph/channels/base.py", "libs/langgraph/langgraph/channels/last_value.py", "libs/langgraph/langgraph/channels/binop.py", "libs/langgraph/langgraph/channels/topic.py"]},
+    {"name": "持久化层", "responsibility": "检查点与长期记忆的存储抽象及后端实现", "modules": ["libs/checkpoint", "libs/checkpoint-sqlite", "libs/checkpoint-postgres"], "files": ["libs/checkpoint/langgraph/checkpoint/base/__init__.py", "libs/checkpoint/langgraph/store/base/__init__.py"]},
+    {"name": "预置组件层", "responsibility": "基于底层图封装开箱即用的 Agent 构造器与工具节点", "modules": ["libs/prebuilt"], "files": ["libs/prebuilt/langgraph/prebuilt/chat_agent_executor.py", "libs/prebuilt/langgraph/prebuilt/tool_node.py"]},
+    {"name": "函数式 API 层", "responsibility": "用装饰器把普通函数变成可持久化的图节点，降低显式建图成本", "modules": ["libs/langgraph/langgraph/func"], "files": ["libs/langgraph/langgraph/func/__init__.py"]}
+  ],
+  "data_flow": [
+    "第1步：用户构造 StateGraph(state_schema)，用 add_node/add_edge/add_conditional_edges 声明节点与边",
+    "第2步：调用 compile()，校验图并把 state/input/output schema 解析为 channels，生成 CompiledStateGraph 即 Pregel 实例",
+    "第3步：attach_node/attach_edge/attach_branch 把节点、边、分支装配为 PregelNode 与触发关系",
+    "第4步：调用 invoke/stream，传入 input 与 config，config 中携带 thread_id 用于检查点寻址",
+    "第5步：Pregel 循环初始化：从 BaseCheckpointSaver.get_tuple 读取该 thread 的检查点恢复各 channel，无则用 empty_checkpoint",
+    "第6步：把 input 写入 START channel，prepare_next_tasks 依据 channel 触发条件生成 superstep 任务，来源分 PULL 边触发与 PUSH Send",
+    "第7步：superstep 内并发执行各 PregelNode 的用户函数，节点从 channel 读输入、产出 writes",
+    "第8步：apply_writes 将 writes 按各 channel 的 reduce 语义合并，更新 channel 版本号",
+    "第9步：未到 END 时 create_checkpoint 生成快照并 checkpointer.put 持久化，put_writes 记录中间写入",
+    "第10步：达到 END 后按 output_channels 聚合最终状态返回给调用方"
+  ],
+  "entry_points": [
+    {"path": "libs/langgraph/langgraph/graph/state.py:compile", "what": "把用户构建的 StateGraph 编译为可执行的 CompiledStateGraph，是构建到执行的枢纽"},
+    {"path": "libs/langgraph/langgraph/pregel/main.py:459", "what": "Pregel 类定义，实现 invoke/stream/stream_events/get_state 等对外执行接口"},
+    {"path": "libs/langgraph/langgraph/pregel/main.py:stream", "what": "核心流式执行入口，驱动整个 superstep 循环"},
+    {"path": "libs/langgraph/langgraph/func/__init__.py", "what": "函数式 API 装饰器入口，用 @entrypoint/@task 建图"},
+    {"path": "libs/prebuilt/langgraph/prebuilt/chat_agent_executor.py", "what": "预置 ReAct 风格 Agent 构造器，最常见的上手入口"}
+  ],
+  "key_files": [
+    {"path": "README.md", "why": "先建立定位认知：低层编排框架，核心是 durable execution / HITL / memory"},
+    {"path": "libs/langgraph/langgraph/graph/state.py", "why": "StateGraph 与 compile() 所在，理解 DSL 如何编译成执行引擎"},
+    {"path": "libs/langgraph/langgraph/pregel/main.py", "why": "Pregel 执行引擎主体，看 invoke/stream 如何驱动循环与检查点"},
+    {"path": "libs/langgraph/langgraph/pregel/_algo.py", "why": "superstep 调度核心：prepare_next_tasks 与 apply_writes 决定任务如何产生与写回"},
+    {"path": "libs/langgraph/langgraph/pregel/_loop.py", "why": "执行循环与检查点保存/恢复逻辑集中地"},
+    {"path": "libs/langgraph/langgraph/channels/base.py", "why": "理解状态如何存储与 reduce 的关键抽象，含 get/update/checkpoint 契约"},
+    {"path": "libs/checkpoint/langgraph/checkpoint/base/__init__.py", "why": "持久化接口契约，理解 thread_id 与断点恢复机制"},
+    {"path": "libs/langgraph/langgraph/types.py", "why": "Command/Send/RetryPolicy/Interrupt 等控制流与配置类型集中定义"}
+  ],
+  "extension_points": [
+    "加一个新节点类型：实现可调用对象或用 add_node 传入 Runnable/Callable，节点封装见 libs/langgraph/langgraph/graph/_node.py",
+    "自定义状态合并语义：继承 BaseChannel 实现 get/update/from_checkpoint，或用 Annotated[type, reducer] 挂到 schema，参考 libs/langgraph/langgraph/channels/base.py",
+    "更换/新增持久化后端：继承 BaseCheckpointSaver 实现 get_tuple/put/put_writes/list，参考 libs/checkpoint-sqlite",
+    "新增长期记忆后端：继承 BaseStore 实现 libs/checkpoint/langgraph/store/base/__init__.py 中的接口",
+    "自定义流式事件转换：实现 StreamTransformer 并在 compile(transformers=...) 传入",
+    "新增缓存策略：继承 BaseCache 用于节点结果缓存"
+  ],
+  "learning_path": [
+    "第1步：读 README.md 明确它解决 durable execution / HITL / memory 三类问题",
+    "第2步：读 graph/state.py 的 StateGraph 与 compile()，搞清 DSL 如何变成执行对象",
+    "第3步：读 pregel/main.py 的 Pregel.__init__ 与 stream()，理解执行入口与循环",
+    "第4步：读 pregel/_algo.py 的 prepare_next_tasks 与 apply_writes，吃透 superstep 调度",
+    "第5步：读 pregel/_loop.py 与 checkpoint/base，理解检查点何时保存与恢复",
+    "第6步：读 channels/base.py 与 graph/message.py，掌握状态 reduce 与 add_messages 语义"
+  ],
+  "diagram_mermaid": "graph TD\n  U[用户构造 StateGraph] --> C[compile 编译]\n  C --> P[CompiledStateGraph 即 Pregel]\n  P --> L[执行循环 Loop]\n  L --> R[读取检查点 恢复 channels]\n  R --> S[写入 START channel]\n  S --> T[prepare_next_tasks 生成 superstep 任务]\n  T --> N[并发执行 PregelNode 节点函数]\n  N --> W[apply_writes 合并写入 channels]\n  W --> K[create_checkpoint 保存快照]\n  K --> E{是否到达 END}\n  E -->|否| T\n  E -->|是| O[聚合 output_channels 返回结果]\n  K -.-> CP[BaseCheckpointSaver 持久化]\n  P -.-> ST[BaseStore 长期记忆]",
+  "surprises": [
+    "对外暴露的是 StateGraph DSL，但真正执行的是 Pregel 引擎；compile() 本质是把图翻译成 Pregel 的 channels 与 PregelNode，理解 Pregel 才算看懂 LangGraph",
+    "状态字段的合并语义由 channel 类型决定而非用户代码：用 Annotated[list, add_messages] 才能累加，否则默认 LastValue 会覆盖",
+    "检查点按 superstep 粒度保存且 put_writes 单独记录中间写入，因此能从中断点精确恢复，但也意味着写入顺序与线程安全需要后端保证",
+    "Command 与 Send 是两套动态控制流：Command 改状态并跳转，Send 会 fan-out 成新任务进入下一 superstep，混用容易产生非预期并行"
+  ],
+  "confidence": "高"
+}

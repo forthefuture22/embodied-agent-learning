@@ -1,11 +1,11 @@
-// 功能级验证：用 DOM 桩执行 projects.html 的渲染逻辑，检查输出完整性
+// 功能级验证：用 DOM 桩执行 projects.html 的四个视图与搜索，检查输出完整性
 // 用法: node scripts/verify_dashboard.js
 const fs = require('fs');
 const path = require('path');
 
 const HTML = path.join(__dirname, '..', 'projects.html');
 const src = fs.readFileSync(HTML, 'utf8');
-const script = src.match(/<script>([\s\S]*)<\/script>/)[1];
+const script = src.match(/<script>([\s\S]*?)<\/script>\s*<\/body>/)[1];
 
 const captured = {};
 function makeEl(id) {
@@ -14,86 +14,112 @@ function makeEl(id) {
     set innerHTML(v) { captured[id] = v; },
     get innerHTML() { return captured[id] || ''; },
     set textContent(v) { captured[id + ':text'] = v; },
-    addEventListener() {},
-    classList: { add() {}, remove() {}, toggle() {} },
-    dataset: {},
-    style: {},
-    onclick: null,
+    addEventListener() {}, scrollIntoView() {}, classList: { add(){}, remove(){}, toggle(){} },
+    dataset: {}, style: {}, value: '',
   };
 }
 const els = {};
 const document = {
   getElementById: id => (els[id] = els[id] || makeEl(id)),
   querySelectorAll: () => [],
+  querySelector: () => null,
   createElement: () => ({ getContext: () => ({ measureText: () => ({ width: 10 }) }), style: {} }),
 };
 const navigator = { clipboard: { writeText: () => Promise.resolve() } };
-const window = {};
+const location = { hash: '' };
+const window = { addEventListener() {} };
 
-const fn = new Function('document', 'navigator', 'window', script + '\nreturn {DATA, DOMAINS};');
-const { DATA, DOMAINS } = fn(document, navigator, window);
-
-const main = captured['list'] || '';
-const stats = captured['stats'] || '';
-const seg = captured['segDomain'] || '';
-const count = captured['count:text'] || '';
-const overview = captured['overview'] || '';
+const fn = new Function('document', 'navigator', 'window', 'location',
+  script + '\nreturn {PROJECTS, ARCH, PRIO, DOMAINS, route, viewHome, viewDomain, viewBranch, viewProject, runSearch, renderTree, slug, starNum};');
+const M = fn(document, navigator, window, location);
+const { PROJECTS, ARCH, DOMAINS } = M;
 
 let fail = 0;
-const check = (cond, msg) => { if (!cond) { console.log('  ✗ ' + msg); fail++; } else console.log('  ✓ ' + msg); };
+const check = (cond, msg) => { if (!cond) { console.log('  x ' + msg); fail++; } else console.log('  v ' + msg); };
+const noLeak = (html, label) => {
+  const u = (html.match(/undefined/g) || []).length;
+  const n = (html.match(/NaN/g) || []).length;
+  check(u === 0 && n === 0, `${label} 无 undefined/NaN 泄漏（undefined ${u} / NaN ${n}）`);
+};
 
 console.log('=== 数据层 ===');
-const projects = Object.values(DATA).filter(p => p.exists);
-check(Object.keys(DATA).length === 109, `内嵌数据 109 条（实际 ${Object.keys(DATA).length}）`);
-check(projects.length === 109, `有效项目 109 个（实际 ${projects.length}）`);
-check(Object.keys(DOMAINS).length === 3, `3 个域（实际 ${Object.keys(DOMAINS).length}）`);
-const missingName = projects.filter(p => !p.name).length;
-const missingStar = projects.filter(p => !p.star).length;
-check(missingName === 0, `项目名无缺失（缺 ${missingName}）`);
-check(missingStar === 0, `star 无缺失（缺 ${missingStar}）`);
-// 元仓库（如 IsaacSim，仅 1 个 README 指针文件）LOC 为 0 属正常
-const noLoc = projects.filter(p => !p.loc && (p.file_count || 0) >= 5).length;
-check(noLoc === 0, `代码行数无缺失（排除纯元仓库后缺 ${noLoc}）`);
+check(PROJECTS.length === 109, `项目 109 个（实际 ${PROJECTS.length}）`);
+check(Object.keys(ARCH).length === 9, `语义架构 9 份（实际 ${Object.keys(ARCH).length}）`);
+check(Object.keys(DOMAINS).length === 3, `域 3 个（实际 ${Object.keys(DOMAINS).length}）`);
+const totalBranches = Object.values(DOMAINS).reduce((a, d) => a + d.branches.length, 0);
+check(totalBranches === 25, `分支 25 个（实际 ${totalBranches}）`);
+check(Object.keys(M.PRIO).length === 109, `优先级 109 条（实际 ${Object.keys(M.PRIO).length}）`);
 
-console.log('\n=== 渲染层 ===');
-check(main.length > 50000, `主视图已渲染（${(main.length / 1024).toFixed(0)} KB HTML）`);
-check(stats.includes('个已分析项目'), '统计卡片已渲染');
-check(seg.includes('data-d="embodied"') && seg.includes('data-d="agent"') && seg.includes('data-d="cross"'), '域筛选按钮完整');
-check(/显示 109 \/ 109/.test(count), `计数正确（"${count}"）`);
+console.log('\n=== 视图 1/4：总览 ===');
+M.viewHome();
+const home = captured['view'] || '';
+check(home.length > 5000, `已渲染（${(home.length / 1024).toFixed(0)} KB）`);
+check(home.includes('项目全景图'), '含全景树图');
+const tiles = (home.match(/class="ovtile"/g) || []).length;
+check(tiles === 109, `全景图 109 个矩形（实际 ${tiles}）`);
+check((home.match(/class="dcard"/g) || []).length === 3, '含 3 个板块卡片');
+noLeak(home, '总览');
 
-console.log('\n=== 全景图 ===');
-check(overview.includes('项目全景图'), '全景图已渲染');
-const tiles = (overview.match(/class="ovtile"/g) || []).length;
-check(tiles === 109, `全景图含 109 个矩形（实际 ${tiles}）`);
-const ovUndef = (overview.match(/undefined|NaN/g) || []).length;
-check(ovUndef === 0, `全景图无 undefined/NaN（发现 ${ovUndef}）`);
+console.log('\n=== 视图 2/4：板块 ===');
+M.viewDomain('embodied');
+const dom = captured['view'] || '';
+check(dom.includes('具身智能'), '标题正确');
+check((dom.match(/class="dcard"/g) || []).length === 9, `具身智能 9 个分支卡片（实际 ${(dom.match(/class="dcard"/g) || []).length}）`);
+noLeak(dom, '板块');
 
-console.log('\n=== 卡片完整性 ===');
-// 跨分支复用的仓库会在多个分支下各渲染一次，故卡片数 >= 唯一仓库数
-const cardCount = (main.match(/class="card"/g) || []).length;
-const uniqueCards = new Set((main.match(/data-repo="([^"]+)"/g) || []).map(s => s.slice(11, -1)));
-check(cardCount >= 109, `卡片数 >= 109（实际 ${cardCount}）`);
-check(uniqueCards.size === 109, `唯一仓库 109 个（实际 ${uniqueCards.size}）`);
-const undefinedLeak = (main.match(/undefined/g) || []).length;
-check(undefinedLeak === 0, `无 undefined 泄漏（发现 ${undefinedLeak} 处）`);
-const nanLeak = (main.match(/NaN/g) || []).length;
-check(nanLeak === 0, `无 NaN 泄漏（发现 ${nanLeak} 处）`);
-const ghLinks = (main.match(/https:\/\/github\.com\//g) || []).length;
-check(ghLinks >= 109, `GitHub 链接 >= 109（实际 ${ghLinks}）`);
-const cmdBlocks = (main.match(/class="cmd"/g) || []).length;
-check(cmdBlocks > 100, `可复制运行命令 > 100 条（实际 ${cmdBlocks}）`);
-const paths = (main.match(/D:\\github/g) || []).length;
-check(paths >= 109, `本地路径 >= 109（实际 ${paths}）`);
+console.log('\n=== 视图 3/4：分支 ===');
+M.viewBranch('embodied', 3);
+const br = captured['view'] || '';
+const rows = (br.match(/<tr onclick=/g) || []).length;
+check(rows > 0, `分支项目列表 ${rows} 行`);
+check(br.includes('class="pl"'), '使用紧凑表格布局');
+noLeak(br, '分支');
 
-console.log('\n=== 抽样检查 ===');
-for (const repo of ['huggingface/lerobot', 'langchain-ai/langchain', 'vllm-project/vllm']) {
-  const p = DATA[repo];
-  if (!p) { console.log(`  ✗ 缺少 ${repo}`); fail++; continue; }
-  console.log(`  ${repo}: ${p.name} ★${p.star} | ${p.loc.toLocaleString()} 行 / ${p.file_count} 文件 | 模块 ${(p.top_dirs || []).length} | 语言 ${(p.languages || []).length} | 命令 ${(p.run_commands || []).length}`);
-  check(p.loc > 0 && p.file_count > 0, `  ${repo} 指标有效`);
-  check(main.includes(p.name), `  ${repo} 出现在看板中`);
-}
+console.log('\n=== 视图 4/4：项目详情 ===');
+M.viewProject('embodied', 3, 'huggingface/lerobot');
+const pj = captured['view'] || '';
+check(pj.includes('语义架构'), '含语义架构区块');
+check(pj.includes('核心抽象'), '含核心抽象表');
+check(pj.includes('分层结构'), '含分层结构表');
+check(pj.includes('数据流'), '含数据流');
+check(pj.includes('建议阅读顺序'), '含建议阅读顺序');
+check(pj.includes('容易踩的坑'), '含踩坑提示');
+check(pj.includes('class="mermaid"'), '含 Mermaid 图容器');
+check(pj.includes('功能全景') && pj.includes('模块架构') && pj.includes('技术栈') && pj.includes('运行流程'),
+  '含结构级四区块');
+noLeak(pj, '项目详情');
+
+console.log('\n=== 无架构分析的项目 ===');
+M.viewProject('agent', 0, 'langchain-ai/langchain');
+const pj2 = captured['view'] || '';
+check(pj2.includes('尚未分析'), '正确显示「尚未分析」占位');
+check(pj2.includes('架构优先级'), '显示优先级评分');
+noLeak(pj2, '未分析项目');
+
+console.log('\n=== 侧栏树 ===');
+M.renderTree();
+const tree = captured['tree'] || '';
+check(tree.includes('总览'), '含总览入口');
+check((tree.match(/class="trow/g) || []).length > 130, `树节点数 ${(tree.match(/class="trow/g) || []).length} > 130`);
+check(tree.includes('archflag'), '标记了已做语义架构的项目');
+noLeak(tree, '侧栏树');
+
+console.log('\n=== 搜索 ===');
+M.runSearch('robot');
+const sr = captured['view'] || '';
+check(sr.includes('搜索结果'), '搜索视图已渲染');
+noLeak(sr, '搜索');
+
+console.log('\n=== 路由 ===');
+location.hash = '';
+check(M.route().v === 'home', '空 hash -> 总览');
+location.hash = '#/embodied';
+check(M.route().v === 'domain' && M.route().d === 'embodied', '/embodied -> 板块');
+location.hash = '#/embodied/3';
+check(M.route().v === 'branch' && M.route().b === 3, '/embodied/3 -> 分支');
+location.hash = '#/embodied/3/huggingface__lerobot';
+check(M.route().v === 'project' && M.route().r === 'huggingface/lerobot', '深链接 -> 项目');
 
 console.log('\n' + '='.repeat(50));
-console.log(fail === 0 ? '全部检查通过 ✓' : `${fail} 项检查失败 ✗`);
+console.log(fail === 0 ? '全部检查通过' : `${fail} 项检查失败`);
 process.exit(fail === 0 ? 0 : 1);
